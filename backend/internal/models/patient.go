@@ -1,31 +1,30 @@
 package models
 
 import (
-	"database/sql"
 	"time"
 )
 
 type Pet struct {
-	ID                  int            `json:"id"`
-	ClinicID            int            `json:"clinicId"`
-	CustomID            string         `json:"customId"`
-	Name                string         `json:"name"`
-	Species             string         `json:"species"`
-	Breed               sql.NullString `json:"breed,omitempty"`
-	Age                 sql.NullFloat64 `json:"age,omitempty"`
-	Weight              sql.NullFloat64 `json:"weight,omitempty"`
-	OwnerName           string         `json:"ownerName"`
-	OwnerPhone          string         `json:"ownerPhone"`
-	OwnerEmail          sql.NullString `json:"ownerEmail,omitempty"`
-	OwnerNationalID     sql.NullString `json:"ownerNationalId,omitempty"`
-	OwnerNotes          sql.NullString `json:"ownerNotes,omitempty"`
-	OwnerLabel          sql.NullString `json:"ownerLabel,omitempty"`
-	Status              string         `json:"status"`
-	LastAppointmentDate sql.NullTime   `json:"lastAppointmentDate,omitempty"`
-	NextAppointmentDate sql.NullTime   `json:"nextAppointmentDate,omitempty"`
-	CreatedAt           time.Time      `json:"createdAt"`
-	UpdatedAt           time.Time      `json:"updatedAt"`
-	DeletedAt           sql.NullTime   `json:"-"`
+	ID                  int        `json:"id"`
+	ClinicID            int        `json:"clinicId"`
+	CustomID            string     `json:"customId"`
+	Name                string     `json:"name"`
+	Species             string     `json:"species"`
+	Breed               NullString `json:"breed,omitempty"`
+	Age                 NullFloat64 `json:"age,omitempty"`
+	Weight              NullFloat64 `json:"weight,omitempty"`
+	OwnerName           string     `json:"ownerName"`
+	OwnerPhone          string     `json:"ownerPhone"`
+	OwnerEmail          NullString `json:"ownerEmail,omitempty"`
+	OwnerNationalID     NullString `json:"ownerNationalId,omitempty"`
+	OwnerNotes          NullString `json:"ownerNotes,omitempty"`
+	OwnerLabel          NullString `json:"ownerLabel,omitempty"`
+	Status              string     `json:"status"`
+	LastAppointmentDate NullTime   `json:"lastAppointmentDate,omitempty"`
+	NextAppointmentDate NullTime   `json:"nextAppointmentDate,omitempty"`
+	CreatedAt           time.Time  `json:"createdAt"`
+	UpdatedAt           time.Time  `json:"updatedAt"`
+	DeletedAt           NullTime   `json:"-"`
 }
 
 type CreatePetRequest struct {

@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"time"
 
@@ -30,13 +29,13 @@ func (s *VisitService) Create(ctx context.Context, clinicID, userID int, req mod
 
 	// Set optional fields
 	if req.AppointmentID > 0 {
-		visit.AppointmentID = sql.NullInt32{Int32: int32(req.AppointmentID), Valid: true}
+		visit.AppointmentID = models.NewNullInt32(int32(req.AppointmentID))
 	}
 
 	if req.AssignedVetID > 0 {
-		visit.AssignedVetID = sql.NullInt32{Int32: int32(req.AssignedVetID), Valid: true}
+		visit.AssignedVetID = models.NewNullInt32(int32(req.AssignedVetID))
 		if req.AssignedVetName != "" {
-			visit.AssignedVetName = sql.NullString{String: req.AssignedVetName, Valid: true}
+			visit.AssignedVetName = models.NewNullString(req.AssignedVetName)
 		}
 	}
 
@@ -81,7 +80,7 @@ func (s *VisitService) Update(ctx context.Context, id int, req models.UpdateVisi
 	}
 
 	if req.ChiefComplaint != "" {
-		updates["chief_complaint"] = sql.NullString{String: req.ChiefComplaint, Valid: true}
+		updates["chief_complaint"] = models.NewNullString(req.ChiefComplaint)
 	}
 
 	if req.Vitals != nil {
@@ -89,23 +88,23 @@ func (s *VisitService) Update(ctx context.Context, id int, req models.UpdateVisi
 	}
 
 	if req.Examination != "" {
-		updates["examination"] = sql.NullString{String: req.Examination, Valid: true}
+		updates["examination"] = models.NewNullString(req.Examination)
 	}
 
 	if req.DifferentialDiagnosis != "" {
-		updates["differential_diagnosis"] = sql.NullString{String: req.DifferentialDiagnosis, Valid: true}
+		updates["differential_diagnosis"] = models.NewNullString(req.DifferentialDiagnosis)
 	}
 
 	if req.FinalDiagnosis != "" {
-		updates["final_diagnosis"] = sql.NullString{String: req.FinalDiagnosis, Valid: true}
+		updates["final_diagnosis"] = models.NewNullString(req.FinalDiagnosis)
 	}
 
 	if req.Treatment != "" {
-		updates["treatment"] = sql.NullString{String: req.Treatment, Valid: true}
+		updates["treatment"] = models.NewNullString(req.Treatment)
 	}
 
 	if req.Advice != "" {
-		updates["advice"] = sql.NullString{String: req.Advice, Valid: true}
+		updates["advice"] = models.NewNullString(req.Advice)
 	}
 
 	if req.FollowUpDate != "" {
@@ -113,7 +112,7 @@ func (s *VisitService) Update(ctx context.Context, id int, req models.UpdateVisi
 		if err != nil {
 			return err
 		}
-		updates["follow_up_date"] = sql.NullTime{Time: date, Valid: true}
+		updates["follow_up_date"] = models.NewNullTime(date)
 	}
 
 	if req.Medications != nil {
@@ -125,7 +124,7 @@ func (s *VisitService) Update(ctx context.Context, id int, req models.UpdateVisi
 	}
 
 	if req.HistoryNotes != "" {
-		updates["history_notes"] = sql.NullString{String: req.HistoryNotes, Valid: true}
+		updates["history_notes"] = models.NewNullString(req.HistoryNotes)
 	}
 
 	if req.BillingStatus != "" {

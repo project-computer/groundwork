@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"time"
@@ -58,7 +57,7 @@ func (s *BillService) Create(ctx context.Context, clinicID, userID int, req mode
 
 	// Set optional fields
 	if req.VisitID > 0 {
-		bill.VisitID = sql.NullInt32{Int32: int32(req.VisitID), Valid: true}
+		bill.VisitID = models.NewNullInt32(int32(req.VisitID))
 	}
 
 	err = s.repo.Create(ctx, clinicID, bill)
@@ -94,15 +93,15 @@ func (s *BillService) Update(ctx context.Context, id int, req models.UpdateBillR
 	updates := make(map[string]interface{})
 
 	if req.Status != "" {
-		updates["status"] = sql.NullString{String: req.Status, Valid: true}
+		updates["status"] = req.Status
 	}
 
 	if req.PaymentMethod != "" {
-		updates["payment_method"] = sql.NullString{String: req.PaymentMethod, Valid: true}
+		updates["payment_method"] = models.NewNullString(req.PaymentMethod)
 	}
 
 	if req.PaymentNotes != "" {
-		updates["payment_notes"] = sql.NullString{String: req.PaymentNotes, Valid: true}
+		updates["payment_notes"] = models.NewNullString(req.PaymentNotes)
 	}
 
 	if len(req.Items) > 0 {

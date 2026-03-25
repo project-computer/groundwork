@@ -1,7 +1,6 @@
 package models
 
 import (
-	"database/sql"
 	"encoding/json"
 	"time"
 )
@@ -10,16 +9,16 @@ type Prescription struct {
 	ID               int             `json:"id"`
 	ClinicID         int             `json:"clinicId"`
 	CustomID         string          `json:"customId"`
-	VisitID          sql.NullInt32   `json:"visitId,omitempty"`
+	VisitID          NullInt32       `json:"visitId,omitempty"`
 	PetID            int             `json:"petId"`
 	PetName          string          `json:"petName"`
 	OwnerName        string          `json:"ownerName"`
 	Date             time.Time       `json:"date"`
-	VeterinarianID   sql.NullInt32   `json:"veterinarianId,omitempty"`
-	VeterinarianName sql.NullString  `json:"veterinarianName,omitempty"`
-	Diagnosis        sql.NullString  `json:"diagnosis,omitempty"`
+	VeterinarianID   NullInt32       `json:"veterinarianId,omitempty"`
+	VeterinarianName NullString      `json:"veterinarianName,omitempty"`
+	Diagnosis        NullString      `json:"diagnosis,omitempty"`
 	Medicines        json.RawMessage `json:"medicines"`
-	Notes            sql.NullString  `json:"notes,omitempty"`
+	Notes            NullString      `json:"notes,omitempty"`
 	CreatedAt        time.Time       `json:"createdAt"`
 }
 

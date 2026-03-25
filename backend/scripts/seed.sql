@@ -8,10 +8,10 @@ INSERT INTO clinics (id, name, address, phone, email, settings) VALUES
 -- Insert users (password: admin123 for all)
 -- Password hash for "admin123" using bcrypt
 INSERT INTO users (name, email, password_hash, role, phone, is_active) VALUES
-('Dr. Sarah Johnson', 'admin@happypaws.vet', '$2a$10$rQ6wHKm0P6Y9QTZVwGxJVOQxYxYxYxYxYxYxYxYxYxYxYxYxYxYxY', 'admin', '+1-555-0101', true),
-('Dr. Michael Chen', 'mchen@happypaws.vet', '$2a$10$rQ6wHKm0P6Y9QTZVwGxJVOQxYxYxYxYxYxYxYxYxYxYxYxYxYxYxY', 'veterinarian', '+1-555-0102', true),
-('Emily Rodriguez', 'emily@happypaws.vet', '$2a$10$rQ6wHKm0P6Y9QTZVwGxJVOQxYxYxYxYxYxYxYxYxYxYxYxYxYxYxY', 'receptionist', '+1-555-0103', true),
-('James Wilson', 'james@happypaws.vet', '$2a$10$rQ6wHKm0P6Y9QTZVwGxJVOQxYxYxYxYxYxYxYxYxYxYxYxYxYxYxY', 'pharmacist', '+1-555-0104', true);
+('Dr. Sarah Johnson', 'admin@happypaws.vet', '$2a$10$oA//KhmIfPXsOwuqwI0DBOmo0/frBFwr0z7eegtHK4j8K8NE6QDTa', 'admin', '+1-555-0101', true),
+('Dr. Michael Chen', 'mchen@happypaws.vet', '$2a$10$oA//KhmIfPXsOwuqwI0DBOmo0/frBFwr0z7eegtHK4j8K8NE6QDTa', 'veterinarian', '+1-555-0102', true),
+('Emily Rodriguez', 'emily@happypaws.vet', '$2a$10$oA//KhmIfPXsOwuqwI0DBOmo0/frBFwr0z7eegtHK4j8K8NE6QDTa', 'receptionist', '+1-555-0103', true),
+('James Wilson', 'james@happypaws.vet', '$2a$10$oA//KhmIfPXsOwuqwI0DBOmo0/frBFwr0z7eegtHK4j8K8NE6QDTa', 'pharmacist', '+1-555-0104', true);
 
 -- Insert sample pets
 INSERT INTO pets (clinic_id, custom_id, name, species, breed, age, weight, owner_name, owner_phone, owner_email, status) VALUES

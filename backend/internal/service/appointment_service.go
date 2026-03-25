@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"time"
 
@@ -49,13 +48,13 @@ func (s *AppointmentService) Create(ctx context.Context, clinicID, userID int, r
 
 	// Set optional fields
 	if req.Notes != "" {
-		apt.Notes = sql.NullString{String: req.Notes, Valid: true}
+		apt.Notes = models.NewNullString(req.Notes)
 	}
 
 	if req.VeterinarianID > 0 {
-		apt.VeterinarianID = sql.NullInt32{Int32: int32(req.VeterinarianID), Valid: true}
+		apt.VeterinarianID = models.NewNullInt32(int32(req.VeterinarianID))
 		if req.VeterinarianName != "" {
-			apt.VeterinarianName = sql.NullString{String: req.VeterinarianName, Valid: true}
+			apt.VeterinarianName = models.NewNullString(req.VeterinarianName)
 		}
 	}
 
@@ -128,13 +127,13 @@ func (s *AppointmentService) Update(ctx context.Context, id int, req models.Upda
 	}
 
 	if req.Notes != "" {
-		updates["notes"] = sql.NullString{String: req.Notes, Valid: true}
+		updates["notes"] = models.NewNullString(req.Notes)
 	}
 
 	if req.VeterinarianID > 0 {
-		updates["veterinarian_id"] = sql.NullInt32{Int32: int32(req.VeterinarianID), Valid: true}
+		updates["veterinarian_id"] = models.NewNullInt32(int32(req.VeterinarianID))
 		if req.VeterinarianName != "" {
-			updates["veterinarian_name"] = sql.NullString{String: req.VeterinarianName, Valid: true}
+			updates["veterinarian_name"] = models.NewNullString(req.VeterinarianName)
 		}
 	}
 

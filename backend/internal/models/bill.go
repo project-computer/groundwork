@@ -1,7 +1,6 @@
 package models
 
 import (
-	"database/sql"
 	"encoding/json"
 	"time"
 )
@@ -10,7 +9,7 @@ type Bill struct {
 	ID             int             `json:"id"`
 	ClinicID       int             `json:"clinicId"`
 	CustomID       string          `json:"customId"`
-	VisitID        sql.NullInt32   `json:"visitId,omitempty"`
+	VisitID        NullInt32       `json:"visitId,omitempty"`
 	PetID          int             `json:"petId"`
 	PetName        string          `json:"petName"`
 	OwnerName      string          `json:"ownerName"`
@@ -21,8 +20,8 @@ type Bill struct {
 	Discount       float64         `json:"discount"`
 	Total          float64         `json:"total"`
 	Status         string          `json:"status"`
-	PaymentMethod  sql.NullString  `json:"paymentMethod,omitempty"`
-	PaymentNotes   sql.NullString  `json:"paymentNotes,omitempty"`
+	PaymentMethod  NullString      `json:"paymentMethod,omitempty"`
+	PaymentNotes   NullString      `json:"paymentNotes,omitempty"`
 	CreatedBy      int             `json:"createdBy"`
 	CreatedAt      time.Time       `json:"createdAt"`
 	UpdatedAt      time.Time       `json:"updatedAt"`

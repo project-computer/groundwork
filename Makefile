@@ -7,7 +7,7 @@ help: ## Show this help
 
 dev: ## Start both frontend and backend (requires DB running)
 	@echo "Starting backend..."
-	@cd backend && go run cmd/api/main.go &
+	@cd backend && air &
 	@echo "Starting frontend..."
 	@cd frontend && pnpm dev
 	@wait

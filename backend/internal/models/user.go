@@ -1,21 +1,20 @@
 package models
 
 import (
-	"database/sql"
 	"time"
 )
 
 type User struct {
-	ID           int            `json:"id"`
-	Email        string         `json:"email"`
-	PasswordHash string         `json:"-"`
-	Name         string         `json:"name"`
-	Role         string         `json:"role"`
-	Phone        sql.NullString `json:"phone,omitempty"`
-	AvatarURL    sql.NullString `json:"avatarUrl,omitempty"`
-	IsActive     bool           `json:"isActive"`
-	CreatedAt    time.Time      `json:"createdAt"`
-	UpdatedAt    time.Time      `json:"updatedAt"`
+	ID           int        `json:"id"`
+	Email        string     `json:"email"`
+	PasswordHash string     `json:"-"`
+	Name         string     `json:"name"`
+	Role         string     `json:"role"`
+	Phone        NullString `json:"phone,omitempty"`
+	AvatarURL    NullString `json:"avatarUrl,omitempty"`
+	IsActive     bool       `json:"isActive"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	UpdatedAt    time.Time  `json:"updatedAt"`
 }
 
 type CreateUserRequest struct {

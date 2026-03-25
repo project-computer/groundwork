@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"time"
@@ -42,22 +41,22 @@ func (s *PrescriptionService) Create(ctx context.Context, clinicID int, req mode
 
 	// Set optional fields
 	if req.VisitID > 0 {
-		rx.VisitID = sql.NullInt32{Int32: int32(req.VisitID), Valid: true}
+		rx.VisitID = models.NewNullInt32(int32(req.VisitID))
 	}
 
 	if req.VeterinarianID > 0 {
-		rx.VeterinarianID = sql.NullInt32{Int32: int32(req.VeterinarianID), Valid: true}
+		rx.VeterinarianID = models.NewNullInt32(int32(req.VeterinarianID))
 		if req.VeterinarianName != "" {
-			rx.VeterinarianName = sql.NullString{String: req.VeterinarianName, Valid: true}
+			rx.VeterinarianName = models.NewNullString(req.VeterinarianName)
 		}
 	}
 
 	if req.Diagnosis != "" {
-		rx.Diagnosis = sql.NullString{String: req.Diagnosis, Valid: true}
+		rx.Diagnosis = models.NewNullString(req.Diagnosis)
 	}
 
 	if req.Notes != "" {
-		rx.Notes = sql.NullString{String: req.Notes, Valid: true}
+		rx.Notes = models.NewNullString(req.Notes)
 	}
 
 	err = s.repo.Create(ctx, clinicID, rx)
