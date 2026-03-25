@@ -6,6 +6,10 @@
 *.dylib
 bin/
 dist/
+tmp/
+
+# Air
+build-errors.log
 
 # Test binary, built with `go test -c`
 *.test
