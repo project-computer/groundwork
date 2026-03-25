@@ -32,16 +32,26 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	patientRepo := repository.NewPatientRepository(db)
 	appointmentRepo := repository.NewAppointmentRepository(db)
+	visitRepo := repository.NewVisitRepository(db)
+	billRepo := repository.NewBillRepository(db)
+	prescriptionRepo := repository.NewPrescriptionRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, cfg.JWT.Secret, cfg.JWT.AccessExpiry, cfg.JWT.RefreshExpiry)
 	patientService := service.NewPatientService(patientRepo)
 	appointmentService := service.NewAppointmentService(appointmentRepo)
+	visitService := service.NewVisitService(visitRepo)
+	billService := service.NewBillService(billRepo)
+	prescriptionService := service.NewPrescriptionService(prescriptionRepo)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
 	patientHandler := handlers.NewPatientHandler(patientService)
 	appointmentHandler := handlers.NewAppointmentHandler(appointmentService)
+	visitHandler := handlers.NewVisitHandler(visitService)
+	billHandler := handlers.NewBillHandler(billService)
+	prescriptionHandler := handlers.NewPrescriptionHandler(prescriptionService)
+	dashboardHandler := handlers.NewDashboardHandler(db)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(cfg.JWT.Secret)
@@ -115,7 +125,32 @@ func main() {
 	appointments.Post("/:id/checkin", appointmentHandler.CheckIn)
 	appointments.Post("/:id/cancel", appointmentHandler.Cancel)
 
-	// TODO: Add routes for visits, bills, prescriptions, etc.
+	// Visit routes
+	visits := protected.Group("/visits")
+	visits.Get("/", visitHandler.List)
+	visits.Post("/", visitHandler.Create)
+	visits.Get("/:id", visitHandler.Get)
+	visits.Put("/:id", visitHandler.Update)
+	visits.Post("/:id/complete", visitHandler.Complete)
+	visits.Post("/:id/duplicate", visitHandler.Duplicate)
+
+	// Bill routes
+	bills := protected.Group("/bills")
+	bills.Get("/", billHandler.List)
+	bills.Post("/", billHandler.Create)
+	bills.Get("/:id", billHandler.Get)
+	bills.Put("/:id", billHandler.Update)
+
+	// Prescription routes
+	prescriptions := protected.Group("/prescriptions")
+	prescriptions.Get("/", prescriptionHandler.List)
+	prescriptions.Post("/", prescriptionHandler.Create)
+	prescriptions.Get("/:id", prescriptionHandler.Get)
+
+	// Dashboard routes
+	dashboard := protected.Group("/dashboard")
+	dashboard.Get("/stats", dashboardHandler.GetStats)
+	dashboard.Get("/revenue", dashboardHandler.GetRevenue)
 
 	// Start server
 	log.Printf("Starting server on %s:%s", cfg.Server.Host, cfg.Server.Port)
