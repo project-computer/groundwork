@@ -48,13 +48,13 @@ prelive-tag: ## Create prelive deployment tag
 	git tag -a prelive-$$(date +%Y%m%d-%H%M%S) -m "Prelive deploy $$(date +%Y-%m-%d\ %H:%M)"
 	git push origin --tags
 
-prelive-up: ## Start prelive services (incremental)
+prelive-up: ## Start prelive services (incremental, keeps data)
 	docker compose -f compose.prelive.yml up -d --build
 
 prelive-down: ## Stop prelive services
 	docker compose -f compose.prelive.yml down
 
-prelive-redeploy: ## Full prelive redeploy (wipes data!)
+prelive-redeploy: ## Full prelive redeploy (wipes all data!)
 	docker compose -f compose.prelive.yml down -v
 	docker compose -f compose.prelive.yml up -d --build
 

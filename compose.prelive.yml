@@ -1,7 +1,6 @@
 services:
   postgres:
     image: postgres:18-alpine
-    container_name: vet_postgres
     environment:
       POSTGRES_USER: ${DB_USER:-vetuser}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-vetpass}
@@ -19,18 +18,17 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - vet-network
+      internal:
 
   api:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: vet_api
     environment:
       DATABASE_URL: postgresql://${DB_USER:-vetuser}:${DB_PASSWORD:-vetpass}@postgres:5432/${DB_NAME:-vetclinic}?sslmode=disable
       JWT_SECRET: ${JWT_SECRET:-dev-secret-key-change-in-production}
       PORT: 8080
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
       ENV: ${ENV:-prelive}
       FILE_STORAGE_TYPE: ${FILE_STORAGE_TYPE:-local}
       FILE_UPLOAD_PATH: ./uploads
@@ -42,37 +40,26 @@ services:
       - uploads_data:/root/uploads
     restart: unless-stopped
     networks:
-      - vet-network
+      internal:
+      proxy:
+        aliases:
+          - vet-api
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: vet_frontend
-    ports:
-      - "80:80"
     depends_on:
       - api
     restart: unless-stopped
     networks:
-      - vet-network
-
-  cloudflare-tunnel:
-    image: cloudflare/cloudflared:latest
-    container_name: vet_tunnel
-    command: tunnel run
-    environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TOKEN}
-    depends_on:
-      - frontend
-      - api
-    restart: unless-stopped
-    networks:
-      - vet-network
+      internal:
+      proxy:
+        aliases:
+          - vet-frontend
 
   discord-notify-success:
     image: alpine:latest
-    container_name: vet-discord-success
     depends_on:
       - api
       - frontend
@@ -84,12 +71,24 @@ services:
     entrypoint: ["/bin/sh", "/notify.sh"]
     restart: "no"
     networks:
-      - vet-network
+      internal:
+
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare-tunnel
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TOKEN}
+    restart: unless-stopped
+    networks:
+      proxy:
 
 volumes:
   postgres_data:
   uploads_data:
 
 networks:
-  vet-network:
+  internal:
     driver: bridge
+  proxy:
+    external: true

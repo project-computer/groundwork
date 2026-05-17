@@ -1,36 +1,43 @@
 # Prelive Deployment
 
-This guide covers deploying VET Clinic to prelive (staging environment).
+This guide covers deploying VET Clinic to prelive (staging environment) on a shared server.
 
-## Environment Overview
+## Architecture
 
-| Component | Prelive | Production |
-|-----------|---------|------------|
-| Frontend | Nginx container | CDN or Nginx |
-| API | Docker container | Docker container |
-| Database | Docker (postgres) | Managed DB |
-| File Storage | Local volume | S3 / R2 |
-| Access | Cloudflare Tunnel | Cloudflare Tunnel |
+```
+Internet
+    |
+Cloudflare Tunnel ─────────────────────┐
+    |                                   |
+    ├── vet.example.com → vet-frontend:80 → nginx
+    |                                         |
+    |                                   /api/* (internal proxy)
+    |                                         |
+    |                                    vet-api:8080
+    |                                         |
+    |                                     postgres:5432
+    |
+    ├── other-app.example.com → other-frontend:80
+    └── ...
+```
+
+**Key principle**: Zero host ports. The tunnel routes directly to containers via Docker network.
 
 ## Prerequisites
 
 1. Docker and Docker Compose installed
-2. Cloudflare Tunnel token for public access
-3. Port 80 available
+2. Cloudflare Tunnel token
+3. `proxy` Docker network created
 
-## 1. Tag Release (Required)
+## 1. One-Time Setup
 
-Every deployment requires a new tag. The Discord notification shows all commits since the last tag.
+### Create the shared proxy network
 
 ```bash
-# Tag with timestamp (recommended for prelive)
-git tag -a prelive-$(date +%Y%m%d-%H%M%S) -m "Prelive deploy $(date +%Y-%m-%d %H:%M)"
-git push origin --tags
-
-# Or tag with version (for tracked releases)
-git tag -a v1.2.3 -m "Release v1.2.3"
-git push origin v1.2.3
+docker network create proxy
 ```
+
+Created **once per server**. All apps on the server share this network so tunnels can reach containers.
 
 ## 2. Configure Environment
 
@@ -45,8 +52,8 @@ DB_NAME=vetclinic
 # JWT (change for staging!)
 JWT_SECRET=your-staging-jwt-secret
 
-# CORS (add your tunnel domain)
-CORS_ORIGINS=http://localhost,https://your-tunnel-domain.com
+# CORS (your tunnel domains)
+CORS_ORIGINS=https://vet.yourdomain.com
 
 # Environment
 ENV=prelive
@@ -62,103 +69,138 @@ CLOUDFLARE_TOKEN=your-cloudflare-tunnel-token
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your-webhook-url
 ```
 
-## 3. Deploy
+## 3. Tag Release
 
-### First Deploy or Full Redeploy
-
-Tear down existing services and volumes, then start fresh:
+Every deployment should have a tag. The Discord notification shows all commits since the last tag.
 
 ```bash
-docker compose -f compose.prelive.yml down -v
-docker compose -f compose.prelive.yml up -d --build
+make prelive-tag
 ```
 
-### Incremental Deploy (no data loss)
-
-If you only need to rebuild services without wiping data:
+Or manually:
 
 ```bash
-docker compose -f compose.prelive.yml up -d --build
+git tag -a prelive-$(date +%Y%m%d-%H%M%S) -m "Prelive deploy $(date +%Y-%m-%d %H:%M)"
+git push origin --tags
 ```
 
-> **Warning**: `down -v` destroys all data in `postgres_data` and `uploads_data` volumes. Use only when you want a clean slate.
+## 4. Deploy
+
+### First deploy / full redeploy (wipes data)
+
+```bash
+make prelive-redeploy
+```
+
+### Incremental deploy (keeps data)
+
+```bash
+make prelive-up
+```
+
+### Stop
+
+```bash
+make prelive-down
+```
+
+> **Warning**: `prelive-redeploy` destroys all data in Docker volumes.
 
 This starts:
-- **postgres** - Database with auto-migrations and seed data
-- **api** - Go backend (Fiber)
-- **frontend** - Nginx serving the built frontend + proxying API
-- **cloudflare-tunnel** - Exposes the site through Cloudflare
-- **discord-notify-success** - Sends Discord notification with commits since last tag
+- **postgres** — Database with auto-migrations and seed data (internal only)
+- **api** — Go backend (internal + proxy network)
+- **frontend** — Nginx SPA + `/api/` proxy to backend (internal + proxy network)
+- **cloudflare-tunnel** — Routes public traffic to containers (proxy network)
+- **discord-notify-success** — Sends deployment notification (runs once)
 
-## 4. Access the Application
+**No ports are exposed to the host.**
 
-Once services are running:
+## 5. Configure Cloudflare Tunnel Routes
 
-| Service | URL (local) | URL (with tunnel) |
-|---------|-------------|-------------------|
-| Frontend | `http://localhost` | Your tunnel domain |
-| API (proxied) | `http://localhost/api/` | `https://your-domain/api/` |
+In Cloudflare Zero Trust → Networks → Tunnels → your tunnel → Public Hostname:
 
-> **Note**: The API is not exposed on port 8080 in prelive. All API traffic goes through the frontend's nginx proxy at `/api/`.
+### Frontend (required)
 
-## 5. Discord Notification (Optional)
+| Field | Value |
+|-------|-------|
+| Subdomain | `vet` |
+| Domain | `yourdomain.com` |
+| Type | HTTP |
+| URL | `vet-frontend:80` |
 
-Enable Discord notifications for successful deployments.
+The frontend nginx proxies `/api/*` to the backend internally, so one route covers everything.
 
-### Configure Webhook
+### API direct access (optional)
 
-1. Create a Discord webhook in your server (Server Settings -> Integrations -> Webhooks)
-2. Add to `.env`:
+| Field | Value |
+|-------|-------|
+| Subdomain | `vet-api` |
+| Domain | `yourdomain.com` |
+| Type | HTTP |
+| URL | `vet-api:8080` |
 
-```bash
-DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your-webhook-url
+## 6. Access
+
+| Service | URL |
+|---------|-----|
+| Frontend | `https://vet.yourdomain.com` |
+| API (proxied) | `https://vet.yourdomain.com/api/` |
+| API (direct) | `https://vet-api.yourdomain.com` |
+
+## 7. Discord Notification (Optional)
+
+1. Create a Discord webhook (Server Settings → Integrations → Webhooks)
+2. Add to `.env`: `DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...`
+
+The notification includes all commits since the last tag.
+
+## 8. Multi-App Setup
+
+```
+Server
+├── VET/
+│   ├── compose.prelive.yml   # app + its own tunnel
+│   └── .env
+│
+├── EduGuide/
+│   ├── compose.prelive.yml   # app + its own tunnel
+│   └── .env
+│
+└── proxy network (shared)
 ```
 
-### How It Works
+Each app:
+- Self-contained in its own `compose.prelive.yml` (includes tunnel)
+- Connects to shared `proxy` network
+- Has unique network aliases (`vet-frontend`, `eduguide-frontend`, etc.)
+- Routes configured in Cloudflare dashboard
 
-The notification is sent automatically after deployment and includes all commits since the last tag. Make sure you've created a tag before deploying (see Step 1).
+No port conflicts. No container name collisions.
 
-Check `docker logs vet-discord-success` if notification doesn't appear.
+### Adding a new app
 
-## 6. Useful Commands
+1. Use unique network aliases in the new app's compose (e.g., `myapp-frontend`)
+2. Add Cloudflare route: `myapp.yourdomain.com → myapp-frontend:80`
+3. Deploy: `docker compose -f compose.prelive.yml up -d --build`
+
+## Useful Commands
 
 ```bash
-# View logs
+make prelive-logs          # Tail all logs
+make prelive-up            # Incremental deploy
+make prelive-redeploy      # Full redeploy (wipes data)
+make prelive-down          # Stop services
+make prelive-tag           # Create + push tag
+
+# Specific service logs
 docker compose -f compose.prelive.yml logs -f api
 docker compose -f compose.prelive.yml logs -f frontend
 
-# Restart a single service
-docker compose -f compose.prelive.yml restart api
-
-# Check service status
-docker compose -f compose.prelive.yml ps
-
-# Rebuild only the API
+# Rebuild only API
 docker compose -f compose.prelive.yml up -d --build api
-
-# Rebuild only the frontend
-docker compose -f compose.prelive.yml up -d --build frontend
-```
-
-## Architecture Overview
-
-```
-                 Internet
-                    |
-           Cloudflare Tunnel
-                   |
-             nginx (frontend)
-              /          \
-     static files     /api/* (proxy)
-                        |
-                      api
-                        |
-                    postgres
 ```
 
 ## Data Persistence
-
-All data is stored in Docker volumes:
 
 | Volume | Contents |
 |--------|----------|
@@ -168,77 +210,50 @@ All data is stored in Docker volumes:
 ### Backup
 
 ```bash
-# Backup database
-docker run --rm -v vet_postgres_data:/data -v $(pwd):/backup alpine tar czf /backup/postgres-backup.tar.gz /data
-
-# Backup uploads
-docker run --rm -v vet_uploads_data:/data -v $(pwd):/backup alpine tar czf /backup/uploads-backup.tar.gz /data
+docker run --rm -v VET_postgres_data:/data -v $(pwd):/backup alpine tar czf /backup/postgres-backup.tar.gz /data
+docker run --rm -v VET_uploads_data:/data -v $(pwd):/backup alpine tar czf /backup/uploads-backup.tar.gz /data
 ```
 
 ### Restore
 
 ```bash
-# Restore database
-docker run --rm -v vet_postgres_data:/data -v $(pwd):/backup alpine tar xzf /backup/postgres-backup.tar.gz -C /
-
-# Restore uploads
-docker run --rm -v vet_uploads_data:/data -v $(pwd):/backup alpine tar xzf /backup/uploads-backup.tar.gz -C /
-```
-
-## Switching Between Environments
-
-```bash
-# Prelive
-docker compose -f compose.prelive.yml down -v
-docker compose -f compose.prelive.yml up -d --build
-
-# Development
-docker compose up -d
-
-# Stop prelive
-docker compose -f compose.prelive.yml down
+docker run --rm -v VET_postgres_data:/data -v $(pwd):/backup alpine tar xzf /backup/postgres-backup.tar.gz -C /
+docker run --rm -v VET_uploads_data:/data -v $(pwd):/backup alpine tar xzf /backup/uploads-backup.tar.gz -C /
 ```
 
 ## Troubleshooting
 
-### "postgres container unhealthy"
+### "network proxy declared as external, but could not be found"
 
 ```bash
-docker compose -f compose.prelive.yml logs postgres
+docker network create proxy
+```
+
+### "Tunnel can't reach container"
+
+```bash
+docker network inspect proxy
+```
+
+You should see `vet-frontend` and `vet-api` listed.
+
+### "502 Bad Gateway"
+
+```bash
 docker compose -f compose.prelive.yml ps
-```
-
-### "API can't connect to database"
-
-Verify the API can reach postgres:
-
-```bash
-docker compose -f compose.prelive.yml logs api
-```
-
-### "Frontend shows blank page"
-
-Check if the build succeeded and nginx is serving files:
-
-```bash
 docker compose -f compose.prelive.yml logs frontend
 ```
 
-### "Cloudflare tunnel not working"
+### Seed data missing
+
+Seed runs via postgres init scripts on first container creation only:
+
+```bash
+make prelive-redeploy
+```
+
+### Tunnel logs
 
 ```bash
 docker compose -f compose.prelive.yml logs cloudflare-tunnel
 ```
-
-Verify your `CLOUDFLARE_TOKEN` in `.env` is correct.
-
-### Seed data missing
-
-The seed runs via postgres init scripts on first container creation. To re-seed:
-
-```bash
-docker compose -f compose.prelive.yml down -v
-docker compose -f compose.prelive.yml up -d --build
-```
-
-> This wipes all data and starts fresh.
