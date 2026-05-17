@@ -116,3 +116,20 @@ export const dashboardApi = {
   stats: () => api.get("/dashboard/stats"),
   revenue: (months?: number) => api.get("/dashboard/revenue", { params: { months } }),
 }
+
+// Brand
+export const brandApi = {
+  get: () => api.get("/brand"),
+  update: (data: Record<string, string>) => api.put("/brand", data),
+}
+
+// Transfers
+export const transfersApi = {
+  list: (params?: { page?: number; limit?: number; status?: string; petId?: number }) =>
+    api.get("/transfers", { params }),
+  get: (id: number) => api.get(`/transfers/${id}`),
+  create: (data: Record<string, unknown>) => api.post("/transfers", data),
+  markSent: (id: number) => api.post(`/transfers/${id}/sent`),
+  markReceived: (id: number) => api.post(`/transfers/${id}/received`),
+  getByToken: (token: string) => api.get(`/transfers/share/${token}`),
+}

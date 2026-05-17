@@ -1,0 +1,95 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: vet_postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-vetuser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-vetpass}
+      POSTGRES_DB: ${DB_NAME:-vetclinic}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations/000001_init_schema.up.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./backend/migrations/000002_add_transfers.up.sql:/docker-entrypoint-initdb.d/02_transfers.sql
+      - ./backend/migrations/000003_add_brand_settings.up.sql:/docker-entrypoint-initdb.d/03_brand.sql
+      - ./backend/scripts/seed.sql:/docker-entrypoint-initdb.d/04_seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-vetuser} -d ${DB_NAME:-vetclinic}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - vet-network
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vet_api
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-vetuser}:${DB_PASSWORD:-vetpass}@postgres:5432/${DB_NAME:-vetclinic}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-key-change-in-production}
+      PORT: 8080
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
+      ENV: ${ENV:-prelive}
+      FILE_STORAGE_TYPE: ${FILE_STORAGE_TYPE:-local}
+      FILE_UPLOAD_PATH: ./uploads
+      FILE_MAX_SIZE: ${FILE_MAX_SIZE:-10485760}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/root/uploads
+    restart: unless-stopped
+    networks:
+      - vet-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vet_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - vet-network
+
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: vet_tunnel
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TOKEN}
+    depends_on:
+      - frontend
+      - api
+    restart: unless-stopped
+    networks:
+      - vet-network
+
+  discord-notify-success:
+    image: alpine:latest
+    container_name: vet-discord-success
+    depends_on:
+      - api
+      - frontend
+    environment:
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+    volumes:
+      - ./scripts/notify.sh:/notify.sh:ro
+      - ./.git:/repo/.git:ro
+    entrypoint: ["/bin/sh", "/notify.sh"]
+    restart: "no"
+    networks:
+      - vet-network
+
+volumes:
+  postgres_data:
+  uploads_data:
+
+networks:
+  vet-network:
+    driver: bridge

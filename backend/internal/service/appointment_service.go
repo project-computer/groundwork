@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/vet-clinic/api/internal/models"
@@ -10,11 +11,12 @@ import (
 )
 
 type AppointmentService struct {
-	repo *repository.AppointmentRepository
+	repo        *repository.AppointmentRepository
+	visitRepo   *repository.VisitRepository
 }
 
-func NewAppointmentService(repo *repository.AppointmentRepository) *AppointmentService {
-	return &AppointmentService{repo: repo}
+func NewAppointmentService(repo *repository.AppointmentRepository, visitRepo *repository.VisitRepository) *AppointmentService {
+	return &AppointmentService{repo: repo, visitRepo: visitRepo}
 }
 
 func (s *AppointmentService) Create(ctx context.Context, clinicID, userID int, req models.CreateAppointmentRequest) (*models.Appointment, error) {
@@ -165,14 +167,36 @@ func (s *AppointmentService) GetTodayAppointments(ctx context.Context, clinicID 
 }
 
 func (s *AppointmentService) CheckIn(ctx context.Context, id int) error {
-	// Update appointment status to Checked-In
-	err := s.repo.UpdateStatus(ctx, id, "Checked-In")
+	apt, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	// TODO: Create a visit from this appointment
-	// This will be implemented when we create the visit service
+	err = s.repo.UpdateStatus(ctx, id, "Checked-In")
+	if err != nil {
+		return err
+	}
+
+	visit := &models.Visit{
+		PetID:           apt.PetID,
+		PetName:         apt.PetName,
+		OwnerName:       apt.OwnerName,
+		Type:            "OPD",
+		Purpose:         "Appointment Only",
+		Steps:           []byte("[]"),
+		Vitals:          []byte("{}"),
+		Medications:     []byte("[]"),
+	}
+	if apt.VeterinarianID.Valid {
+		visit.AssignedVetID = apt.VeterinarianID
+		visit.AssignedVetName = apt.VeterinarianName
+	}
+	visit.AppointmentID = models.NewNullInt32(int32(apt.ID))
+
+	err = s.visitRepo.Create(ctx, apt.ClinicID, visit)
+	if err != nil {
+		return fmt.Errorf("failed to create visit from appointment: %w", err)
+	}
 
 	return nil
 }

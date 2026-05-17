@@ -10,6 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Plus, Search, ClipboardPlus, Eye, Copy } from "lucide-react"
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel,
+} from "@/components/ui/alert-dialog"
 
 const statusColors: Record<string, string> = {
   Draft: "bg-muted text-muted-foreground border-border",
@@ -30,6 +34,7 @@ export default function VisitsPage() {
   const [filterStatus, setFilterStatus] = useState("all")
   const [filterBilling, setFilterBilling] = useState("all")
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [dupDialogId, setDupDialogId] = useState<number | null>(null)
   const navigate = useNavigate()
 
   const { data: visitsData, isLoading } = useVisits({
@@ -72,8 +77,13 @@ export default function VisitsPage() {
 
   function handleDuplicate(id: number, e: React.MouseEvent) {
     e.stopPropagation()
-    duplicateMutation.mutate(id, {
-      onSuccess: (data) => navigate(`/visits/${data?.id || data?.data?.id}`),
+    setDupDialogId(id)
+  }
+
+  function confirmDuplicate() {
+    if (dupDialogId == null) return
+    duplicateMutation.mutate(dupDialogId, {
+      onSuccess: (data) => { setDupDialogId(null); navigate(`/visits/${data?.id || data?.data?.id}`) },
     })
   }
 
@@ -198,6 +208,23 @@ export default function VisitsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={dupDialogId !== null} onOpenChange={(open) => { if (!open) setDupDialogId(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicate Visit</AlertDialogTitle>
+            <AlertDialogDescription>
+              Do you want to duplicate this visit? A new visit with the same details will be created.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDuplicate} disabled={duplicateMutation.isPending}>
+              Duplicate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

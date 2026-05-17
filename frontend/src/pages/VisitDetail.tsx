@@ -10,9 +10,14 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   ArrowLeft, Copy, Check, Circle, Trash2, Plus, Upload, X, Send,
-  Thermometer, Heart, Wind, Weight, ChevronLeft, ChevronRight,
+  Thermometer, Heart, Wind, Weight, ChevronLeft, ChevronRight, ClipboardCopy,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel,
+} from "@/components/ui/alert-dialog"
+import { useToast } from "@/hooks/use-toast"
 
 type StepKey = "basicInfo" | "treatmentPlan" | "lab" | "dispenseMedication" | "appointment" | "endTreatment"
 type Med = { name: string; dosage: string; frequency: string; duration: string; instructions: string; envelopeLabel: boolean }
@@ -50,6 +55,8 @@ export default function VisitDetailPage() {
   const { data: petsData } = usePatients({ limit: 200 })
   const [activeStep, setActiveStep] = useState(0)
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
+  const [dupDialogOpen, setDupDialogOpen] = useState(false)
+  const { toast } = useToast()
 
   const save = useCallback((updates: Record<string, unknown>) => {
     if (!visit) return
@@ -79,7 +86,72 @@ export default function VisitDetailPage() {
 
   function handleDuplicate() {
     duplicateMutation.mutate(visit!.id, {
-      onSuccess: (data) => navigate(`/visits/${data?.id || data?.data?.id}`),
+      onSuccess: (data) => { setDupDialogOpen(false); navigate(`/visits/${data?.id || data?.data?.id}`) },
+    })
+  }
+
+  function handleCopyReport() {
+    const v = visit!
+    const lines: string[] = [
+      `VISIT REPORT - ${v.customId || v.id}`,
+      `Date: ${v.createdAt ? new Date(v.createdAt).toLocaleDateString() : "-"}`,
+      `Status: ${v.status}`,
+      `Purpose: ${v.purpose} | Type: ${v.type}`,
+      "",
+      "--- PATIENT ---",
+      `Name: ${v.petName}`,
+      `Species: ${pet?.species || "-"} | Breed: ${pet?.breed || "-"}`,
+      `Weight: ${pet?.weight ? `${pet.weight} kg` : "-"}`,
+      `Owner: ${v.ownerName}`,
+      "",
+      "--- ASSIGNED VET ---",
+      `${v.assignedVetName || "-"}`,
+      "",
+      "--- VITALS ---",
+      `Temperature: ${vitals.temperature || "-"}`,
+      `Heart Rate: ${vitals.heartRate || "-"}`,
+      `Respiratory Rate: ${vitals.respiratoryRate || "-"}`,
+      `Weight: ${vitals.weight || "-"}`,
+      "",
+      "--- CHIEF COMPLAINT ---",
+      v.chiefComplaint || "-",
+      "",
+      "--- HISTORY NOTES ---",
+      v.historyNotes || "-",
+      "",
+      "--- EXAMINATION ---",
+      v.examination || "-",
+      "",
+      "--- DIFFERENTIAL DIAGNOSIS ---",
+      v.differentialDiagnosis || "-",
+      "",
+      "--- FINAL DIAGNOSIS ---",
+      v.finalDiagnosis || "-",
+      "",
+      "--- TREATMENT ---",
+      v.treatment || "-",
+      "",
+      "--- ADVICE ---",
+      v.advice || "-",
+    ]
+
+    if (medications.length > 0) {
+      lines.push("", "--- MEDICATIONS ---")
+      medications.forEach((m: Med, i: number) => {
+        lines.push(`${i + 1}. ${m.name || "-"} | Dosage: ${m.dosage || "-"} | Frequency: ${m.frequency || "-"} | Duration: ${m.duration || "-"}${m.instructions ? ` | Instructions: ${m.instructions}` : ""}`)
+      })
+    }
+
+    if (v.followUpDate) {
+      lines.push("", "--- FOLLOW-UP ---", `Date: ${String(v.followUpDate).slice(0, 10)}`)
+    }
+
+    if (v.billingStatus) {
+      lines.push("", "--- BILLING ---", `Status: ${v.billingStatus}`)
+    }
+
+    navigator.clipboard.writeText(lines.join("\n")).then(() => {
+      toast({ title: "Report copied!", description: "Visit report copied to clipboard" })
     })
   }
 
@@ -178,8 +250,10 @@ export default function VisitDetailPage() {
           </div>
           <p className="text-sm text-muted-foreground mt-1">{visit.petName} ({pet?.species || ""} - {pet?.breed || ""}) &middot; Owner: {visit.ownerName} &middot; Vet: {visit.assignedVetName || "-"}</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleDuplicate}><Copy className="w-4 h-4 mr-1" /> Duplicate</Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={handleCopyReport}><ClipboardCopy className="w-4 h-4 mr-1" /> Copy Report</Button>
+          <Button variant="outline" size="sm" onClick={() => navigate(`/visits/${visit.id}/transfer`)}><Send className="w-4 h-4 mr-1" /> Transfer</Button>
+          <Button variant="outline" size="sm" onClick={() => setDupDialogOpen(true)}><Copy className="w-4 h-4 mr-1" /> Duplicate</Button>
         </div>
       </div>
 
@@ -394,6 +468,23 @@ export default function VisitDetailPage() {
           <img src={images[lightboxIdx].url} alt={images[lightboxIdx].caption} className="max-w-[90vw] max-h-[90vh] object-contain" onClick={(e: React.MouseEvent) => e.stopPropagation()} />
         </div>
       )}
+
+      <AlertDialog open={dupDialogOpen} onOpenChange={setDupDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicate Visit</AlertDialogTitle>
+            <AlertDialogDescription>
+              Do you want to duplicate this visit for {visit.petName}? A new visit with the same details will be created.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDuplicate} disabled={duplicateMutation.isPending}>
+              Duplicate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

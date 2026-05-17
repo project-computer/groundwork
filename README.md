@@ -113,10 +113,16 @@ make docker-down   # Stop everything
 - **Patients** — CRUD with search, species/status filters
 - **Appointments** — Schedule, check-in (creates visit), cancel
 - **Visits** — Full clinical workflow (OPD/IPD): vitals, exam, diagnosis, treatment, medications
-- **Queue** — Kanban board: Waiting → In Examination → Done
+- **Queue** — Kanban board: Waiting → In Examination → Done (with Thai labels)
+- **Quick Add** — Add patient to queue in 1 click (search existing or create new)
 - **Billing** — Create invoices from visits, mark paid, print
 - **Prescriptions** — Generate from visits, print Rx
 - **Medical Records** — OPD/IPD history view
+- **Case Transfer** — Referral system with shareable link + PDF generation
+  - Create transfer from any visit
+  - Share link for other clinics to view (no login required)
+  - Download printable PDF referral document
+  - Track status: Pending → Sent → Received
 
 ## Tech Stack
 

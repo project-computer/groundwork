@@ -1,4 +1,4 @@
-.PHONY: help dev dev-backend dev-frontend db db-seed db-reset docker-up docker-down build
+.PHONY: help dev dev-backend dev-frontend db db-seed db-reset docker-up docker-down prelive-up prelive-down prelive-redeploy prelive-logs prelive-tag build
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -34,13 +34,32 @@ db-reset: ## Drop and recreate database
 	PGPASSWORD=vetpass psql -h localhost -U vetuser -d postgres -c "CREATE DATABASE vetclinic;"
 	@$(MAKE) db-seed
 
-# ── Docker (production) ─────────────────────────────────
+# ── Docker (development) ────────────────────────────────
 
 docker-up: ## Start all services via Docker Compose
 	docker compose up --build -d
 
 docker-down: ## Stop all services
 	docker compose down
+
+# ── Prelive ──────────────────────────────────────────────
+
+prelive-tag: ## Create prelive deployment tag
+	git tag -a prelive-$$(date +%Y%m%d-%H%M%S) -m "Prelive deploy $$(date +%Y-%m-%d\ %H:%M)"
+	git push origin --tags
+
+prelive-up: ## Start prelive services (incremental)
+	docker compose -f compose.prelive.yml up -d --build
+
+prelive-down: ## Stop prelive services
+	docker compose -f compose.prelive.yml down
+
+prelive-redeploy: ## Full prelive redeploy (wipes data!)
+	docker compose -f compose.prelive.yml down -v
+	docker compose -f compose.prelive.yml up -d --build
+
+prelive-logs: ## Tail prelive logs
+	docker compose -f compose.prelive.yml logs -f
 
 # ── Build ────────────────────────────────────────────────
 

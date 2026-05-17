@@ -11,7 +11,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/migrations/000001_init_schema.up.sql:/docker-entrypoint-initdb.d/01_schema.sql
-      - ./backend/scripts/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
+      - ./backend/migrations/000002_add_transfers.up.sql:/docker-entrypoint-initdb.d/02_transfers.sql
+      - ./backend/migrations/000003_add_brand_settings.up.sql:/docker-entrypoint-initdb.d/03_brand.sql
+      - ./backend/scripts/seed.sql:/docker-entrypoint-initdb.d/04_seed.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U vetuser -d vetclinic"]
       interval: 10s

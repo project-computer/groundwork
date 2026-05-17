@@ -35,14 +35,17 @@ func main() {
 	visitRepo := repository.NewVisitRepository(db)
 	billRepo := repository.NewBillRepository(db)
 	prescriptionRepo := repository.NewPrescriptionRepository(db)
+	transferRepo := repository.NewTransferRepository(db)
+	brandRepo := repository.NewBrandRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, cfg.JWT.Secret, cfg.JWT.AccessExpiry, cfg.JWT.RefreshExpiry)
 	patientService := service.NewPatientService(patientRepo)
-	appointmentService := service.NewAppointmentService(appointmentRepo)
+	appointmentService := service.NewAppointmentService(appointmentRepo, visitRepo)
 	visitService := service.NewVisitService(visitRepo)
 	billService := service.NewBillService(billRepo)
 	prescriptionService := service.NewPrescriptionService(prescriptionRepo)
+	transferService := service.NewTransferService(transferRepo, visitRepo, patientRepo)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
@@ -51,7 +54,9 @@ func main() {
 	visitHandler := handlers.NewVisitHandler(visitService)
 	billHandler := handlers.NewBillHandler(billService)
 	prescriptionHandler := handlers.NewPrescriptionHandler(prescriptionService)
+	transferHandler := handlers.NewTransferHandler(transferService)
 	dashboardHandler := handlers.NewDashboardHandler(db)
+	brandHandler := handlers.NewBrandHandler(brandRepo)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(cfg.JWT.Secret)
@@ -147,10 +152,27 @@ func main() {
 	prescriptions.Post("/", prescriptionHandler.Create)
 	prescriptions.Get("/:id", prescriptionHandler.Get)
 
+	// Transfer routes
+	transfers := protected.Group("/transfers")
+	transfers.Get("/", transferHandler.List)
+	transfers.Post("/", transferHandler.Create)
+	transfers.Get("/:id", transferHandler.Get)
+	transfers.Get("/:id/pdf", transferHandler.GeneratePDF)
+	transfers.Post("/:id/sent", transferHandler.MarkSent)
+	transfers.Post("/:id/received", transferHandler.MarkReceived)
+
+	// Public transfer view (by share token)
+	api.Get("/transfers/share/:token", transferHandler.GetByToken)
+
 	// Dashboard routes
 	dashboard := protected.Group("/dashboard")
 	dashboard.Get("/stats", dashboardHandler.GetStats)
 	dashboard.Get("/revenue", dashboardHandler.GetRevenue)
+
+	// Brand settings routes (admin only)
+	brand := protected.Group("/brand", authMiddleware.RequireRole("admin"))
+	brand.Get("/", brandHandler.Get)
+	brand.Put("/", brandHandler.Update)
 
 	// Start server
 	log.Printf("Starting server on %s:%s", cfg.Server.Host, cfg.Server.Port)

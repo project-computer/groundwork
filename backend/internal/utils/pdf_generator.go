@@ -1,0 +1,187 @@
+package utils
+
+import (
+	"bytes"
+	"fmt"
+	"strings"
+
+	"github.com/jung-kurt/gofpdf"
+	"github.com/vet-clinic/api/internal/models"
+)
+
+func GenerateTransferPDF(t *models.CaseTransfer) ([]byte, error) {
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.AddPage()
+
+	pdf.SetFont("Helvetica", "B", 18)
+	pdf.Cell(0, 10, "Veterinary Case Transfer")
+	pdf.Ln(8)
+
+	pdf.SetFont("Helvetica", "", 10)
+	pdf.Cell(0, 6, fmt.Sprintf("Reference: %s", t.CustomID))
+	pdf.Ln(6)
+	pdf.Cell(0, 6, fmt.Sprintf("Date: %s", t.CreatedAt.Format("02 Jan 2006")))
+	pdf.Ln(6)
+	pdf.Cell(0, 6, fmt.Sprintf("Status: %s", strings.ToUpper(t.Status)))
+	pdf.Ln(10)
+
+	pdf.SetFont("Helvetica", "B", 13)
+	pdf.SetFillColor(240, 240, 240)
+	pdf.CellFormat(190, 8, "Patient Information", "0", 1, "L", true, 0, "")
+	pdf.Ln(2)
+
+	pdf.SetFont("Helvetica", "", 10)
+	pdf.Cell(40, 6, "Pet Name:")
+	pdf.SetFont("Helvetica", "B", 10)
+	pdf.Cell(0, 6, t.PetName)
+	pdf.Ln(6)
+	pdf.SetFont("Helvetica", "", 10)
+	pdf.Cell(40, 6, "Species:")
+	pdf.SetFont("Helvetica", "B", 10)
+	pdf.Cell(0, 6, t.TransferData.PetInfo.Species)
+	pdf.Ln(6)
+
+	if t.TransferData.PetInfo.Breed != "" {
+		pdf.SetFont("Helvetica", "", 10)
+		pdf.Cell(40, 6, "Breed:")
+		pdf.SetFont("Helvetica", "B", 10)
+		pdf.Cell(0, 6, t.TransferData.PetInfo.Breed)
+		pdf.Ln(6)
+	}
+
+	if t.TransferData.PetInfo.Age > 0 {
+		pdf.SetFont("Helvetica", "", 10)
+		pdf.Cell(40, 6, "Age:")
+		pdf.SetFont("Helvetica", "B", 10)
+		pdf.Cell(0, 6, fmt.Sprintf("%.1f years", t.TransferData.PetInfo.Age))
+		pdf.Ln(6)
+	}
+
+	if t.TransferData.PetInfo.Weight > 0 {
+		pdf.SetFont("Helvetica", "", 10)
+		pdf.Cell(40, 6, "Weight:")
+		pdf.SetFont("Helvetica", "B", 10)
+		pdf.Cell(0, 6, fmt.Sprintf("%.2f kg", t.TransferData.PetInfo.Weight))
+		pdf.Ln(6)
+	}
+
+	pdf.SetFont("Helvetica", "", 10)
+	pdf.Cell(40, 6, "Owner:")
+	pdf.SetFont("Helvetica", "B", 10)
+	pdf.Cell(0, 6, t.OwnerName)
+	pdf.Ln(6)
+
+	if t.OwnerPhone.Valid {
+		pdf.SetFont("Helvetica", "", 10)
+		pdf.Cell(40, 6, "Phone:")
+		pdf.SetFont("Helvetica", "B", 10)
+		pdf.Cell(0, 6, t.OwnerPhone.String)
+		pdf.Ln(10)
+	}
+
+	pdf.SetFont("Helvetica", "B", 13)
+	pdf.SetFillColor(240, 240, 240)
+	pdf.CellFormat(190, 8, "Visit Details", "0", 1, "L", true, 0, "")
+	pdf.Ln(2)
+
+	pdf.SetFont("Helvetica", "", 10)
+	pdf.Cell(40, 6, "Date:")
+	pdf.Cell(0, 6, t.TransferData.VisitInfo.Date)
+	pdf.Ln(6)
+	pdf.Cell(40, 6, "Type:")
+	pdf.Cell(0, 6, t.TransferData.VisitInfo.Type)
+	pdf.Ln(6)
+	pdf.Cell(40, 6, "Purpose:")
+	pdf.Cell(0, 6, t.TransferData.VisitInfo.Purpose)
+	pdf.Ln(6)
+
+	if t.TransferData.VisitInfo.ChiefComplaint != "" {
+		pdf.Cell(40, 6, "Complaint:")
+		pdf.Cell(0, 6, t.TransferData.VisitInfo.ChiefComplaint)
+		pdf.Ln(6)
+	}
+
+	if t.TransferData.VisitInfo.Examination != "" {
+		pdf.Cell(40, 6, "Examination:")
+		pdf.Cell(0, 6, t.TransferData.VisitInfo.Examination)
+		pdf.Ln(6)
+	}
+
+	if t.TransferData.VisitInfo.AssignedVet != "" {
+		pdf.Cell(40, 6, "Veterinarian:")
+		pdf.Cell(0, 6, t.TransferData.VisitInfo.AssignedVet)
+		pdf.Ln(10)
+	}
+
+	if t.TransferData.Diagnosis != "" {
+		pdf.SetFont("Helvetica", "B", 13)
+		pdf.SetFillColor(240, 240, 240)
+		pdf.CellFormat(190, 8, "Diagnosis & Treatment", "0", 1, "L", true, 0, "")
+		pdf.Ln(2)
+
+		pdf.SetFont("Helvetica", "", 10)
+		pdf.Cell(40, 6, "Diagnosis:")
+		pdf.Ln(6)
+		pdf.MultiCell(0, 5, t.TransferData.Diagnosis, "", "", false)
+		pdf.Ln(3)
+
+		if t.TransferData.Treatment != "" {
+			pdf.Cell(40, 6, "Treatment:")
+			pdf.Ln(6)
+			pdf.MultiCell(0, 5, t.TransferData.Treatment, "", "", false)
+			pdf.Ln(10)
+		}
+	}
+
+	if len(t.TransferData.Medications) > 0 {
+		pdf.SetFont("Helvetica", "B", 13)
+		pdf.SetFillColor(240, 240, 240)
+		pdf.CellFormat(190, 8, "Medications", "0", 1, "L", true, 0, "")
+		pdf.Ln(2)
+
+		pdf.SetFont("Helvetica", "B", 10)
+		pdf.CellFormat(50, 6, "Name", "1", 0, "C", true, 0, "")
+		pdf.CellFormat(35, 6, "Dosage", "1", 0, "C", true, 0, "")
+		pdf.CellFormat(35, 6, "Frequency", "1", 0, "C", true, 0, "")
+		pdf.CellFormat(35, 6, "Duration", "1", 1, "C", true, 0, "")
+
+		pdf.SetFont("Helvetica", "", 9)
+		for _, med := range t.TransferData.Medications {
+			pdf.CellFormat(50, 6, med.Name, "1", 0, "L", false, 0, "")
+			pdf.CellFormat(35, 6, med.Dosage, "1", 0, "L", false, 0, "")
+			pdf.CellFormat(35, 6, med.Frequency, "1", 0, "L", false, 0, "")
+			pdf.CellFormat(35, 6, med.Duration, "1", 1, "L", false, 0, "")
+		}
+		pdf.Ln(10)
+	}
+
+	pdf.SetFont("Helvetica", "B", 13)
+	pdf.SetFillColor(255, 240, 240)
+	pdf.CellFormat(190, 8, "Referral Information", "0", 1, "L", true, 0, "")
+	pdf.Ln(2)
+
+	pdf.SetFont("Helvetica", "", 10)
+	pdf.Cell(40, 6, "Referral To:")
+	pdf.SetFont("Helvetica", "B", 10)
+	pdf.Cell(0, 6, t.ReferralClinic)
+	pdf.Ln(8)
+
+	pdf.SetFont("Helvetica", "", 10)
+	pdf.Cell(40, 6, "Reason:")
+	pdf.Ln(6)
+	pdf.MultiCell(0, 5, t.ReferralReason, "", "", false)
+
+	pdf.Ln(15)
+	pdf.SetFont("Helvetica", "I", 8)
+	pdf.SetTextColor(150, 150, 150)
+	pdf.Cell(0, 5, "This document was generated by VetCare Clinic Management System")
+	pdf.Ln(5)
+	pdf.Cell(0, 5, fmt.Sprintf("Share Token: %s | Expires: %s", t.ShareToken, t.ExpiresAt.Time.Format("02 Jan 2006")))
+
+	var buf bytes.Buffer
+	if err := pdf.Output(&buf); err != nil {
+		return nil, fmt.Errorf("failed to generate PDF: %w", err)
+	}
+
+	return buf.Bytes(), nil
+}

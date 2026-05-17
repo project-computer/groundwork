@@ -12,6 +12,10 @@ import Queue from "@/pages/Queue"
 import Billing from "@/pages/Billing"
 import Prescriptions from "@/pages/Prescriptions"
 import MedicalRecords from "@/pages/MedicalRecords"
+import BrandSettings from "@/pages/BrandSettings"
+import Transfers from "@/pages/Transfers"
+import CreateTransfer from "@/pages/CreateTransfer"
+import ShareTransfer from "@/pages/ShareTransfer"
 
 function ProtectedLayout() {
   const { isAuthenticated, loading } = useAuth()
@@ -44,6 +48,9 @@ function ProtectedLayout() {
             <Route path="/records" element={<MedicalRecords />} />
             <Route path="/billing" element={<Billing />} />
             <Route path="/prescriptions" element={<Prescriptions />} />
+            <Route path="/brand" element={<BrandSettings />} />
+            <Route path="/transfers" element={<Transfers />} />
+            <Route path="/visits/:id/transfer" element={<CreateTransfer />} />
           </Routes>
         </main>
       </div>
@@ -56,6 +63,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/share/:token" element={<ShareTransfer />} />
         <Route path="/*" element={<ProtectedLayout />} />
       </Routes>
     </BrowserRouter>

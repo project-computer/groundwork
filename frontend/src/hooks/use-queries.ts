@@ -6,6 +6,7 @@ import {
   billsApi,
   prescriptionsApi,
   dashboardApi,
+  brandApi,
 } from "@/lib/api"
 
 // --- Patients ---
@@ -214,5 +215,71 @@ export function useRevenue(months = 6) {
   return useQuery({
     queryKey: ["dashboard", "revenue", months],
     queryFn: () => dashboardApi.revenue(months).then((r) => r.data),
+  })
+}
+
+// --- Brand ---
+export function useBrandSettings(enabled = true) {
+  return useQuery({
+    queryKey: ["brand"],
+    queryFn: () => brandApi.get().then((r) => r.data),
+    enabled,
+    retry: false,
+  })
+}
+
+export function useUpdateBrandSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Record<string, string>) => brandApi.update(data).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["brand"] }),
+  })
+}
+
+// --- Transfers ---
+export function useTransfers(params?: { page?: number; limit?: number; status?: string; petId?: number }) {
+  return useQuery({
+    queryKey: ["transfers", params],
+    queryFn: () => transfersApi.list(params).then((r) => r.data),
+  })
+}
+
+export function useTransfer(id: number | undefined) {
+  return useQuery({
+    queryKey: ["transfer", id],
+    queryFn: () => transfersApi.get(id!).then((r) => r.data),
+    enabled: !!id,
+  })
+}
+
+export function useTransferByToken(token: string | undefined) {
+  return useQuery({
+    queryKey: ["transfer", "token", token],
+    queryFn: () => transfersApi.getByToken(token!).then((r) => r.data),
+    enabled: !!token,
+  })
+}
+
+export function useCreateTransfer() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => transfersApi.create(data).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["transfers"] }),
+  })
+}
+
+export function useMarkTransferSent() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => transfersApi.markSent(id).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["transfers"] }),
+  })
+}
+
+export function useMarkTransferReceived() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => transfersApi.markReceived(id).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["transfers"] }),
   })
 }

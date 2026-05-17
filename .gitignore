@@ -30,3 +30,7 @@ backend/uploads/
 
 # Docker volumes
 postgres_data/
+uploads_data/
+
+# Backups
+*.tar.gz
