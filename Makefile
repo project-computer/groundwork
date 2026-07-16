@@ -18,6 +18,13 @@ dev-backend: ## Start backend only
 dev-frontend: ## Start frontend only
 	cd frontend && pnpm dev
 
+# ── OS detection for env vars ────────────────────────────
+ifeq ($(OS),Windows_NT)
+  PSQL = set PGPASSWORD=vetpass && psql
+else
+  PSQL = PGPASSWORD=vetpass psql
+endif
+
 # ── Database ─────────────────────────────────────────────
 
 db: ## Start PostgreSQL via Docker
@@ -25,13 +32,13 @@ db: ## Start PostgreSQL via Docker
 
 db-seed: ## Run schema + seed against local DB
 	@echo "Running migrations..."
-	PGPASSWORD=vetpass psql -h localhost -U vetuser -d vetclinic -f backend/migrations/000001_init_schema.up.sql
+	$(PSQL) -h localhost -U vetuser -d vetclinic -f backend/migrations/000001_init_schema.up.sql
 	@echo "Seeding data..."
-	PGPASSWORD=vetpass psql -h localhost -U vetuser -d vetclinic -f backend/scripts/seed.sql
+	$(PSQL) -h localhost -U vetuser -d vetclinic -f backend/scripts/seed.sql
 
 db-reset: ## Drop and recreate database
-	PGPASSWORD=vetpass psql -h localhost -U vetuser -d postgres -c "DROP DATABASE IF EXISTS vetclinic;"
-	PGPASSWORD=vetpass psql -h localhost -U vetuser -d postgres -c "CREATE DATABASE vetclinic;"
+	$(PSQL) -h localhost -U vetuser -d postgres -c "DROP DATABASE IF EXISTS vetclinic;"
+	$(PSQL) -h localhost -U vetuser -d postgres -c "CREATE DATABASE vetclinic;"
 	@$(MAKE) db-seed
 
 # ── Docker (development) ────────────────────────────────
