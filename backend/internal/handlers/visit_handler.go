@@ -75,6 +75,17 @@ func (h *VisitHandler) List(c fiber.Ctx) error {
 	return utils.PaginatedResponse(c, visits, meta)
 }
 
+func (h *VisitHandler) Queue(c fiber.Ctx) error {
+	clinicID := 1 // TODO: Get from user context
+
+	visits, err := h.service.Queue(c.Context(), clinicID)
+	if err != nil {
+		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "fetch_failed", "Failed to fetch visit queue")
+	}
+
+	return c.JSON(visits)
+}
+
 func (h *VisitHandler) Update(c fiber.Ctx) error {
 	id, err := utils.GetParamInt(c, "id")
 	if err != nil {

@@ -3,7 +3,6 @@ package handlers
 import (
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
-	"github.com/vet-clinic/api/internal/middleware"
 	"github.com/vet-clinic/api/internal/models"
 	"github.com/vet-clinic/api/internal/service"
 	"github.com/vet-clinic/api/internal/utils"
@@ -31,7 +30,6 @@ func (h *PrescriptionHandler) Create(c fiber.Ctx) error {
 		return utils.ErrorResponse(c, fiber.StatusBadRequest, "validation_error", err.Error())
 	}
 
-	_ = middleware.GetUserID(c)
 	clinicID := 1 // TODO: Get from user context in multi-clinic setup
 
 	rx, err := h.service.Create(c.Context(), clinicID, req)

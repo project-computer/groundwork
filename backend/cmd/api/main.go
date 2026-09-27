@@ -35,6 +35,7 @@ func main() {
 	visitRepo := repository.NewVisitRepository(db)
 	billRepo := repository.NewBillRepository(db)
 	prescriptionRepo := repository.NewPrescriptionRepository(db)
+	dashboardRepo := repository.NewDashboardRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, cfg.JWT.Secret, cfg.JWT.AccessExpiry, cfg.JWT.RefreshExpiry)
@@ -43,6 +44,7 @@ func main() {
 	visitService := service.NewVisitService(visitRepo)
 	billService := service.NewBillService(billRepo)
 	prescriptionService := service.NewPrescriptionService(prescriptionRepo)
+	dashboardService := service.NewDashboardService(dashboardRepo)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
@@ -51,7 +53,7 @@ func main() {
 	visitHandler := handlers.NewVisitHandler(visitService)
 	billHandler := handlers.NewBillHandler(billService)
 	prescriptionHandler := handlers.NewPrescriptionHandler(prescriptionService)
-	dashboardHandler := handlers.NewDashboardHandler(db)
+	dashboardHandler := handlers.NewDashboardHandler(dashboardService)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(cfg.JWT.Secret)
@@ -129,6 +131,7 @@ func main() {
 	visits := protected.Group("/visits")
 	visits.Get("/", visitHandler.List)
 	visits.Post("/", visitHandler.Create)
+	visits.Get("/queue", visitHandler.Queue)
 	visits.Get("/:id", visitHandler.Get)
 	visits.Put("/:id", visitHandler.Update)
 	visits.Post("/:id/complete", visitHandler.Complete)

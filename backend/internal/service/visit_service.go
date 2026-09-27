@@ -68,6 +68,10 @@ func (s *VisitService) List(ctx context.Context, clinicID int, query models.Visi
 	return visits, meta, nil
 }
 
+func (s *VisitService) Queue(ctx context.Context, clinicID int) ([]*models.Visit, error) {
+	return s.repo.Queue(ctx, clinicID)
+}
+
 func (s *VisitService) Update(ctx context.Context, id int, req models.UpdateVisitRequest) error {
 	updates := make(map[string]interface{})
 

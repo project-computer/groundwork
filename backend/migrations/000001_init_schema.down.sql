@@ -1,7 +1,5 @@
 -- Drop tables in reverse order
 DROP TABLE IF EXISTS audit_logs CASCADE;
-DROP TABLE IF EXISTS ipd_records CASCADE;
-DROP TABLE IF EXISTS opd_records CASCADE;
 DROP TABLE IF EXISTS prescriptions CASCADE;
 DROP TABLE IF EXISTS bills CASCADE;
 DROP TABLE IF EXISTS visit_images CASCADE;

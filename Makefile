@@ -1,4 +1,4 @@
-.PHONY: help dev dev-backend dev-frontend db db-seed db-reset docker-up docker-down build
+.PHONY: help dev dev-backend dev-frontend db db-seed db-reset docker-up docker-down build test test-backend test-frontend test-e2e
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -51,3 +51,16 @@ build-frontend: ## Build frontend for production
 	cd frontend && pnpm build
 
 build: build-backend build-frontend ## Build everything
+
+# ── Testing ───────────────────────────────────────────────
+
+test-backend: ## Run Go unit tests
+	cd backend && go test ./...
+
+test-frontend: ## Run Vitest unit tests once
+	cd frontend && pnpm test:run
+
+test-e2e: ## Run Playwright e2e (needs backend + frontend running)
+	cd frontend && pnpm test:e2e
+
+test: test-backend test-frontend ## Run all unit tests

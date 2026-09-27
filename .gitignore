@@ -30,3 +30,11 @@ backend/uploads/
 
 # Docker volumes
 postgres_data/
+
+# Vitest reports and artifacts
+.vitest/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/

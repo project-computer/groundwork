@@ -159,55 +159,7 @@ CREATE TABLE prescriptions (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- opd_records: Outpatient records
-CREATE TABLE opd_records (
-    id SERIAL PRIMARY KEY,
-    clinic_id INT REFERENCES clinics(id),
-    custom_id VARCHAR(50) UNIQUE NOT NULL,
-    source_visit_id INT REFERENCES visits(id),
-    pet_id INT REFERENCES pets(id),
-    pet_name VARCHAR(255) NOT NULL,
-    owner_name VARCHAR(255) NOT NULL,
-    date DATE NOT NULL,
-    time TIME NOT NULL,
-    veterinarian_id INT REFERENCES users(id),
-    veterinarian_name VARCHAR(255),
-    chief_complaint TEXT,
-    vitals JSONB DEFAULT '{}',
-    examination TEXT,
-    diagnosis TEXT,
-    treatment TEXT,
-    advice TEXT,
-    follow_up_date DATE,
-    status VARCHAR(50) DEFAULT 'Ongoing',
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- ipd_records: Inpatient records
-CREATE TABLE ipd_records (
-    id SERIAL PRIMARY KEY,
-    clinic_id INT REFERENCES clinics(id),
-    custom_id VARCHAR(50) UNIQUE NOT NULL,
-    source_visit_id INT REFERENCES visits(id),
-    pet_id INT REFERENCES pets(id),
-    pet_name VARCHAR(255) NOT NULL,
-    owner_name VARCHAR(255) NOT NULL,
-    admission_date DATE NOT NULL,
-    discharge_date DATE,
-    ward VARCHAR(100),
-    bed_number VARCHAR(50),
-    veterinarian_id INT REFERENCES users(id),
-    veterinarian_name VARCHAR(255),
-    reason_for_admission TEXT,
-    diagnosis_on_admission TEXT,
-    treatment_plan TEXT,
-    daily_notes JSONB DEFAULT '[]',
-    discharge_summary TEXT,
-    status VARCHAR(50) DEFAULT 'Admitted',
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
+-- opd_records / ipd_records: removed — superseded by visits.type ('OPD'/'IPD')
 
 -- audit_logs: Track all changes for compliance
 CREATE TABLE audit_logs (
@@ -241,5 +193,3 @@ CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
 CREATE INDEX idx_visit_images_visit_id ON visit_images(visit_id);
 CREATE INDEX idx_prescriptions_visit_id ON prescriptions(visit_id);
-CREATE INDEX idx_opd_records_pet_id ON opd_records(pet_id);
-CREATE INDEX idx_ipd_records_pet_id ON ipd_records(pet_id);

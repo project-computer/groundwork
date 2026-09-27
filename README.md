@@ -8,7 +8,7 @@ Full-stack veterinary clinic management system with a React frontend and Go API 
 .
 ├── frontend/          # React + TypeScript + Vite
 │   ├── src/
-│   │   ├── components/   # shadcn/ui components
+│   │   ├── components/   # Primer React components
 │   │   ├── hooks/        # React Query hooks
 │   │   ├── lib/          # API client, auth context
 │   │   └── pages/        # Route pages
@@ -33,7 +33,7 @@ Full-stack veterinary clinic management system with a React frontend and Go API 
 ### Prerequisites
 
 - **Node.js** 20+ and **pnpm**
-- **Go** 1.21+
+- **Go** 1.27+
 - **Docker** (for PostgreSQL, or use your own)
 
 ### 1. Start the database
@@ -122,7 +122,7 @@ make docker-down   # Stop everything
 
 | Layer | Tech |
 |-------|------|
-| Frontend | React 19, TypeScript, Vite, TailwindCSS v4, shadcn/ui, React Router v7, React Query, Recharts |
+| Frontend | React 19, TypeScript, Vite, Primer React, styled-components, React Router v7, React Query, Recharts |
 | Backend | Go, Fiber v3, pgx v5, JWT auth, bcrypt |
 | Database | PostgreSQL 15 |
 | Deployment | Docker Compose, Nginx |

@@ -171,3 +171,8 @@ type DashboardStats struct {
 	MonthRevenue      float64 `json:"monthRevenue"`
 	ActivePatients    int     `json:"activePatients"`
 }
+
+type RevenueEntry struct {
+	Month   string  `json:"month"`
+	Revenue float64 `json:"revenue"`
+}

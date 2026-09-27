@@ -174,6 +174,51 @@ func (r *VisitRepository) List(ctx context.Context, clinicID int, query models.V
 	return visits, total, rows.Err()
 }
 
+// Queue returns the clinic's active visits for the queue board: drafts and
+// in-progress visits, plus visits completed today.
+func (r *VisitRepository) Queue(ctx context.Context, clinicID int) ([]*models.Visit, error) {
+	query := `
+		SELECT id, clinic_id, custom_id, pet_id, appointment_id, pet_name, owner_name,
+		       type, purpose, status, assigned_vet_id, assigned_vet_name,
+		       steps, chief_complaint, vitals, examination,
+		       differential_diagnosis, final_diagnosis, treatment, advice,
+		       follow_up_date, medications, has_medication_envelope,
+		       history_notes, billing_status, created_by,
+		       created_at, updated_at
+		FROM visits
+		WHERE clinic_id = $1
+		  AND (status IN ('Draft', 'Waiting', 'In Examination')
+		       OR (status = 'Done' AND updated_at >= CURRENT_DATE))
+		ORDER BY created_at ASC
+	`
+
+	rows, err := r.db.Query(ctx, query, clinicID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query visit queue: %w", err)
+	}
+	defer rows.Close()
+
+	var visits []*models.Visit
+	for rows.Next() {
+		v := &models.Visit{}
+		err := rows.Scan(
+			&v.ID, &v.ClinicID, &v.CustomID, &v.PetID, &v.AppointmentID,
+			&v.PetName, &v.OwnerName, &v.Type, &v.Purpose, &v.Status,
+			&v.AssignedVetID, &v.AssignedVetName, &v.Steps, &v.ChiefComplaint,
+			&v.Vitals, &v.Examination, &v.DifferentialDiagnosis, &v.FinalDiagnosis,
+			&v.Treatment, &v.Advice, &v.FollowUpDate, &v.Medications,
+			&v.HasMedicationEnvelope, &v.HistoryNotes, &v.BillingStatus,
+			&v.CreatedBy, &v.CreatedAt, &v.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan visit: %w", err)
+		}
+		visits = append(visits, v)
+	}
+
+	return visits, rows.Err()
+}
+
 func (r *VisitRepository) Update(ctx context.Context, id int, updates map[string]interface{}) error {
 	query := `
 		UPDATE visits
