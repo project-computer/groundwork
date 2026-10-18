@@ -1,0 +1,14 @@
+{
+  "name": "vet-clinic",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "pnpm --filter @vet/clinic dev",
+    "build": "pnpm --filter @vet/clinic build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test && cargo test --manifest-path apps/clinic/src-tauri/Cargo.toml",
+    "test:ts": "pnpm -r test",
+    "test:rust": "cargo test --manifest-path apps/clinic/src-tauri/Cargo.toml",
+    "tauri": "pnpm --filter @vet/clinic tauri"
+  }
+}

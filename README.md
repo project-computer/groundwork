@@ -1,141 +1,34 @@
-# VetCare Clinic Management System
+# Vet Clinic — local-first clinic management
 
-Full-stack veterinary clinic management system with a React frontend and Go API backend.
+One app (`apps/clinic`): Tauri 2 + React + TypeScript + Base UI + Tailwind,
+SQLite via Rust. Works offline, no subscription. Same codebase targets
+Windows desktop now, Android/iOS later (Tauri mobile), and web later
+(same UI, IndexedDB persistence adapter).
 
-## Project Structure
+## Prerequisites
 
-```
-.
-├── frontend/          # React + TypeScript + Vite
-│   ├── src/
-│   │   ├── components/   # Primer React components
-│   │   ├── hooks/        # React Query hooks
-│   │   ├── lib/          # API client, auth context
-│   │   └── pages/        # Route pages
-│   └── ...
-├── backend/           # Go + Fiber v3 + PostgreSQL
-│   ├── cmd/api/          # Entry point
-│   ├── internal/
-│   │   ├── handlers/     # HTTP handlers
-│   │   ├── service/      # Business logic
-│   │   ├── repository/   # Database queries
-│   │   ├── models/       # Data models
-│   │   ├── middleware/    # Auth, CORS, logging
-│   │   └── utils/        # Helpers
-│   ├── migrations/       # SQL schema
-│   └── scripts/          # Seed data
-├── docker-compose.yml # Full-stack deployment
-└── Makefile           # Dev commands
-```
+- Node 20+ and pnpm
+- Rust stable (Tauri 2 prerequisites: webkit2gtk on Linux)
 
-## Quick Start
-
-### Prerequisites
-
-- **Node.js** 20+ and **pnpm**
-- **Go** 1.27+
-- **Docker** (for PostgreSQL, or use your own)
-
-### 1. Start the database
+## Commands
 
 ```bash
-make db
+pnpm install                  # install all deps
+pnpm dev                      # Vite dev server (browser, in-memory data)
+pnpm -C apps/clinic tauri dev # desktop shell (SQLite)
+pnpm build                    # web build
+pnpm lint                     # oxlint
+pnpm test                     # TS tests + Rust tests
+pnpm test:ts                  # TS only
+pnpm test:rust                # Rust only
 ```
 
-This starts PostgreSQL in Docker with the right credentials.
+## Where local data is stored
 
-### 2. Run migrations and seed data
+Desktop: OS app-data dir + `clinic.db`, e.g. on Windows
+`%APPDATA%/com.vetclinic.desktop/clinic.db`. Visible in-app under
+Settings → Database. Backup/restore arrives in Phase 3.
 
-```bash
-make db-seed
-```
+## Decisions
 
-Creates tables and inserts sample data (5 pets, 3 appointments, 1 visit, 1 bill, 1 prescription).
-
-### 3. Set up environment files
-
-```bash
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-```
-
-Defaults work out of the box for local development.
-
-### 4. Install frontend dependencies
-
-```bash
-cd frontend && pnpm install
-```
-
-### 5. Start both servers
-
-```bash
-# Terminal 1 — Backend (port 8080)
-make dev-backend
-
-# Terminal 2 — Frontend (port 5173)
-make dev-frontend
-```
-
-Or run both at once:
-
-```bash
-make dev
-```
-
-### 6. Open the app
-
-Go to [http://localhost:5173](http://localhost:5173) and log in with:
-
-| Email | Password | Role |
-|-------|----------|------|
-| `admin@happypaws.vet` | `admin123` | Admin |
-| `mchen@happypaws.vet` | `admin123` | Veterinarian |
-| `emily@happypaws.vet` | `admin123` | Receptionist |
-
-## Docker Deployment
-
-Build and run the entire stack:
-
-```bash
-make docker-up
-```
-
-This starts PostgreSQL, the Go API, and an Nginx-served frontend. The app is available at [http://localhost:5173](http://localhost:5173).
-
-```bash
-make docker-down   # Stop everything
-```
-
-## Features
-
-- **Dashboard** — Stats, revenue chart, today's appointments
-- **Patients** — CRUD with search, species/status filters
-- **Appointments** — Schedule, check-in (creates visit), cancel
-- **Visits** — Full clinical workflow (OPD/IPD): vitals, exam, diagnosis, treatment, medications
-- **Queue** — Kanban board: Waiting → In Examination → Done
-- **Billing** — Create invoices from visits, mark paid, print
-- **Prescriptions** — Generate from visits, print Rx
-- **Medical Records** — OPD/IPD history view
-
-## Tech Stack
-
-| Layer | Tech |
-|-------|------|
-| Frontend | React 19, TypeScript, Vite, Primer React, styled-components, React Router v7, React Query, Recharts |
-| Backend | Go, Fiber v3, pgx v5, JWT auth, bcrypt |
-| Database | PostgreSQL 15 |
-| Deployment | Docker Compose, Nginx |
-
-## Available Commands
-
-```bash
-make help          # Show all commands
-make dev           # Start frontend + backend
-make db            # Start PostgreSQL
-make db-seed       # Run migrations + seed
-make db-reset      # Drop, recreate, reseed
-make build         # Build both frontend and backend
-make docker-up     # Deploy with Docker Compose
-make docker-down   # Tear down Docker
-```
+See `docs/decisions/` (ADRs), `docs/architecture.md`, `docs/data-model.md`.
