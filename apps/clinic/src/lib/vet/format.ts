@@ -1,14 +1,14 @@
-import type { InventoryItem, InventoryLot, Invoice, Payment, Permission, Role, StockMovement } from './types'
+import type { InventoryItem, InventoryLot, Invoice, Payment, Permission, Role, StockMovement, Vaccination } from './types'
 
 /** Shared pill tone mapping for entity statuses across views. */
-export function statusTone(status: string): 'ok' | 'warn' | 'bad' | 'muted' | 'info' {
+export const statusTone = (status: string): 'ok' | 'warn' | 'bad' | 'muted' | 'info' => {
   if (status === 'paid' || status === 'completed') return 'ok'
   if (status === 'draft' || status === 'booked') return 'info'
   if (status === 'cancelled' || status === 'no_show') return 'bad'
   return 'warn'
 }
 
-export function initials(name: string) {
+export const initials = (name: string) => {
   return name
     .split(' ')
     .map((part) => part[0])
@@ -22,7 +22,7 @@ const TZ = 'Asia/Bangkok'
 const pad = (n: number) => String(n).padStart(2, '0')
 
 /** Local calendar date (YYYY-MM-DD) used to scope "today" views and seeds. */
-export function todayKey(now = new Date()) {
+export const todayKey = (now = new Date()) => {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
@@ -34,7 +34,7 @@ export const formatMoney = (minor: number) => money.format(minor / 100)
 export const formatTime = (iso: string) => time.format(new Date(iso))
 export const formatDate = (iso: string) => date.format(new Date(iso))
 
-export function ageFrom(birthDate: string, today = todayKey()) {
+export const ageFrom = (birthDate: string, today = todayKey()) => {
   const b = new Date(birthDate)
   const t = new Date(today)
   let months = (t.getFullYear() - b.getFullYear()) * 12 + (t.getMonth() - b.getMonth())
@@ -43,7 +43,7 @@ export function ageFrom(birthDate: string, today = todayKey()) {
   return `${Math.floor(months / 12)} yr`
 }
 
-export function invoiceTotals(invoice: Invoice, vatRate: number, payments: Payment[]) {
+export const invoiceTotals = (invoice: Invoice, vatRate: number, payments: Payment[]) => {
   const subtotal = invoice.items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0)
   const tax = Math.round(subtotal * vatRate)
   const total = subtotal + tax
@@ -51,17 +51,17 @@ export function invoiceTotals(invoice: Invoice, vatRate: number, payments: Payme
   return { subtotal, tax, total, paid, balance: total - paid }
 }
 
-export function stockOnHand(productId: string, movements: StockMovement[]) {
+export const stockOnHand = (productId: string, movements: StockMovement[]) => {
   return movements.filter((m) => m.productId === productId).reduce((s, m) => s + m.delta, 0)
 }
 
 /** Quantity-on-hand for an item is the sum of its lots' quantities (slice 0008). */
-export function itemOnHand(itemId: string, lots: InventoryLot[]) {
+export const itemOnHand = (itemId: string, lots: InventoryLot[]) => {
   return lots.filter((l) => l.itemId === itemId).reduce((s, l) => s + l.quantity, 0)
 }
 
 /** Lots expiring within `days` from today (slice 0009 "Expiring Soon" widget). */
-export function lotsExpiringWithin(lots: InventoryLot[], days = 30, today = todayKey()) {
+export const lotsExpiringWithin = (lots: InventoryLot[], days = 30, today = todayKey()) => {
   const limit = new Date(today)
   limit.setDate(limit.getDate() + days)
   return lots
@@ -74,13 +74,13 @@ export function lotsExpiringWithin(lots: InventoryLot[], days = 30, today = toda
 }
 
 /** Top stock_out items over `days`, medicine + vaccine only (slice 0009). */
-export function mostUsedItems(
+export const mostUsedItems = (
   items: InventoryItem[],
   movements: StockMovement[],
   lots: InventoryLot[],
   days = 30,
   today = new Date(),
-) {
+) => {
   const since = new Date(today)
   since.setDate(since.getDate() - days)
   const lotById = new Map(lots.map((l) => [l.id, l]))
@@ -103,6 +103,34 @@ export function mostUsedItems(
     .slice(0, 5)
 }
 
+/** Stock valuation: sum of lot quantity × cost per unit (minor units). */
+export const stockValuation = (lots: InventoryLot[]) => {
+  return lots.reduce((sum, l) => sum + l.quantity * (l.costPerUnit ?? 0), 0)
+}
+
+/** Vaccinations due within `days` (or overdue), newest due date first. */
+export const vaccinationsDue = (vaccinations: Vaccination[], days = 30, today = todayKey()) => {
+  const limit = new Date(today)
+  limit.setDate(limit.getDate() + days)
+  return vaccinations
+    .filter((v) => v.nextDueAt)
+    .filter((v) => {
+      const due = new Date(v.nextDueAt!)
+      return due <= limit
+    })
+    .sort((a, b) => a.nextDueAt!.localeCompare(b.nextDueAt!))
+}
+
+/** Latest vaccination per patient keyed by patient id — the immunization status view. */
+export const latestVaccinations = (vaccinations: Vaccination[]) => {
+  const latest = new Map<string, Vaccination>()
+  for (const v of vaccinations) {
+    const existing = latest.get(v.patientId)
+    if (!existing || v.administeredAt > existing.administeredAt) latest.set(v.patientId, v)
+  }
+  return latest
+}
+
 const rolePermissions: Record<Role, Permission[]> = {
   reception: ['records.write', 'appointments.write', 'billing.write'],
   veterinarian: ['records.write', 'appointments.write', 'clinical.write', 'inventory.write'],
@@ -112,7 +140,7 @@ const rolePermissions: Record<Role, Permission[]> = {
 
 export const can = (role: Role, permission: Permission) => rolePermissions[role].includes(permission)
 
-export function permissionsFor(role: Role): Permission[] {
+export const permissionsFor = (role: Role): Permission[] => {
   return rolePermissions[role]
 }
 

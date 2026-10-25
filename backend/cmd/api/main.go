@@ -35,6 +35,8 @@ func main() {
 	appointmentRepo := repository.NewAppointmentRepository(db)
 	visitRepo := repository.NewVisitRepository(db)
 	billRepo := repository.NewBillRepository(db)
+	billPaymentRepo := repository.NewBillPaymentRepository(db)
+	auditRepo := repository.NewAuditRepository(db)
 	prescriptionRepo := repository.NewPrescriptionRepository(db)
 	dashboardRepo := repository.NewDashboardRepository(db)
 	vaccinationRepo := repository.NewVaccinationRepository(db)
@@ -51,13 +53,15 @@ func main() {
 	ownerService := service.NewOwnerService(ownerRepo)
 	appointmentService := service.NewAppointmentService(appointmentRepo, visitRepo)
 	visitService := service.NewVisitService(visitRepo)
-	billService := service.NewBillService(billRepo)
+	auditService := service.NewAuditService(auditRepo)
+	billService := service.NewBillService(billRepo, billPaymentRepo, auditService)
 	prescriptionService := service.NewPrescriptionService(prescriptionRepo)
 	dashboardService := service.NewDashboardService(dashboardRepo)
 	vaccinationService := service.NewVaccinationService(vaccinationRepo, vaccineProtocolRepo, patientRepo)
 	syncService := service.NewSyncService(syncRepo)
 	supplierService := service.NewSupplierService(supplierRepo)
-	itemService := service.NewItemService(inventoryItemRepo, inventoryLotRepo)
+	itemService := service.NewItemService(inventoryItemRepo, inventoryLotRepo, auditService)
+	historyService := service.NewHistoryService(patientRepo, visitRepo, prescriptionRepo, billRepo, vaccinationRepo)
 	notificationService := service.NewNotificationService(notificationRepo, ownerRepo, notificationRepo, nil)
 	reminderService := service.NewReminderService(notificationRepo, notificationService)
 
@@ -77,6 +81,7 @@ func main() {
 	lotHandler := handlers.NewLotHandler(itemService)
 	notificationHandler := handlers.NewNotificationHandler(notificationService)
 	reminderHandler := handlers.NewReminderHandler(reminderService)
+	historyHandler := handlers.NewHistoryHandler(historyService)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(cfg.JWT.Secret)
@@ -137,7 +142,7 @@ func main() {
 	patients.Get("/:id", patientHandler.Get)
 	patients.Put("/:id", patientHandler.Update)
 	patients.Delete("/:id", patientHandler.Delete)
-	patients.Get("/:id/history", patientHandler.GetHistory)
+	patients.Get("/:id/history", historyHandler.Get)
 
 	// Owner routes
 	owners := protected.Group("/owners")
@@ -187,6 +192,9 @@ func main() {
 	bills.Post("/", billHandler.Create)
 	bills.Get("/:id", billHandler.Get)
 	bills.Put("/:id", billHandler.Update)
+	bills.Post("/:id/payments", billHandler.RecordPayment)
+	bills.Get("/:id/payments", billHandler.ListPayments)
+	bills.Post("/:id/void", billHandler.Void)
 
 	// Prescription routes
 	prescriptions := protected.Group("/prescriptions")

@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-function renderTabs(defaultValue = "overview") {
+const renderTabs = (defaultValue = "overview") => {
   return render(
     <Tabs defaultValue={defaultValue}>
       <TabsList>

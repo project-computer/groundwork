@@ -176,7 +176,7 @@
 /* ---------- Clinic workspace design system (Vettera) ---------- */
 :root {
   --ink: #18343d;
-  --muted: #6c8185;
+  --ink-muted: #6c8185;
   --line: #dfe9e8;
   --paper: #fff;
   --surface: #fff;
@@ -214,7 +214,7 @@
 }
 .dark {
   --ink: #dbeae7;
-  --muted: #a3bcb8;
+  --ink-muted: #a3bcb8;
   --line: #22403e;
   --paper: #0f2120;
   --surface: #0f2120;
@@ -253,7 +253,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
     --ink: #dbeae7;
-    --muted: #a3bcb8;
+    --ink-muted: #a3bcb8;
     --line: #22403e;
     --paper: #0f2120;
     --surface: #0f2120;
@@ -331,6 +331,23 @@ textarea,
 select {
   font: inherit;
 }
+input,
+select,
+textarea {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 9px 10px;
+  font-size: 12px;
+  outline: 0;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 22%, transparent);
+}
 button {
   cursor: pointer;
 }
@@ -385,7 +402,7 @@ button:disabled {
 }
 .brand span {
   font-size: 10px;
-  color: var(--muted);
+  color: var(--ink-muted);
   margin-top: 2px;
 }
 .clinic-switch {
@@ -415,7 +432,7 @@ button:disabled {
 }
 .clinic-switch span {
   font-size: 10px;
-  color: var(--muted);
+  color: var(--ink-muted);
   margin-top: 2px;
 }
 .chevron {
@@ -479,7 +496,7 @@ button:disabled {
   font-size: 11px;
 }
 .profile span {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 10px;
   margin-top: 2px;
 }
@@ -507,7 +524,7 @@ button:disabled {
   gap: 10px;
   align-items: center;
   min-width: 0;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 12px;
 }
 .breadcrumbs strong {
@@ -527,7 +544,7 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 7px;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 11px;
 }
 .pulse {
@@ -601,7 +618,7 @@ button:disabled {
 .icon-button {
   border: 0;
   background: transparent;
-  color: var(--muted);
+  color: var(--ink-muted);
   display: grid;
   place-items: center;
   width: 30px;
@@ -618,7 +635,9 @@ button:disabled {
 }
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* Dashboard shows five cards; auto-fit keeps them on one row on wide screens
+     and lets four-card views (Billing, Reports) stretch without an empty track. */
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 13px;
   margin: 28px 0 22px;
 }
@@ -660,7 +679,7 @@ button:disabled {
 .stat-card small,
 .stat-note {
   display: block;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 11px;
 }
 .stat-card strong {
@@ -671,7 +690,7 @@ button:disabled {
 }
 .stat-note {
   font-size: 10px;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 .dashboard-grid,
 .consult-grid,
@@ -705,7 +724,7 @@ button:disabled {
   font-size: 14px;
 }
 .panel header p {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 11px;
   margin-top: 4px;
 }
@@ -713,7 +732,9 @@ button:disabled {
   padding: 18px;
 }
 .appointment-list {
-  padding: 6px 18px 15px !important;
+  /* Panel bodies (fields.tsx) already pad their content; these list wrappers
+     only add vertical rhythm so rows align with the panel header. */
+  padding: 6px 0 15px;
 }
 .appointment-row {
   display: flex;
@@ -727,7 +748,7 @@ button:disabled {
 }
 .appointment-row time {
   width: 44px;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 11px;
 }
 .appointment-bar {
@@ -761,7 +782,7 @@ button:disabled {
 .appointment-main span,
 .patient-cell span {
   display: block;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 10px;
   margin-top: 3px;
   white-space: nowrap;
@@ -780,13 +801,19 @@ button:disabled {
   margin: 10px 0 0;
 }
 .activity-list {
-  padding: 7px 18px 13px !important;
+  padding: 7px 0 13px;
 }
 .activity-row {
   display: flex;
   gap: 10px;
   padding: 12px 0;
   border-bottom: 1px solid var(--row-border);
+}
+/* Text column must be allowed to shrink and wrap so the trailing pill
+   (shrink-0, nowrap) never gets pushed out of the panel. */
+.activity-row > div:not(.activity-mark) {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .activity-mark {
   flex: none;
@@ -802,9 +829,10 @@ button:disabled {
 .activity-row span {
   display: block;
   font-size: 11px;
+  overflow-wrap: anywhere;
 }
 .activity-row span {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 10px;
   margin-top: 3px;
 }
@@ -823,7 +851,7 @@ button:disabled {
   padding: 0 12px;
   max-width: 360px;
   flex: 1;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 .search-field input {
   border: 0;
@@ -856,7 +884,7 @@ button:disabled {
 }
 .form-heading span {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--ink-muted);
   margin-top: 3px;
 }
 .form-grid {
@@ -891,11 +919,11 @@ button:disabled {
   grid-template-columns: 1.4fr 1fr 0.8fr 1fr 0.6fr;
   gap: 14px;
   align-items: center;
-  padding: 13px 18px;
+  padding: 13px 0;
 }
 .table-head {
   background: var(--thead-bg);
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -913,9 +941,26 @@ button:disabled {
 }
 .table-row > div > span {
   display: block;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 10px;
   margin-top: 3px;
+}
+.encounters-table .table-head,
+.encounters-table .table-row {
+  grid-template-columns: 1.25fr 0.9fr 1.7fr 0.45fr 0.6fr;
+}
+.vaccinations-table .table-head,
+.vaccinations-table .table-row {
+  grid-template-columns: 1.25fr 1.15fr 0.85fr 1fr 0.75fr;
+}
+.encounters-table .table-row > span[data-label='Diagnoses'],
+.vaccinations-table .table-row > span[data-label='Vet'] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vaccinations-table .table-row > span[data-label='Vet'] {
+  white-space: nowrap;
 }
 .row-action {
   border: 0;
@@ -972,7 +1017,7 @@ button:disabled {
 }
 .patient-profile span {
   display: block;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 11px;
   margin-top: 4px;
 }
@@ -999,7 +1044,7 @@ button:disabled {
 .vitals-grid b {
   display: block;
   font-size: 10px;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 .vitals-grid b {
   color: var(--ink);
@@ -1025,8 +1070,12 @@ button:disabled {
   gap: 8px;
   padding: 0 18px 18px;
 }
+.p-4 > .panel-footer {
+  /* Footers rendered inside a Panel body inherit its padding already. */
+  padding: 0;
+}
 .save-hint {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 10px;
   display: flex;
   align-items: center;
@@ -1043,7 +1092,7 @@ button:disabled {
   margin-bottom: 12px;
 }
 .note-history span {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 10px;
 }
 .note-history p {
@@ -1060,7 +1109,7 @@ button:disabled {
   font-size: 28px;
 }
 .stock-number span {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 11px;
   margin-left: 6px;
 }
@@ -1081,7 +1130,7 @@ button:disabled {
   margin-top: 24px;
 }
 .status-stack {
-  padding: 4px 18px 8px !important;
+  padding: 4px 0 8px;
 }
 .status-line {
   display: flex;
@@ -1103,12 +1152,12 @@ button:disabled {
   flex: 1;
 }
 .status-line strong,
-.status-line span {
+.status-line > div span {
   display: block;
   font-size: 11px;
 }
-.status-line span {
-  color: var(--muted);
+.status-line > div span {
+  color: var(--ink-muted);
   font-size: 10px;
   margin-top: 3px;
 }
@@ -1121,7 +1170,7 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 13px 18px !important;
+  padding: 13px 0;
   border-bottom: 1px solid var(--row-border);
 }
 .export-card > div:nth-child(2) {
@@ -1133,7 +1182,7 @@ button:disabled {
   font-size: 11px;
 }
 .export-card span {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 10px;
   margin-top: 3px;
 }
@@ -1147,9 +1196,13 @@ button:disabled {
   color: var(--teal);
 }
 .empty-state {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 12px;
   padding: 10px 0;
+}
+.records-table .empty-state {
+  /* Tables are flush inside their panel; give the empty message row breathing room. */
+  padding: 4px 0 14px;
 }
 .sidebar-backdrop {
   display: none;
@@ -1220,7 +1273,7 @@ button:disabled {
   .table-row {
     grid-template-columns: 1fr auto;
     gap: 8px;
-    padding: 14px;
+    padding: 14px 0;
   }
   .table-row > span:nth-child(2),
   .table-row > span:nth-child(3),
@@ -1272,7 +1325,7 @@ button:disabled {
   border-radius: 6px;
   padding: 6px 14px;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 .seg button.active {
   background: var(--paper);
@@ -1300,7 +1353,7 @@ button:disabled {
   border-top: 0;
 }
 .cal-row time {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 11px;
   padding-top: 10px;
   text-align: right;
@@ -1310,6 +1363,24 @@ button:disabled {
   flex-direction: column;
   gap: 6px;
   padding: 6px 0;
+}
+.cal-appt[draggable='true'] {
+  cursor: grab;
+}
+.cal-appt.dragging {
+  opacity: 0.45;
+}
+.cal-cells.drop-target {
+  outline: 2px dashed var(--teal);
+  outline-offset: -4px;
+  border-radius: 8px;
+  background: var(--teal-soft);
+}
+.week-cells.drop-target {
+  outline: 2px dashed var(--teal);
+  outline-offset: -4px;
+  border-radius: 8px;
+  background: var(--teal-soft);
 }
 .cal-appt {
   display: flex;
@@ -1339,7 +1410,7 @@ button:disabled {
 }
 .cal-appt.status-cancelled,
 .cal-appt.status-no_show {
-  border-left-color: var(--muted);
+  border-left-color: var(--ink-muted);
   opacity: 0.75;
 }
 .cal-appt.compact {
@@ -1363,7 +1434,7 @@ button:disabled {
 }
 .cal-appt .cal-time-chip {
   font-weight: 400;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 10px;
 }
 .cal-actions {
@@ -1374,7 +1445,8 @@ button:disabled {
   flex: none;
   flex-wrap: wrap;
   justify-content: flex-end;
-}.week-grid {
+}
+.week-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 10px;
@@ -1390,7 +1462,7 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   font-size: 11px;
-  color: var(--muted);
+  color: var(--ink-muted);
   padding: 6px 8px;
   border-radius: 8px;
   background: var(--tile-bg);
@@ -1512,7 +1584,7 @@ button:disabled {
   margin: 22px 0 4px;
 }
 .report-period {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 11px;
 }
 .report-grid {
@@ -1541,7 +1613,7 @@ button:disabled {
   gap: 2px;
 }
 .report-summary small {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 10px;
 }
 .report-summary strong {
@@ -1551,7 +1623,7 @@ button:disabled {
   display: flex;
   justify-content: flex-end;
   gap: 14px;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 10px;
   margin-bottom: 10px;
 }
@@ -1609,7 +1681,7 @@ button:disabled {
   filter: brightness(0.92);
 }
 .trend-col small {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 9px;
   white-space: nowrap;
 }
@@ -1635,7 +1707,7 @@ button:disabled {
 .bar-label span {
   display: block;
   margin-top: 2px;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 9px;
 }
 .bar-track {
@@ -1664,7 +1736,7 @@ button:disabled {
   background: var(--destructive);
 }
 .bar-fill.muted {
-  background: var(--muted);
+  background: var(--ink-muted);
 }
 .bar-value {
   min-width: 54px;
@@ -1674,7 +1746,7 @@ button:disabled {
 }
 .bar-value small {
   display: block;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 9px;
   font-weight: 400;
 }
@@ -1686,7 +1758,7 @@ button:disabled {
   align-items: center;
   gap: 5px;
   margin-top: 14px;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 10px;
 }
 .report-table {
@@ -1704,7 +1776,7 @@ button:disabled {
 }
 .report-table-head {
   padding-top: 0;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 9px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1741,7 +1813,7 @@ button:disabled {
 }
 .vet-share {
   display: block;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 9px;
 }
 .report-footer-note {
@@ -1750,7 +1822,7 @@ button:disabled {
   justify-content: center;
   gap: 6px;
   margin-top: 20px;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 10px;
 }
 @media (max-width: 900px) {
@@ -1786,6 +1858,20 @@ button:disabled {
 .records-table.table-wide .table-row {
   min-width: 640px;
 }
+/* Invoices table carries two extra columns (status/balance) plus actions. */
+.records-table.table-wide.billing-table .table-head,
+.records-table.table-wide.billing-table .table-row {
+  min-width: 780px;
+}
+.billing-table .table-head,
+.billing-table .table-row {
+  grid-template-columns: 1.25fr 1.05fr 0.55fr 0.85fr 0.85fr 0.85fr 1.4fr;
+}
+/* Staff table: permission tags are ~100px each and must wrap several per line. */
+.staff-table .table-head,
+.staff-table .table-row {
+  grid-template-columns: minmax(150px, 1.3fr) minmax(110px, 1fr) minmax(220px, 2fr) auto auto;
+}
 @media (max-width: 900px) {
   .cal-appt {
     flex-wrap: wrap;
@@ -1808,10 +1894,10 @@ button:disabled {
     padding: 14px;
   }
   .appointment-list {
-    padding: 4px 14px 12px !important;
+    padding: 4px 0 12px;
   }
   .activity-list {
-    padding: 4px 14px 10px !important;
+    padding: 4px 0 10px;
   }
   .appointment-bar .pill,
   .cal-appt .pill {
@@ -1863,12 +1949,24 @@ button:disabled {
   .records-table.table-wide .table-head {
     grid-template-columns: 1.4fr 1fr 0.8fr 1fr 0.6fr;
     gap: 12px;
-    padding: 12px 14px;
+    padding: 12px 0;
+  }
+  .records-table.table-wide.billing-table .table-head,
+  .records-table.table-wide.billing-table .table-row {
+    grid-template-columns: 1.25fr 1.05fr 0.55fr 0.85fr 0.85fr 0.85fr 1.4fr;
+  }
+  .records-table.table-wide.staff-table .table-head,
+  .records-table.table-wide.staff-table .table-row {
+    grid-template-columns: minmax(120px, 1.2fr) minmax(105px, 1fr) minmax(220px, 2fr) auto auto;
   }
   .records-table.table-wide .table-row > span:nth-child(2),
   .records-table.table-wide .table-row > span:nth-child(3),
   .records-table.table-wide .table-row > span:nth-child(4) {
     display: block;
+  }
+  /* Keep permission tags wrapping — the generic override above resets them to block. */
+  .records-table.table-wide .table-row > span.perm-list {
+    display: flex;
   }
 }
 
@@ -1971,7 +2069,7 @@ button:disabled {
   }
   .week-cells:empty::after {
     content: 'No appointments';
-    color: var(--muted);
+    color: var(--ink-muted);
     font-size: 11px;
     padding: 2px 8px 4px;
   }
@@ -1995,7 +2093,7 @@ button:disabled {
 .filter-chip {
   border: 1px solid var(--line);
   background: var(--surface);
-  color: var(--muted);
+  color: var(--ink-muted);
   border-radius: 999px;
   padding: 7px 13px;
   font-size: 11px;
@@ -2021,7 +2119,7 @@ button:disabled {
 .lot-breakdown {
   border-top: 1px dashed var(--row-border);
   background: var(--teal-wash);
-  padding: 10px 18px 14px;
+  padding: 10px 0 14px;
 }
 .lot-row {
   display: flex;
@@ -2042,12 +2140,12 @@ button:disabled {
 }
 .lot-main span {
   display: block;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 10px;
   margin-top: 2px;
 }
 .lot-ledger {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 10px;
 }
 
@@ -2184,16 +2282,11 @@ button,
   border-radius: 12px;
   font-size: 14px;
 }
-.patients-empty {
-  padding: 18px;
-}
 @media (max-width: 900px) {
   .patients-table .table-head,
   .patients-table .table-row {
     grid-template-columns: 1.5fr 1fr 0.7fr auto;
     gap: 10px;
-    padding-left: 14px;
-    padding-right: 14px;
   }
   .patients-table .table-head > span:nth-child(4),
   .patients-table .table-row > span:nth-child(4) {
@@ -2213,7 +2306,7 @@ button,
   .patients-table .table-row {
     grid-template-columns: 1fr 1fr;
     gap: 6px 12px;
-    padding: 14px;
+    padding: 14px 0;
   }
   .patients-table .table-row > span:nth-child(2),
   .patients-table .table-row > span:nth-child(3),
@@ -2230,7 +2323,7 @@ button,
     font-size: 9px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--muted);
+    color: var(--ink-muted);
     margin-bottom: 4px;
   }
   .patients-table .table-row > span[data-label='Owner'] {
@@ -2265,6 +2358,60 @@ button,
   }
 }
 
+/* Medical records tables — card layout on small screens.
+   Must stay after the generic max-width:600px table rules above. */
+.vaccination-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+.vaccination-form input,
+.vaccination-form select {
+  flex: 1 1 130px;
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .encounters-table .table-row,
+  .vaccinations-table .table-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+    align-items: start;
+    grid-auto-flow: row dense;
+  }
+  .encounters-table .table-row > span[data-label],
+  .vaccinations-table .table-row > span[data-label] {
+    display: block;
+  }
+  .encounters-table .table-row > span[data-label]::before,
+  .vaccinations-table .table-row > span[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+    margin-bottom: 4px;
+  }
+  .encounters-table .table-row .patient-cell,
+  .vaccinations-table .table-row .patient-cell,
+  .encounters-table .table-row > span[data-label='Diagnoses'],
+  .vaccinations-table .table-row > span[data-label='Vaccine'],
+  .vaccinations-table .table-row > span[data-label='Vet'] {
+    grid-column: 1 / -1;
+  }
+  .encounters-table .table-row > .small-button,
+  .encounters-table .table-row > .pill {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  .vaccination-form input,
+  .vaccination-form select {
+    flex-grow: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -2272,5 +2419,249 @@ button,
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+}
+
+/* ---------- wider modal for clinical profile + timeline ---------- */
+
+.modal.modal-wide {
+  width: min(720px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.timeline {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.timeline h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+.timeline-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.timeline-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.timeline-row strong {
+  font-size: 13px;
+}
+.timeline-row span {
+  font-size: 12px;
+  color: var(--muted-foreground, #64748b);
+}
+
+/* ---------- prescriptions & diagnoses lists ---------- */
+
+.rx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.rx-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.rx-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rx-row strong {
+  font-size: 13px;
+}
+.rx-row span {
+  font-size: 12px;
+  color: var(--muted-foreground, #64748b);
+}
+.allergy-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--destructive, #dc2626);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--destructive, #dc2626) 8%, transparent);
+  font-size: 12.5px;
+  color: var(--destructive, #dc2626);
+  font-weight: 500;
+}
+
+/* ---------- month calendar ---------- */
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.month-head {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground, #64748b);
+  padding-bottom: 4px;
+}
+.month-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 64px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card, transparent);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.month-cell:hover {
+  border-color: var(--primary);
+}
+.month-cell.today {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+.month-cell.outside {
+  opacity: 0.4;
+}
+.month-day {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.month-count {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+}
+
+/* ---------- printable receipt ---------- */
+
+.receipt {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.receipt header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
+}
+.receipt header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.receipt header span,
+.receipt footer {
+  font-size: 12px;
+  color: var(--muted-foreground, #64748b);
+}
+.receipt footer {
+  text-align: center;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.receipt-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12.5px;
+}
+.receipt-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.receipt-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px 90px 90px;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.receipt-line span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.receipt-line span + span,
+.receipt-line strong {
+  text-align: right;
+}
+.receipt-head {
+  font-weight: 600;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground, #64748b);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.receipt-totals {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.receipt-totals div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+}
+.receipt-grand {
+  font-weight: 700;
+  font-size: 13.5px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border);
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 24px;
+  }
+  .no-print {
+    display: none !important;
   }
 }

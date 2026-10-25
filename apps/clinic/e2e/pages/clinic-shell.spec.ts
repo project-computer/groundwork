@@ -35,6 +35,6 @@ test('nav mounts each view', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Reports', exact: true })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Report period' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
 })

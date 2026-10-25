@@ -85,13 +85,18 @@ func (s *SupplierService) Delete(ctx context.Context, clinicID, id int) error {
 }
 
 type ItemService struct {
-	repo InventoryItemRepo
-	lots InventoryLotRepo
-	now  func() time.Time
+	repo  InventoryItemRepo
+	lots  InventoryLotRepo
+	audit *AuditService
+	now   func() time.Time
 }
 
-func NewItemService(repo InventoryItemRepo, lots InventoryLotRepo) *ItemService {
-	return &ItemService{repo: repo, lots: lots, now: time.Now}
+func NewItemService(repo InventoryItemRepo, lots InventoryLotRepo, audit ...*AuditService) *ItemService {
+	s := &ItemService{repo: repo, lots: lots, now: time.Now}
+	if len(audit) > 0 {
+		s.audit = audit[0]
+	}
+	return s
 }
 
 func (s *ItemService) Create(ctx context.Context, clinicID int, req models.CreateInventoryItemRequest) (*models.InventoryItem, error) {
@@ -138,11 +143,11 @@ func (s *ItemService) CreateLot(ctx context.Context, clinicID, userID int, req m
 	}
 
 	lot := &models.InventoryLot{
-		ItemID:      req.ItemID,
-		LotNumber:   strings.TrimSpace(req.LotNumber),
-		Quantity:    0, // inserted at 0; the initial stock_in movement below brings it up
-		SupplierID:  models.NullInt32{},
-		CostPerUnit: models.NullFloat64{},
+		ItemID:       req.ItemID,
+		LotNumber:    strings.TrimSpace(req.LotNumber),
+		Quantity:     0, // inserted at 0; the initial stock_in movement below brings it up
+		SupplierID:   models.NullInt32{},
+		CostPerUnit:  models.NullFloat64{},
 		ReceivedDate: s.now(),
 	}
 	if req.ExpiryDate != "" {
@@ -197,7 +202,18 @@ func (s *ItemService) UpdateLot(ctx context.Context, clinicID, lotID int, req mo
 // RecordMovement is the single stock-op path (stock_in/out/adjustment/waste).
 // The ledger is append-only: no update or delete exists.
 func (s *ItemService) RecordMovement(ctx context.Context, clinicID, lotID, userID int, req models.CreateStockMovementRequest) (*models.StockMovement, error) {
-	return s.lots.RecordMovement(ctx, clinicID, lotID, userID, &req)
+	movement, err := s.lots.RecordMovement(ctx, clinicID, lotID, userID, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	s.audit.Record(ctx, clinicID, userID, "inventory.stock_movement", "inventory_lot", lotID, map[string]interface{}{
+		"type":     req.Reason,
+		"quantity": req.Delta,
+		"reason":   req.Reason,
+	})
+
+	return movement, nil
 }
 
 func (s *ItemService) ListMovements(ctx context.Context, clinicID, lotID int) ([]*models.StockMovement, error) {

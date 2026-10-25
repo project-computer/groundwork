@@ -74,6 +74,7 @@ var topLevel = map[string]string{
 	"payment":        "payments",
 	"stock_movement": "stockMovements",
 	"user":           "users",
+	"vaccination":    "vaccinations",
 }
 
 // nested maps entity types to the array key inside an encounter.

@@ -20,10 +20,10 @@ import {
   Wifi,
   X,
 } from 'lucide-react'
-import { Field, Panel, PageHeader, Pill } from '@/components/vet/fields'
+import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission, type View } from '@/lib/vet/store'
-import { formatMoney as formatCurrency, formatDate, formatTime, initials, invoiceTotals, itemOnHand, lotsExpiringWithin, mostUsedItems, roleLabel, statusTone, todayKey } from '@/lib/vet/format'
-import type { InventoryCategory } from '@/lib/vet/types'
+import { formatMoney as formatCurrency, formatDate, formatTime, initials, invoiceTotals, itemOnHand, lotsExpiringWithin, mostUsedItems, roleLabel, statusTone, todayKey, vaccinationsDue } from '@/lib/vet/format'
+import { SPECIES, SEXES, type InventoryCategory, type Patient, type Vitals } from '@/lib/vet/types'
 import { getTheme, setTheme, THEME_CHOICES, watchSystemTheme, type ThemeChoice } from '@/lib/theme'
 import { ReportsView } from './reports-view'
 import { ScheduleView } from './schedule-view'
@@ -41,7 +41,7 @@ const nav = [
   { id: 'settings', label: 'Settings', icon: Settings2 },
 ] as const
 
-function greeting(now = new Date()) {
+const greeting = (now = new Date()) => {
   const hour = now.getHours()
   if (hour < 12) return 'Good morning'
   if (hour < 18) return 'Good afternoon'
@@ -59,7 +59,7 @@ const themeIcon: Record<ThemeChoice, typeof Sun> = {
   system: Monitor,
 }
 
-function ThemeToggle() {
+const ThemeToggle = () => {
   const [choice, setChoice] = useState<ThemeChoice>(() => getTheme())
   useEffect(() => watchSystemTheme(), [])
   const next = THEME_CHOICES[(THEME_CHOICES.indexOf(choice) + 1) % THEME_CHOICES.length]
@@ -79,7 +79,7 @@ function ThemeToggle() {
   )
 }
 
-export function ClinicApp() {
+export const ClinicApp = () => {
   const { data, session, user, dispatch } = useClinic()
   const [mobileNav, setMobileNav] = useState(false)
   const [query, setQuery] = useState('')
@@ -202,7 +202,7 @@ export function ClinicApp() {
   )
 }
 
-function Dashboard({ onNavigate, onStart }: { onNavigate: SetView; onStart: (id: string) => void }) {
+const Dashboard = ({ onNavigate, onStart }: { onNavigate: SetView; onStart: (id: string) => void }) => {
   const { data, user } = useClinic()
   const today = todayKey()
   const firstName = user.name.replace(/^Dr\.\s*/, '').split(' ')[0]
@@ -210,6 +210,7 @@ function Dashboard({ onNavigate, onStart }: { onNavigate: SetView; onStart: (id:
   const outstanding = data.invoices
     .filter((i) => i.status !== 'paid')
     .reduce((sum, invoice) => sum + invoiceTotals(invoice, data.clinic.vatRate, data.payments).balance, 0)
+  const dueVaccinations = vaccinationsDue(data.vaccinations)
   return (
     <>
       <PageHeader
@@ -252,6 +253,20 @@ function Dashboard({ onNavigate, onStart }: { onNavigate: SetView; onStart: (id:
             <small>Outstanding</small>
             <strong>{formatCurrency(outstanding)}</strong>
             <span className="stat-note">{data.invoices.filter((i) => i.status !== 'paid').length} invoices</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <span className="stat-icon amber">
+            <Stethoscope size={19} />
+          </span>
+          <div>
+            <small>Vaccinations due (30d)</small>
+            <strong>{dueVaccinations.length}</strong>
+            <span className="stat-note">
+              {dueVaccinations.length > 0
+                ? `Next: ${data.patients.find((p) => p.id === dueVaccinations[0].patientId)?.name ?? '—'}`
+                : 'None upcoming'}
+            </span>
           </div>
         </div>
         <div className="stat-card">
@@ -393,12 +408,33 @@ function Dashboard({ onNavigate, onStart }: { onNavigate: SetView; onStart: (id:
             )}
           </div>
         </Panel>
+        <Panel title="Vaccinations due" description="Boosters due or overdue within 30 days">
+          <div className="activity-list">
+            {vaccinationsDue(data.vaccinations, 30).map((v) => {
+              const patient = data.patients.find((p) => p.id === v.patientId)
+              const overdue = v.nextDueAt! < today
+              return (
+                <div className="activity-row" key={v.id}>
+                  <div className="activity-mark"><CalendarDays size={14} /></div>
+                  <div>
+                    <strong>{patient?.name ?? 'Patient'} — {v.vaccineName}</strong>
+                    <span>Last given {formatDate(v.administeredAt)}</span>
+                  </div>
+                  <Pill tone={overdue ? 'bad' : 'warn'} dot>{overdue ? `Overdue ${v.nextDueAt}` : `Due ${v.nextDueAt}`}</Pill>
+                </div>
+              )
+            })}
+            {vaccinationsDue(data.vaccinations, 30).length === 0 && (
+              <p className="empty-state">No boosters due in the next 30 days.</p>
+            )}
+          </div>
+        </Panel>
       </div>
     </>
   )
 }
 
-function Owners({
+const Owners = ({
   query,
   setQuery,
   showForm,
@@ -410,16 +446,77 @@ function Owners({
   showForm: boolean
   setShowForm: (b: boolean) => void
   canWrite: boolean
-}) {
+}) => {
   const { data, dispatch } = useClinic()
+  const [formMode, setFormMode] = useState<'new-owner' | 'existing-owner'>('new-owner')
+  const [ownerId, setOwnerId] = useState('')
   const [ownerName, setOwnerName] = useState('')
+  const [ownerPhone, setOwnerPhone] = useState('')
   const [petName, setPetName] = useState('')
+  const [species, setSpecies] = useState<Patient['species']>('Dog')
+  const [breed, setBreed] = useState('')
+  const [sex, setSex] = useState<Patient['sex']>('Unknown')
+  const [birthDate, setBirthDate] = useState('')
   const [microchip, setMicrochip] = useState('')
   const [detailId, setDetailId] = useState<string | null>(null)
   const filtered = data.patients.filter((p) => {
-    const owner = data.owners.find((o) => o.id === p.ownerId)?.name ?? ''
-    return `${p.name} ${owner} ${p.mrn} ${p.microchip ?? ''}`.toLowerCase().includes(query.toLowerCase())
+    const owner = data.owners.find((o) => o.id === p.ownerId)
+    return `${p.name} ${owner?.name ?? ''} ${owner?.phone ?? ''} ${p.mrn} ${p.microchip ?? ''}`
+      .toLowerCase()
+      .includes(query.toLowerCase())
   })
+  const resetForm = () => {
+    setPetName('')
+    setBreed('')
+    setBirthDate('')
+    setMicrochip('')
+    setSex('Unknown')
+  }
+  const save = () => {
+    if (!petName.trim()) return
+    if (formMode === 'new-owner') {
+      if (!ownerName.trim()) return
+      dispatch({
+        type: 'registerOwner',
+        owner: { name: ownerName.trim(), phone: ownerPhone.trim(), email: '', address: '' },
+        patient: {
+          name: petName.trim(),
+          species,
+          breed: breed.trim() || 'Mixed breed',
+          sex,
+          birthDate,
+          weightKg: undefined,
+          microchip: microchip.trim() || undefined,
+          allergies: [],
+          medicalAlerts: [],
+          weightUnit: 'kg',
+        },
+      })
+      setOwnerName('')
+      setOwnerPhone('')
+    } else {
+      const owner = data.owners.find((o) => o.id === ownerId) ?? data.owners[0]
+      if (!owner) return
+      dispatch({
+        type: 'addPatient',
+        patient: {
+          ownerId: owner.id,
+          name: petName.trim(),
+          species,
+          breed: breed.trim() || 'Mixed breed',
+          sex,
+          birthDate,
+          weightKg: undefined,
+          microchip: microchip.trim() || undefined,
+          allergies: [],
+          medicalAlerts: [],
+          weightUnit: 'kg',
+        },
+      })
+    }
+    resetForm()
+    setShowForm(false)
+  }
   return (
     <>
       <PageHeader
@@ -437,7 +534,7 @@ function Owners({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by owner, patient, MRN or microchip…"
+            placeholder="Search by owner, phone, patient, MRN or microchip…"
             aria-label="Search owners or patients"
           />
         </div>
@@ -449,24 +546,57 @@ function Owners({
         <div className="inline-form">
           <div className="form-heading">
             <div>
-              <strong>Register owner and patient</strong>
-              <span>Both records will be saved in one local transaction.</span>
+              <strong>Register patient</strong>
+              <span>Owner and patient records are saved in one local transaction.</span>
             </div>
             <button className="icon-button" onClick={() => setShowForm(false)} aria-label="Close form">
               <X size={17} />
             </button>
           </div>
+          <div className="seg" role="tablist" aria-label="Registration mode">
+            <button role="tab" aria-selected={formMode === 'new-owner'} className={formMode === 'new-owner' ? 'active' : ''} onClick={() => setFormMode('new-owner')}>
+              New owner
+            </button>
+            <button role="tab" aria-selected={formMode === 'existing-owner'} className={formMode === 'existing-owner' ? 'active' : ''} onClick={() => setFormMode('existing-owner')}>
+              Existing owner
+            </button>
+          </div>
           <div className="form-grid">
-            <Field label="Owner name" htmlFor="owner">
-              <input
-                id="owner"
-                name="owner-name"
-                autoComplete="off"
-                value={ownerName}
-                onChange={(e) => setOwnerName(e.target.value)}
-                placeholder="e.g. Anong Srisuk…"
-              />
-            </Field>
+            {formMode === 'new-owner' ? (
+              <>
+                <Field label="Owner name" htmlFor="owner">
+                  <input
+                    id="owner"
+                    name="owner-name"
+                    autoComplete="off"
+                    value={ownerName}
+                    onChange={(e) => setOwnerName(e.target.value)}
+                    placeholder="e.g. Anong Srisuk…"
+                  />
+                </Field>
+                <Field label="Owner phone" htmlFor="owner-phone">
+                  <input
+                    id="owner-phone"
+                    name="owner-phone"
+                    autoComplete="off"
+                    inputMode="tel"
+                    value={ownerPhone}
+                    onChange={(e) => setOwnerPhone(e.target.value)}
+                    placeholder="e.g. 081 234 5678…"
+                  />
+                </Field>
+              </>
+            ) : (
+              <Field label="Owner" htmlFor="owner-select">
+                <NativeSelect id="owner-select" value={ownerId || data.owners[0]?.id || ''} onChange={(e) => setOwnerId(e.target.value)}>
+                  {data.owners.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name} ({data.patients.filter((p) => p.ownerId === o.id).length} patients)
+                    </option>
+                  ))}
+                </NativeSelect>
+              </Field>
+            )}
             <Field label="Patient name" htmlFor="pet">
               <input
                 id="pet"
@@ -476,6 +606,26 @@ function Owners({
                 onChange={(e) => setPetName(e.target.value)}
                 placeholder="e.g. Milo…"
               />
+            </Field>
+            <Field label="Species" htmlFor="pet-species">
+              <NativeSelect id="pet-species" value={species} onChange={(e) => setSpecies(e.target.value as Patient['species'])}>
+                {SPECIES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field label="Breed" htmlFor="pet-breed">
+              <input id="pet-breed" autoComplete="off" value={breed} onChange={(e) => setBreed(e.target.value)} placeholder="e.g. Golden Retriever…" />
+            </Field>
+            <Field label="Sex" htmlFor="pet-sex">
+              <NativeSelect id="pet-sex" value={sex} onChange={(e) => setSex(e.target.value as Patient['sex'])}>
+                {SEXES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field label="Date of birth" htmlFor="pet-dob">
+              <input id="pet-dob" type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
             </Field>
             <Field label="Microchip (optional)" htmlFor="microchip">
               <input
@@ -493,31 +643,11 @@ function Owners({
           <div className="form-actions">
             <button
               className="button primary"
-              onClick={() => {
-                if (!ownerName || !petName) return
-              dispatch({
-                type: 'registerOwner',
-                owner: { name: ownerName, phone: '', email: '', address: '' },
-                patient: {
-                  name: petName,
-                  species: 'Dog',
-                  breed: 'Mixed breed',
-                  sex: 'Unknown',
-                  birthDate: '',
-                  microchip: microchip.trim() || undefined,
-                  allergies: [],
-                  medicalAlerts: [],
-                  weightUnit: 'kg',
-                },
-              })
-              setOwnerName('')
-              setPetName('')
-              setMicrochip('')
-              setShowForm(false)
-            }}
-          >
-            Save Records
-          </button>
+              onClick={save}
+              disabled={!petName.trim() || (formMode === 'new-owner' && !ownerName.trim()) || (formMode === 'existing-owner' && data.owners.length === 0)}
+            >
+              Save Records
+            </button>
           </div>
         </div>
       )}
@@ -579,7 +709,7 @@ function Owners({
   )
 }
 
-function PatientClinicalDialog({ patientId, onClose, canWrite }: { patientId: string; onClose: () => void; canWrite: boolean }) {
+const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: string; onClose: () => void; canWrite: boolean }) => {
   const { data, dispatch } = useClinic()
   const patient = data.patients.find((p) => p.id === patientId)
   const [microchip, setMicrochip] = useState(patient?.microchip ?? '')
@@ -599,6 +729,22 @@ function PatientClinicalDialog({ patientId, onClose, canWrite }: { patientId: st
       .split(',')
       .map((entry) => entry.trim())
       .filter(Boolean)
+  const timeline = [
+    ...data.encounters
+      .filter((e) => e.patientId === patient.id)
+      .map((e) => ({
+        kind: 'visit' as const,
+        at: e.openedAt,
+        encounter: e,
+      })),
+    ...data.vaccinations
+      .filter((v) => v.patientId === patient.id)
+      .map((v) => ({
+        kind: 'vaccination' as const,
+        at: v.administeredAt,
+        vaccination: v,
+      })),
+  ].sort((a, b) => b.at.localeCompare(a.at))
   return (
     <div
       className="modal-backdrop"
@@ -606,12 +752,12 @@ function PatientClinicalDialog({ patientId, onClose, canWrite }: { patientId: st
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="modal" role="dialog" aria-modal="true" aria-label={`Clinical profile for ${patient.name}`}>
+      <div className="modal modal-wide" role="dialog" aria-modal="true" aria-label={`Clinical profile for ${patient.name}`}>
         <div className="form-heading">
           <div>
             <strong>{patient.name}</strong>
             <span>
-              {patient.mrn} · {owner?.name ?? 'No owner'} · {patient.species} · {patient.breed}
+              {patient.mrn} · {owner?.name ?? 'No owner'}{owner?.phone ? ` · ${owner.phone}` : ''} · {patient.species} · {patient.breed}
             </span>
           </div>
           <button className="icon-button" onClick={onClose} aria-label="Close dialog">
@@ -678,18 +824,89 @@ function PatientClinicalDialog({ patientId, onClose, canWrite }: { patientId: st
             Save Profile
           </button>
         </div>
+        <div className="timeline" aria-label="Medical timeline">
+          <h3>Medical timeline</h3>
+          {timeline.length === 0 && <p className="empty-state">No visits or vaccinations recorded yet.</p>}
+          {timeline.map((entry) =>
+            entry.kind === 'vaccination' ? (
+              <div className="timeline-row" key={entry.vaccination.id}>
+                <Pill tone="info" dot>Vaccine</Pill>
+                <div>
+                  <strong>{entry.vaccination.vaccineName}</strong>
+                  <span>
+                    {formatDate(entry.vaccination.administeredAt)}
+                    {entry.vaccination.lotNumber ? ` · lot ${entry.vaccination.lotNumber}` : ''}
+                    {entry.vaccination.nextDueAt ? ` · next due ${entry.vaccination.nextDueAt}` : ''}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="timeline-row" key={entry.encounter.id}>
+                <Pill tone={entry.encounter.status === 'open' ? 'warn' : 'ok'} dot>
+                  {entry.encounter.status === 'open' ? 'Open visit' : 'Visit'}
+                </Pill>
+                <div>
+                  <strong>
+                    {formatDate(entry.encounter.openedAt)}
+                    {entry.encounter.diagnoses.length > 0 && ` — ${entry.encounter.diagnoses.map((d) => d.description).join('; ')}`}
+                  </strong>
+                  {entry.encounter.prescriptions.length > 0 && (
+                    <span>
+                      Rx: {entry.encounter.prescriptions.map((rx) => `${rx.medication} (${rx.dose} ${rx.frequency})`).join(', ')}
+                    </span>
+                  )}
+                  <span>
+                    {entry.encounter.notes.length} note{entry.encounter.notes.length === 1 ? '' : 's'}
+                    {entry.encounter.vitals.weightKg ? ` · weight ${entry.encounter.vitals.weightKg} kg` : ''}
+                  </span>
+                </div>
+              </div>
+            ),
+          )}
+        </div>
       </div>
     </div>
   )
 }
 
-function Consultations() {
+const Consultations = () => {
   const { data, session, dispatch } = useClinic()
   const open =
     data.encounters.find((e) => e.id === session.activeEncounterId) ??
     data.encounters.find((e) => e.status === 'open')
   const patient = open && data.patients.find((p) => p.id === open.patientId)
+  const appt = open && data.appointments.find((a) => a.id === open.appointmentId)
   const [note, setNote] = useState('')
+  const [vitals, setVitals] = useState<Vitals>(open?.vitals ?? { weightKg: '', tempC: '', heartRate: '', respRate: '' })
+  const [dxText, setDxText] = useState('')
+  const [dxStatus, setDxStatus] = useState<'provisional' | 'confirmed'>('provisional')
+  const [rxItemId, setRxItemId] = useState('')
+  const [rxDose, setRxDose] = useState('')
+  const [rxRoute, setRxRoute] = useState('PO')
+  const [rxFrequency, setRxFrequency] = useState('BID')
+  const [rxDuration, setRxDuration] = useState('7 days')
+  const [rxQuantity, setRxQuantity] = useState('1')
+  const [vacName, setVacName] = useState('')
+  const [vacLot, setVacLot] = useState('')
+  const [vacNextDue, setVacNextDue] = useState('')
+  const [followUpDate, setFollowUpDate] = useState('')
+  const [followUpTime, setFollowUpTime] = useState('10:00')
+  useEffect(() => {
+    if (open) setVitals(open.vitals)
+  }, [open?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Dispensable catalog: live inventory items (medicine/vaccine) plus legacy
+  // medication products so historical prescriptions still resolve.
+  const catalog = useMemo(
+    () => [
+      ...data.inventoryItems
+        .filter((i) => i.category === 'medicine' || i.category === 'vaccine')
+        .map((i) => ({ id: i.id, name: i.name, unit: i.unit })),
+      ...data.products.filter((p) => p.kind === 'medication').map((p) => ({ id: p.id, name: p.name, unit: p.unit })),
+    ],
+    [data.inventoryItems, data.products],
+  )
+  const selectedRx = catalog.find((c) => c.id === rxItemId)
+  const allergyHit = patient && selectedRx ? patient.allergies.find((a) => a && selectedRx.name.toLowerCase().includes(a.toLowerCase())) : undefined
   if (!open || !patient)
     return (
       <>
@@ -699,11 +916,86 @@ function Consultations() {
         </Panel>
       </>
     )
+  if (open.status === 'closed') {
+    const invoice = data.invoices.find((i) => i.encounterId === open.id)
+    return (
+      <>
+        <PageHeader
+          title="Consultation closed"
+          description={`The clinical record for ${patient.name} is archived — notes, diagnoses and prescriptions are preserved.`}
+        />
+        <Panel title="Visit complete">
+          <p className="empty-state">
+            {invoice ? `Draft invoice ${invoice.number} was created and is ready to post in Billing.` : 'No invoice was created for this visit.'}
+          </p>
+          <div className="panel-footer">
+            <button
+              className="button primary"
+              onClick={() => dispatch({ type: 'session', patch: { view: 'billing', activeEncounterId: undefined } })}
+            >
+              Go to billing
+            </button>
+          </div>
+        </Panel>
+      </>
+    )
+  }
+  const patientVaccinations = data.vaccinations.filter((v) => v.patientId === patient.id)
+  const addRx = () => {
+    if (!selectedRx || !rxDose.trim()) return
+    dispatch({
+      type: 'addPrescription',
+      encounterId: open.id,
+      prescription: {
+        productId: selectedRx.id,
+        medication: selectedRx.name,
+        dose: rxDose.trim(),
+        route: rxRoute.trim(),
+        frequency: rxFrequency.trim(),
+        duration: rxDuration.trim(),
+        quantity: Math.max(1, Number(rxQuantity) || 1),
+      },
+    })
+    setRxItemId('')
+    setRxDose('')
+    setRxQuantity('1')
+  }
+  const recordVac = () => {
+    if (!vacName.trim()) return
+    dispatch({
+      type: 'recordVaccination',
+      patientId: patient.id,
+      vaccination: {
+        vaccineName: vacName.trim(),
+        lotNumber: vacLot.trim() || undefined,
+        administeredAt: new Date().toISOString(),
+        nextDueAt: vacNextDue || undefined,
+        encounterId: open.id,
+      },
+    })
+    setVacName('')
+    setVacLot('')
+    setVacNextDue('')
+  }
+  const bookFollowUp = () => {
+    if (!followUpDate) return
+    dispatch({
+      type: 'bookAppointment',
+      appointment: {
+        patientId: patient.id,
+        startsAt: `${followUpDate}T${followUpTime || '10:00'}:00+07:00`,
+        durationMin: 30,
+        reason: `Follow-up${appt ? `: ${appt.reason}` : ''}`,
+        vetId: open.attendingId,
+      },
+    })
+    setFollowUpDate('')
+  }
   return (
     <>
       <PageHeader
         title="Consultation"
-        description={`Clinical record for ${patient.name} · ${patient.species} · ${patient.breed}`}
+        description={`Clinical record for ${patient.name} · ${patient.species} · ${patient.breed}${appt ? ` · ${appt.reason}` : ''}`}
         action={
           <Pill tone="ok" dot>
             Saved locally
@@ -711,101 +1003,279 @@ function Consultations() {
         }
       />
       <div className="consult-grid">
-        <Panel title="Patient snapshot" description="Current patient details">
-          <div className="patient-profile">
-            <div className="large-pet-avatar">{patient.name.slice(0, 1)}</div>
-            <div>
-              <h3>{patient.name}</h3>
-              <span>
-                {patient.mrn} · {patient.sex} · {patient.breed}
+        <div className="side-stack">
+          <Panel title="Patient snapshot" description="Current patient details">
+            <div className="patient-profile">
+              <div className="large-pet-avatar">{patient.name.slice(0, 1)}</div>
+              <div>
+                <h3>{patient.name}</h3>
+                <span>
+                  {patient.mrn} · {patient.sex} · {patient.breed}
+                </span>
+                <span>Owner: {data.owners.find((o) => o.id === patient.ownerId)?.name}</span>
+              </div>
+            </div>
+            {(patient.allergies.length > 0 || patient.medicalAlerts.length > 0) && (
+              <div className="patient-flags consult-flags" role="alert">
+                {patient.allergies.map((a) => (
+                  <Pill key={a} tone="bad" dot>
+                    Allergy: {a}
+                  </Pill>
+                ))}
+                {patient.medicalAlerts.map((a) => (
+                  <Pill key={a} tone="warn" dot>
+                    {a}
+                  </Pill>
+                ))}
+              </div>
+            )}
+          </Panel>
+          <Panel title="Vitals" description="Weight, temperature, pulse and respiration">
+            <div className="form-grid">
+              <Field label="Weight (kg)" htmlFor="vt-weight">
+                <input id="vt-weight" inputMode="decimal" value={vitals.weightKg} onChange={(e) => setVitals({ ...vitals, weightKg: e.target.value })} placeholder="e.g. 28.6" />
+              </Field>
+              <Field label="Temperature (°C)" htmlFor="vt-temp">
+                <input id="vt-temp" inputMode="decimal" value={vitals.tempC} onChange={(e) => setVitals({ ...vitals, tempC: e.target.value })} placeholder="e.g. 38.6" />
+              </Field>
+              <Field label="Heart rate (bpm)" htmlFor="vt-hr">
+                <input id="vt-hr" inputMode="numeric" value={vitals.heartRate} onChange={(e) => setVitals({ ...vitals, heartRate: e.target.value })} placeholder="e.g. 96" />
+              </Field>
+              <Field label="Respiratory rate" htmlFor="vt-rr">
+                <input id="vt-rr" inputMode="numeric" value={vitals.respRate} onChange={(e) => setVitals({ ...vitals, respRate: e.target.value })} placeholder="e.g. 22" />
+              </Field>
+            </div>
+            <div className="panel-footer">
+              <button
+                className="button secondary"
+                onClick={() => dispatch({ type: 'updateVitals', encounterId: open.id, vitals })}
+              >
+                Record vitals
+              </button>
+            </div>
+          </Panel>
+          <Panel title="Vaccinations" description="Recorded during this visit and prior history">
+            <div className="inline-form nested">
+              <div className="form-grid">
+                <Field label="Vaccine" htmlFor="vac-name">
+                  <input id="vac-name" list="vac-options" value={vacName} onChange={(e) => setVacName(e.target.value)} placeholder="e.g. Rabies vaccine…" />
+                  <datalist id="vac-options">
+                    {data.inventoryItems.filter((i) => i.category === 'vaccine').map((i) => (
+                      <option key={i.id} value={i.name} />
+                    ))}
+                  </datalist>
+                </Field>
+                <Field label="Lot number" htmlFor="vac-lot">
+                  <input id="vac-lot" value={vacLot} onChange={(e) => setVacLot(e.target.value)} placeholder="e.g. RAB-2610B…" />
+                </Field>
+                <Field label="Next due" htmlFor="vac-next">
+                  <input id="vac-next" type="date" value={vacNextDue} onChange={(e) => setVacNextDue(e.target.value)} />
+                </Field>
+              </div>
+              <button className="button secondary" onClick={recordVac} disabled={!vacName.trim()}>
+                Record vaccination
+              </button>
+            </div>
+            <div className="activity-list">
+              {patientVaccinations.length === 0 && <p className="empty-state">No vaccinations recorded for this patient.</p>}
+              {patientVaccinations.map((v) => (
+                <div className="activity-row" key={v.id}>
+                  <div className="activity-mark"><CalendarDays size={14} /></div>
+                  <div>
+                    <strong>{v.vaccineName}</strong>
+                    <span>
+                      {formatDate(v.administeredAt)}
+                      {v.lotNumber ? ` · lot ${v.lotNumber}` : ''}
+                      {v.nextDueAt ? ` · next due ${v.nextDueAt}` : ''}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        </div>
+        <div className="side-stack">
+          <Panel title="Diagnoses" description="Provisional working diagnoses and confirmed findings">
+            <div className="inline-form nested">
+              <div className="form-grid">
+                <Field label="Diagnosis" htmlFor="dx-text">
+                  <input id="dx-text" value={dxText} onChange={(e) => setDxText(e.target.value)} placeholder="e.g. Soft tissue strain, right stifle…" />
+                </Field>
+                <Field label="Status" htmlFor="dx-status">
+                  <NativeSelect id="dx-status" value={dxStatus} onChange={(e) => setDxStatus(e.target.value as 'provisional' | 'confirmed')}>
+                    <option value="provisional">Provisional</option>
+                    <option value="confirmed">Confirmed</option>
+                  </NativeSelect>
+                </Field>
+              </div>
+              <button
+                className="button secondary"
+                disabled={!dxText.trim()}
+                onClick={() => {
+                  dispatch({ type: 'addDiagnosis', encounterId: open.id, diagnosis: { description: dxText.trim(), status: dxStatus } })
+                  setDxText('')
+                }}
+              >
+                Add diagnosis
+              </button>
+            </div>
+            <div className="rx-list">
+              {open.diagnoses.length === 0 && <p className="empty-state">No diagnoses recorded yet.</p>}
+              {open.diagnoses.map((d) => (
+                <div className="rx-row" key={d.id}>
+                  <div>
+                    <strong>{d.description}</strong>
+                    <span>{d.status}</span>
+                  </div>
+                  <Pill tone={d.status === 'confirmed' ? 'ok' : 'info'} dot>{d.status}</Pill>
+                </div>
+              ))}
+            </div>
+          </Panel>
+          <Panel title="Prescriptions" description="Dispensed from pharmacy stock when the visit closes">
+            <div className="inline-form nested">
+              <div className="form-grid">
+                <Field label="Medication" htmlFor="rx-item">
+                  <NativeSelect id="rx-item" value={rxItemId} onChange={(e) => setRxItemId(e.target.value)}>
+                    <option value="">— select medication —</option>
+                    {catalog.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </NativeSelect>
+                </Field>
+                <Field label="Dose" htmlFor="rx-dose">
+                  <input id="rx-dose" value={rxDose} onChange={(e) => setRxDose(e.target.value)} placeholder="e.g. 0.1 mg/kg" />
+                </Field>
+                <Field label="Route" htmlFor="rx-route">
+                  <input id="rx-route" value={rxRoute} onChange={(e) => setRxRoute(e.target.value)} placeholder="PO / SC / IM" />
+                </Field>
+                <Field label="Frequency" htmlFor="rx-freq">
+                  <input id="rx-freq" value={rxFrequency} onChange={(e) => setRxFrequency(e.target.value)} placeholder="SID / BID / TID" />
+                </Field>
+                <Field label="Duration" htmlFor="rx-duration">
+                  <input id="rx-duration" value={rxDuration} onChange={(e) => setRxDuration(e.target.value)} placeholder="e.g. 7 days" />
+                </Field>
+                <Field label="Quantity" htmlFor="rx-qty">
+                  <input id="rx-qty" type="number" min="1" value={rxQuantity} onChange={(e) => setRxQuantity(e.target.value)} />
+                </Field>
+              </div>
+              {allergyHit && (
+                <p className="allergy-warning" role="alert">
+                  <Pill tone="bad" dot>Allergy warning</Pill>
+                  {patient.name} is allergic to “{allergyHit}” — check this prescription before dispensing.
+                </p>
+              )}
+              <button className="button secondary" onClick={addRx} disabled={!selectedRx || !rxDose.trim()}>
+                Add prescription
+              </button>
+            </div>
+            <div className="rx-list">
+              {open.prescriptions.length === 0 && <p className="empty-state">No prescriptions on this visit.</p>}
+              {open.prescriptions.map((rx) => (
+                <div className="rx-row" key={rx.id}>
+                  <div>
+                    <strong>{rx.medication}</strong>
+                    <span>
+                      {rx.dose} · {rx.route} · {rx.frequency} · {rx.duration} · qty {rx.quantity}
+                    </span>
+                  </div>
+                  <button className="text-button" onClick={() => dispatch({ type: 'removePrescription', encounterId: open.id, prescriptionId: rx.id })}>
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </Panel>
+          <Panel title="Clinical notes" description="Authored notes are preserved as a revision history">
+            <textarea
+              className="note-box"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              aria-label="Clinical notes"
+              placeholder="Record the consultation findings, assessment and plan…"
+            />
+            <div className="panel-footer">
+              <span className="save-hint">
+                <span className="pulse" /> Draft is saved locally
               </span>
-              <span>Owner: {data.owners.find((o) => o.id === patient.ownerId)?.name}</span>
+              <button
+                className="button secondary"
+                onClick={() => {
+                  if (note.trim()) {
+                    dispatch({
+                      type: 'addNote',
+                      encounterId: open.id,
+                      body: note,
+                    })
+                    setNote('')
+                  }
+                }}
+              >
+                Add note
+              </button>
+              <button
+                className="button primary"
+                onClick={() => dispatch({ type: 'closeEncounter', encounterId: open.id })}
+              >
+                Close consultation
+              </button>
             </div>
-          </div>
-          {(patient.allergies.length > 0 || patient.medicalAlerts.length > 0) && (
-            <div className="patient-flags consult-flags" role="alert">
-              {patient.allergies.map((a) => (
-                <Pill key={a} tone="bad" dot>
-                  Allergy: {a}
-                </Pill>
-              ))}
-              {patient.medicalAlerts.map((a) => (
-                <Pill key={a} tone="warn" dot>
-                  {a}
-                </Pill>
-              ))}
+            {open.notes.length > 0 && (
+              <div className="note-history">
+                {open.notes.map((n) => (
+                  <div key={n.id}>
+                    <span>{formatDate(n.createdAt)}</span>
+                    <p>{n.body}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Panel>
+          <Panel title="Follow-up" description="Book the next visit before closing">
+            <div className="inline-form nested">
+              <div className="form-grid">
+                <Field label="Follow-up date" htmlFor="fu-date">
+                  <input id="fu-date" type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
+                </Field>
+                <Field label="Time" htmlFor="fu-time">
+                  <input id="fu-time" type="time" value={followUpTime} onChange={(e) => setFollowUpTime(e.target.value)} />
+                </Field>
+              </div>
+              <button className="button secondary" onClick={bookFollowUp} disabled={!followUpDate}>
+                Book follow-up
+              </button>
             </div>
-          )}
-          <div className="vitals">
-            <strong>Vitals</strong>
-            <div className="vitals-grid">
-              {Object.entries(open.vitals).map(([key, value]) => (
-                <div key={key}>
-                  <small>
-                    {key
-                      .replace('Kg', ' (kg)')
-                      .replace('C', ' (°C)')
-                      .replace('Rate', ' rate')}
-                  </small>
-                  <b>{value || '—'}</b>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Panel>
-        <Panel title="Clinical notes" description="Authored notes are preserved as a revision history">
-          <textarea
-            className="note-box"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            aria-label="Clinical notes"
-            placeholder="Record the consultation findings, assessment and plan…"
-          />
-          <div className="panel-footer">
-            <span className="save-hint">
-              <span className="pulse" /> Draft is saved locally
-            </span>
-            <button
-              className="button secondary"
-              onClick={() => {
-                if (note.trim()) {
-                  dispatch({
-                    type: 'addNote',
-                    encounterId: open.id,
-                    body: note,
-                  })
-                  setNote('')
-                }
-              }}
-            >
-              Add note
-            </button>
-            <button
-              className="button primary"
-              onClick={() => dispatch({ type: 'closeEncounter', encounterId: open.id })}
-            >
-              Close consultation
-            </button>
-          </div>
-          {open.notes.length > 0 && (
-            <div className="note-history">
-              {open.notes.map((n) => (
-                <div key={n.id}>
-                  <span>{formatDate(n.createdAt)}</span>
-                  <p>{n.body}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </Panel>
+          </Panel>
+        </div>
       </div>
     </>
   )
 }
 
-function Billing() {
+const Billing = () => {
   const { data, dispatch } = useClinic()
+  const billing = usePermission('billing.write')
   const today = todayKey()
+  const [newInvoiceOpen, setNewInvoiceOpen] = useState(false)
+  const [niOwnerId, setNiOwnerId] = useState('')
+  const [niCatalogId, setNiCatalogId] = useState('')
+  const [niQuantity, setNiQuantity] = useState('1')
+  const [addItemInvoiceId, setAddItemInvoiceId] = useState<string | null>(null)
+  const [addItemCatalogId, setAddItemCatalogId] = useState('')
+  const [addItemQuantity, setAddItemQuantity] = useState('1')
+  const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | null>(null)
+  const [payAmount, setPayAmount] = useState('')
+  const [payMethod, setPayMethod] = useState<'cash' | 'card' | 'promptpay' | 'transfer'>('cash')
+  const [receiptInvoiceId, setReceiptInvoiceId] = useState<string | null>(null)
+
+  // Billable catalog: legacy products (services & medications) plus live inventory items.
+  const catalog = useMemo(
+    () => [
+      ...data.products.map((p) => ({ id: p.id, name: p.name, unitPrice: p.unitPrice, unit: p.unit })),
+      ...data.inventoryItems.map((i) => ({ id: i.id, name: i.name, unitPrice: i.sellingPrice, unit: i.unit })),
+    ],
+    [data.products, data.inventoryItems],
+  )
 
   const openInvoices = data.invoices.filter((i) => i.status !== 'paid')
   const outstanding = openInvoices.reduce(
@@ -829,6 +1299,20 @@ function Billing() {
   ]
 
   const sortedInvoices = [...data.invoices].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const paymentInvoice = data.invoices.find((i) => i.id === paymentInvoiceId)
+  const paymentBalance = paymentInvoice ? invoiceTotals(paymentInvoice, data.clinic.vatRate, data.payments).balance : 0
+
+  const submitPayment = () => {
+    const amount = Math.round(Number(payAmount) * 100)
+    if (!paymentInvoice || !Number.isFinite(amount) || amount <= 0 || amount > paymentBalance) return
+    dispatch({
+      type: 'recordPayment',
+      payment: { invoiceId: paymentInvoice.id, amount, method: payMethod },
+      settles: amount >= paymentBalance,
+    })
+    setPaymentInvoiceId(null)
+    setPayAmount('')
+  }
 
   return (
     <>
@@ -836,7 +1320,7 @@ function Billing() {
         title="Billing & payments"
         description="Invoices, payments and adjustments stay traceable."
         action={
-          <button className="button primary">
+          <button className="button primary" onClick={() => setNewInvoiceOpen(true)} disabled={!billing.allowed} title={billing.reason || undefined}>
             <Plus size={16} /> New invoice
           </button>
         }
@@ -855,11 +1339,65 @@ function Billing() {
           </div>
         ))}
       </div>
+      {newInvoiceOpen && (
+        <div className="inline-form">
+          <div className="form-heading">
+            <div>
+              <strong>New invoice</strong>
+              <span>Draft invoices can be edited and posted when settled at the desk.</span>
+            </div>
+            <button className="icon-button" onClick={() => setNewInvoiceOpen(false)} aria-label="Close form">
+              <X size={17} />
+            </button>
+          </div>
+          <div className="form-grid">
+            <Field label="Owner" htmlFor="ni-owner">
+              <NativeSelect id="ni-owner" value={niOwnerId || data.owners[0]?.id || ''} onChange={(e) => setNiOwnerId(e.target.value)}>
+                {data.owners.map((o) => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field label="Line item" htmlFor="ni-item">
+              <NativeSelect id="ni-item" value={niCatalogId} onChange={(e) => setNiCatalogId(e.target.value)}>
+                <option value="">— select item —</option>
+                {catalog.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name} — {formatCurrency(c.unitPrice)}</option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field label="Quantity" htmlFor="ni-qty">
+              <input id="ni-qty" type="number" min="1" value={niQuantity} onChange={(e) => setNiQuantity(e.target.value)} />
+            </Field>
+          </div>
+          <div className="form-actions">
+            <button
+              className="button primary"
+              disabled={!niCatalogId}
+              onClick={() => {
+                const entry = catalog.find((c) => c.id === niCatalogId)
+                const owner = data.owners.find((o) => o.id === (niOwnerId || data.owners[0]?.id))
+                if (!entry || !owner) return
+                dispatch({
+                  type: 'createInvoice',
+                  ownerId: owner.id,
+                  items: [{ description: entry.name, quantity: Math.max(1, Number(niQuantity) || 1), unitPrice: entry.unitPrice, productId: entry.id }],
+                })
+                setNiCatalogId('')
+                setNiQuantity('1')
+                setNewInvoiceOpen(false)
+              }}
+            >
+              Create draft invoice
+            </button>
+          </div>
+        </div>
+      )}
       <Panel
         title="Invoices"
         description="Drafts can be reviewed before posting; posted invoices are immutable."
       >
-        <div className="records-table table-wide">
+        <div className="records-table table-wide billing-table">
           <div className="table-head">
             <span>Invoice</span>
             <span>Owner</span>
@@ -872,36 +1410,93 @@ function Billing() {
           {sortedInvoices.map((invoice) => {
             const owner = data.owners.find((o) => o.id === invoice.ownerId)
             const totals = invoiceTotals(invoice, data.clinic.vatRate, data.payments)
+            const addEntry = addItemCatalogId ? catalog.find((c) => c.id === addItemCatalogId) : undefined
             return (
-              <div className="table-row" key={invoice.id}>
-                <div>
-                  <strong>{invoice.number}</strong>
-                  <span>{formatDate(invoice.createdAt)}</span>
+              <div key={invoice.id}>
+                <div className="table-row">
+                  <div>
+                    <strong>{invoice.number}</strong>
+                    <span>{formatDate(invoice.createdAt)}</span>
+                  </div>
+                  <span>{owner?.name}</span>
+                  <span>
+                    {invoice.items.length} item{invoice.items.length === 1 ? '' : 's'}
+                  </span>
+                  <span>
+                    <Pill tone={statusTone(invoice.status)} dot>
+                      {invoice.status}
+                    </Pill>
+                  </span>
+                  <strong>{formatCurrency(totals.total)}</strong>
+                  <strong className={totals.balance > 0 ? 'balance-due' : undefined}>
+                    {totals.balance > 0 ? formatCurrency(totals.balance) : '—'}
+                  </strong>
+                  <div className="row-actions">
+                    {invoice.status === 'draft' && (
+                      <>
+                        <button className="row-action" onClick={() => setAddItemInvoiceId(addItemInvoiceId === invoice.id ? null : invoice.id)}>
+                          Add item
+                        </button>
+                        <button
+                          className="small-button"
+                          onClick={() => dispatch({ type: 'postInvoice', invoiceId: invoice.id })}
+                        >
+                          Post invoice
+                        </button>
+                      </>
+                    )}
+                    {invoice.status === 'posted' && totals.balance > 0 && (
+                      <button
+                        className="small-button"
+                        disabled={!billing.allowed}
+                        title={billing.reason || undefined}
+                        onClick={() => {
+                          setPaymentInvoiceId(invoice.id)
+                          setPayAmount((totals.balance / 100).toFixed(2))
+                        }}
+                      >
+                        Record payment
+                      </button>
+                    )}
+                    {(invoice.status !== 'draft' || totals.balance === 0) && (
+                      <button className="row-action" onClick={() => setReceiptInvoiceId(invoice.id)}>
+                        Receipt
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <span>{owner?.name}</span>
-                <span>
-                  {invoice.items.length} item{invoice.items.length === 1 ? '' : 's'}
-                </span>
-                <span>
-                  <Pill tone={statusTone(invoice.status)} dot>
-                    {invoice.status}
-                  </Pill>
-                </span>
-                <strong>{formatCurrency(totals.total)}</strong>
-                <strong className={totals.balance > 0 ? 'balance-due' : undefined}>
-                  {totals.balance > 0 ? formatCurrency(totals.balance) : '—'}
-                </strong>
-                {invoice.status === 'draft' ? (
-                  <button
-                    className="small-button"
-                    onClick={() => dispatch({ type: 'postInvoice', invoiceId: invoice.id })}
-                  >
-                    Post invoice
-                  </button>
-                ) : totals.balance > 0 ? (
-                  <button className="row-action">Record payment</button>
-                ) : (
-                  <button className="row-action">View</button>
+                {addItemInvoiceId === invoice.id && (
+                  <div className="inline-form nested">
+                    <div className="form-grid">
+                      <Field label="Item" htmlFor={`ai-item-${invoice.id}`}>
+                        <NativeSelect id={`ai-item-${invoice.id}`} value={addItemCatalogId} onChange={(e) => setAddItemCatalogId(e.target.value)}>
+                          <option value="">— select item —</option>
+                          {catalog.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name} — {formatCurrency(c.unitPrice)}</option>
+                          ))}
+                        </NativeSelect>
+                      </Field>
+                      <Field label="Quantity" htmlFor={`ai-qty-${invoice.id}`}>
+                        <input id={`ai-qty-${invoice.id}`} type="number" min="1" value={addItemQuantity} onChange={(e) => setAddItemQuantity(e.target.value)} />
+                      </Field>
+                    </div>
+                    <button
+                      className="button secondary"
+                      disabled={!addEntry}
+                      onClick={() => {
+                        dispatch({
+                          type: 'addInvoiceItem',
+                          invoiceId: invoice.id,
+                          item: { description: addEntry!.name, quantity: Math.max(1, Number(addItemQuantity) || 1), unitPrice: addEntry!.unitPrice, productId: addEntry!.id },
+                        })
+                        setAddItemCatalogId('')
+                        setAddItemQuantity('1')
+                        setAddItemInvoiceId(null)
+                      }}
+                    >
+                      Add to invoice
+                    </button>
+                  </div>
                 )}
               </div>
             )
@@ -936,7 +1531,127 @@ function Billing() {
           {data.payments.length === 0 && <p className="empty-state">No payments recorded yet.</p>}
         </div>
       </Panel>
+
+      {paymentInvoice && (
+        <div
+          className="modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPaymentInvoiceId(null)
+          }}
+        >
+          <div className="modal" role="dialog" aria-modal="true" aria-label={`Record payment for ${paymentInvoice.number}`}>
+            <div className="form-heading">
+              <div>
+                <strong>Record payment — {paymentInvoice.number}</strong>
+                <span>
+                  Balance due {formatCurrency(paymentBalance)} · partial payments are supported
+                </span>
+              </div>
+              <button className="icon-button" onClick={() => setPaymentInvoiceId(null)} aria-label="Close dialog">
+                <X size={17} />
+              </button>
+            </div>
+            <div className="form-grid">
+              <Field label="Amount (THB)" htmlFor="pay-amount">
+                <input id="pay-amount" type="number" min="0" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
+              </Field>
+              <Field label="Method" htmlFor="pay-method">
+                <NativeSelect id="pay-method" value={payMethod} onChange={(e) => setPayMethod(e.target.value as typeof payMethod)}>
+                  <option value="cash">Cash</option>
+                  <option value="card">Card</option>
+                  <option value="promptpay">PromptPay</option>
+                  <option value="transfer">Bank transfer</option>
+                </NativeSelect>
+              </Field>
+            </div>
+            <div className="panel-footer">
+              <button className="button secondary" onClick={() => setPaymentInvoiceId(null)}>
+                Cancel
+              </button>
+              <button
+                className="button primary"
+                onClick={submitPayment}
+                disabled={!(Number(payAmount) > 0) || Math.round(Number(payAmount) * 100) > paymentBalance}
+              >
+                Record payment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {receiptInvoiceId && (
+        <ReceiptDialog invoiceId={receiptInvoiceId} onClose={() => setReceiptInvoiceId(null)} />
+      )}
     </>
+  )
+}
+
+const ReceiptDialog = ({ invoiceId, onClose }: { invoiceId: string; onClose: () => void }) => {
+  const { data } = useClinic()
+  const invoice = data.invoices.find((i) => i.id === invoiceId)
+  if (!invoice) return null
+  const owner = data.owners.find((o) => o.id === invoice.ownerId)
+  const totals = invoiceTotals(invoice, data.clinic.vatRate, data.payments)
+  const invoicePayments = data.payments.filter((p) => p.invoiceId === invoice.id)
+  return (
+    <div
+      className="modal-backdrop"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div className="modal" role="dialog" aria-modal="true" aria-label={`Receipt for ${invoice.number}`}>
+        <div className="print-area receipt">
+          <header>
+            <h2>{data.clinic.name}</h2>
+            <span>Invoice / Receipt</span>
+          </header>
+          <div className="receipt-meta">
+            <span>{invoice.number}</span>
+            <span>{formatDate(invoice.createdAt)}</span>
+            <span>{owner?.name}</span>
+          </div>
+          <div className="receipt-items">
+            <div className="receipt-line receipt-head">
+              <span>Item</span>
+              <span>Qty</span>
+              <span>Price</span>
+              <span>Amount</span>
+            </div>
+            {invoice.items.map((item) => (
+              <div className="receipt-line" key={item.id}>
+                <span>{item.description}</span>
+                <span>{item.quantity}</span>
+                <span>{formatCurrency(item.unitPrice)}</span>
+                <span>{formatCurrency(item.quantity * item.unitPrice)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="receipt-totals">
+            <div><span>Subtotal</span><strong>{formatCurrency(totals.subtotal)}</strong></div>
+            <div><span>VAT ({Math.round(data.clinic.vatRate * 100)}%)</span><strong>{formatCurrency(totals.tax)}</strong></div>
+            <div className="receipt-grand"><span>Total</span><strong>{formatCurrency(totals.total)}</strong></div>
+            {invoicePayments.length > 0 && (
+              <>
+                {invoicePayments.map((p) => (
+                  <div key={p.id}><span>Paid — {p.method}</span><strong>{formatCurrency(p.amount)}</strong></div>
+                ))}
+                <div className="receipt-grand"><span>Balance due</span><strong>{formatCurrency(totals.balance)}</strong></div>
+              </>
+            )}
+          </div>
+          <footer>Thank you — {data.clinic.name} · {data.clinic.timezone}</footer>
+        </div>
+        <div className="panel-footer no-print">
+          <button className="button secondary" onClick={onClose}>
+            Close
+          </button>
+          <button className="button primary" onClick={() => window.print()}>
+            Print receipt
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -947,7 +1662,7 @@ const categoryLabel: Record<string, string> = {
   supply: 'Supply',
 }
 
-function Inventory() {
+const Inventory = () => {
   const { data, dispatch } = useClinic()
   const inventory = usePermission('inventory.write')
   const [category, setCategory] = useState<'all' | 'medicine' | 'vaccine' | 'equipment' | 'supply'>('all')

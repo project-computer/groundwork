@@ -6,13 +6,13 @@ declare global {
   }
 }
 
-export function currentPlatform(): Platform {
+export const currentPlatform = (): Platform => {
   if (typeof window !== "undefined" && window.__TAURI_INTERNALS__ !== undefined) {
     return "tauri";
   }
   return "web";
 }
 
-export function isTauri(): boolean {
+export const isTauri = (): boolean => {
   return currentPlatform() === "tauri";
 }

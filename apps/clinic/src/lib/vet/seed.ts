@@ -26,9 +26,9 @@ export const seedState: ClinicState = {
     { id: 'o-4', name: 'Anan Kittisak', phone: '095 111 2233', email: 'anan@example.com', version: 1 },
   ],
   patients: [
-    { id: 'p-1', ownerId: 'o-1', mrn: 'PT-2026-0001', name: 'Moo Daeng', species: 'Dog', breed: 'Thai Ridgeback', sex: 'Male (neutered)', birthDate: '2021-03-12', microchip: '988100012345670', allergies: [], medicalAlerts: [], version: 1 },
+    { id: 'p-1', ownerId: 'o-1', mrn: 'PT-2026-0001', name: 'Moo Daeng', species: 'Dog', breed: 'Thai Ridgeback', sex: 'Male (neutered)', birthDate: '2021-03-12', weightKg: '28.6', microchip: '988100012345670', allergies: [], medicalAlerts: [], version: 1 },
     { id: 'p-2', ownerId: 'o-1', mrn: 'PT-2026-0002', name: 'Khao Niao', species: 'Cat', breed: 'Khao Manee', sex: 'Female (spayed)', birthDate: '2019-08-02', allergies: ['Penicillin'], medicalAlerts: [], version: 1 },
-    { id: 'p-3', ownerId: 'o-2', mrn: 'PT-2026-0003', name: 'Tiger', species: 'Dog', breed: 'Golden Retriever', sex: 'Male', birthDate: '2017-11-20', microchip: '988100098765432', allergies: [], medicalAlerts: ['Chronic stifle strain — avoid vigorous exercise'], version: 1 },
+    { id: 'p-3', ownerId: 'o-2', mrn: 'PT-2026-0003', name: 'Tiger', species: 'Dog', breed: 'Golden Retriever', sex: 'Male', birthDate: '2017-11-20', weightKg: '32.4', microchip: '988100098765432', allergies: [], medicalAlerts: ['Chronic stifle strain — avoid vigorous exercise'], version: 1 },
     { id: 'p-4', ownerId: 'o-3', mrn: 'PT-2026-0004', name: 'Mochi', species: 'Rabbit', breed: 'Holland Lop', sex: 'Female', birthDate: '2023-05-14', allergies: [], medicalAlerts: [], version: 1 },
     { id: 'p-5', ownerId: 'o-4', mrn: 'PT-2026-0005', name: 'Pla Too', species: 'Cat', breed: 'Domestic Shorthair', sex: 'Male (neutered)', birthDate: '2022-01-09', microchip: '988100055544433', allergies: ['Flea topical (pyrethrin)'], medicalAlerts: ['Aggressive during handling — muzzle first'], version: 1 },
   ],
@@ -100,6 +100,7 @@ export const seedState: ClinicState = {
     { id: 'it-3', name: 'Rabies vaccine', category: 'vaccine', unit: 'dose', reorderLevel: 10, sellingPrice: 35000 },
     { id: 'it-4', name: 'DHPPi vaccine', category: 'vaccine', unit: 'dose', reorderLevel: 10, sellingPrice: 55000 },
     { id: 'it-5', name: 'Cohesive bandage 5cm', category: 'supply', unit: 'roll', reorderLevel: 20, sellingPrice: 9000 },
+    { id: 'it-6', name: 'Penicillin G injectable', category: 'medicine', unit: 'vial', reorderLevel: 10, sellingPrice: 12000 },
   ],
   inventoryLots: [
     { id: 'lot-1', itemId: 'it-1', lotNumber: 'MEL-2609A', quantity: 60, expiryDate: '2027-09-30', supplierId: 'sup-1', costPerUnit: 26000, receivedDate: '2026-09-20' },
@@ -107,6 +108,7 @@ export const seedState: ClinicState = {
     { id: 'lot-3', itemId: 'it-3', lotNumber: 'RAB-2610B', quantity: 10, expiryDate: '2026-11-05', supplierId: 'sup-2', costPerUnit: 21000, receivedDate: '2026-10-02' },
     { id: 'lot-4', itemId: 'it-4', lotNumber: 'DHP-2608F', quantity: 2, expiryDate: '2027-08-15', supplierId: 'sup-2', costPerUnit: 33000, receivedDate: '2026-10-05' },
     { id: 'lot-5', itemId: 'it-5', lotNumber: 'BND-2609D', quantity: 6, expiryDate: '2028-01-01', supplierId: 'sup-1', costPerUnit: 5200, receivedDate: '2026-09-12' },
+    { id: 'lot-6', itemId: 'it-6', lotNumber: 'PNG-2607E', quantity: 18, expiryDate: '2027-06-30', supplierId: 'sup-1', costPerUnit: 8000, receivedDate: '2026-10-10' },
   ],
   invoices: [
     {
@@ -124,6 +126,11 @@ export const seedState: ClinicState = {
     },
   ],
   payments: [],
+  vaccinations: [
+    { id: 'v-1', patientId: 'p-1', vaccineName: 'Rabies vaccine', lotNumber: 'RAB-2601A', administeredAt: '2025-10-15T10:20:00+07:00', nextDueAt: '2026-10-15', vetId: 'u-pim', version: 1 },
+    { id: 'v-2', patientId: 'p-2', vaccineName: 'FVRCP', lotNumber: 'FVR-2603B', administeredAt: '2026-02-11T14:05:00+07:00', nextDueAt: '2027-02-11', vetId: 'u-arun', version: 1 },
+    { id: 'v-3', patientId: 'p-3', vaccineName: 'Rabies vaccine', lotNumber: 'RAB-2510C', administeredAt: '2025-09-02T09:30:00+07:00', nextDueAt: '2026-09-02', vetId: 'u-pim', version: 1 },
+  ],
   audit: [
     { id: 'ae-1', actorId: 'u-pim', action: 'encounter.close', entityType: 'encounter', entityId: 'e-1', summary: 'Closed consultation for Tiger', occurredAt: at('09:41') },
     { id: 'ae-2', actorId: 'u-nok', action: 'invoice.post', entityType: 'invoice', entityId: 'inv-1', summary: 'Posted INV-2026-0142', occurredAt: at('09:42') },

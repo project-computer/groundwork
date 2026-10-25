@@ -4,11 +4,11 @@ export const THEME_CHOICES: ThemeChoice[] = ['light', 'dark', 'system']
 
 const THEME_KEY = 'clinicbook:theme'
 
-function systemPrefersDark(): boolean {
+const systemPrefersDark = (): boolean => {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 
-export function getTheme(): ThemeChoice {
+export const getTheme = (): ThemeChoice => {
   try {
     const stored = window.localStorage.getItem(THEME_KEY)
     if (stored === 'light' || stored === 'dark' || stored === 'system') return stored
@@ -18,18 +18,18 @@ export function getTheme(): ThemeChoice {
   return 'system'
 }
 
-export function resolvedTheme(choice: ThemeChoice = getTheme()): 'light' | 'dark' {
+export const resolvedTheme = (choice: ThemeChoice = getTheme()): 'light' | 'dark' => {
   return choice === 'dark' || (choice === 'system' && systemPrefersDark()) ? 'dark' : 'light'
 }
 
 /** Reflects the resolved theme on <html> as a `dark`/`light` class. */
-export function applyTheme(choice: ThemeChoice = getTheme()) {
+export const applyTheme = (choice: ThemeChoice = getTheme()) => {
   const dark = resolvedTheme(choice) === 'dark'
   document.documentElement.classList.toggle('dark', dark)
   document.documentElement.classList.toggle('light', !dark)
 }
 
-export function setTheme(choice: ThemeChoice) {
+export const setTheme = (choice: ThemeChoice) => {
   try {
     window.localStorage.setItem(THEME_KEY, choice)
   } catch {
@@ -39,7 +39,7 @@ export function setTheme(choice: ThemeChoice) {
 }
 
 /** Re-applies the theme when the OS preference changes while on "system". */
-export function watchSystemTheme(): () => void {
+export const watchSystemTheme = (): () => void => {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return () => {}
   const query = window.matchMedia('(prefers-color-scheme: dark)')
   const onChange = () => applyTheme()

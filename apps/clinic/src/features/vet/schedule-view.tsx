@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type DragEvent } from 'react'
 import { CalendarPlus, ChevronLeft, ChevronRight, DoorOpen, Stethoscope, UserX, X } from 'lucide-react'
 import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
@@ -11,13 +11,13 @@ const pad = (n: number) => String(n).padStart(2, '0')
 /** Appointment timestamps share the clinic-offset convention used by seeds and bookings. */
 const apptDay = (iso: string) => iso.slice(0, 10)
 
-function shiftDays(iso: string, days: number): string {
+const shiftDays = (iso: string, days: number): string => {
   const d = new Date(`${iso}T12:00:00Z`)
   d.setUTCDate(d.getUTCDate() + days)
   return d.toISOString().slice(0, 10)
 }
 
-function weekDays(iso: string): string[] {
+const weekDays = (iso: string): string[] => {
   const d = new Date(`${iso}T12:00:00Z`)
   const weekday = d.getUTCDay() // 0 = Sunday
   const monday = shiftDays(iso, weekday === 0 ? -6 : 1 - weekday)
@@ -34,6 +34,25 @@ const HOUR_START = 8
 const HOUR_END = 18
 const HOURS = Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => HOUR_START + i)
 
+const WEEKDAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+/** 6-week Monday-start grid covering the month of `iso`. */
+const monthGrid = (iso: string): string[] => {
+  const first = `${iso.slice(0, 7)}-01`
+  const weekday = new Date(`${first}T12:00:00Z`).getUTCDay()
+  const monday = shiftDays(first, weekday === 0 ? -6 : 1 - weekday)
+  return Array.from({ length: 42 }, (_, i) => shiftDays(monday, i))
+}
+
+const monthLabel = (iso: string) =>
+  new Date(`${iso.slice(0, 7)}-01T12:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+
+const shiftMonth = (iso: string, delta: number): string => {
+  const d = new Date(`${iso.slice(0, 7)}-01T12:00:00Z`)
+  d.setUTCMonth(d.getUTCMonth() + delta)
+  return d.toISOString().slice(0, 10)
+}
+
 interface BookingDraft {
   patientId: string
   date: string
@@ -43,13 +62,65 @@ interface BookingDraft {
   vetId: string
 }
 
-export function ScheduleView() {
+export const ScheduleView = () => {
   const { data, session, dispatch } = useClinic()
   const permission = usePermission('appointments.write')
   const [dayIso, setDayIso] = useState(todayKey())
-  const [mode, setMode] = useState<'day' | 'week'>('day')
+  const [mode, setMode] = useState<'day' | 'week' | 'month'>('day')
   const [dialog, setDialog] = useState<{ mode: 'book' | 'reschedule'; appointmentId?: string; draft: BookingDraft } | null>(null)
   const [walkInOpen, setWalkInOpen] = useState(false)
+  const [dragId, setDragId] = useState<string | null>(null)
+  const [dropTarget, setDropTarget] = useState<string | null>(null)
+
+  /** Only appointments the reducer allows rescheduling are draggable. */
+  const canDrag = (a: { id: string; status: string }) =>
+    permission.allowed && (a.status === 'booked' || a.status === 'no_show' || a.status === 'cancelled')
+
+  const startDrag = (e: DragEvent, id: string) => {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', id)
+    setDragId(id)
+  }
+
+  const endDrag = () => {
+    setDragId(null)
+    setDropTarget(null)
+  }
+
+  const dragOver = (e: DragEvent, key: string) => {
+    if (!dragId) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDropTarget(key)
+  }
+
+  const dragLeave = (key: string) => {
+    setDropTarget((prev) => (prev === key ? null : prev))
+  }
+
+  /** Drop on a day-view hour row: keep the minutes, change the hour. */
+  const dropOnHour = (e: DragEvent, hour: number) => {
+    e.preventDefault()
+    const id = dragId ?? e.dataTransfer.getData('text/plain')
+    const appt = data.appointments.find((a) => a.id === id)
+    if (appt) {
+      const minutes = appt.startsAt.slice(14, 16)
+      dispatch({ type: 'rescheduleAppointment', id: appt.id, startsAt: `${dayIso}T${pad(hour)}:${minutes}:00${CLINIC_TZ_SUFFIX}` })
+    }
+    endDrag()
+  }
+
+  /** Drop on a week-view day column: keep the time, change the day. */
+  const dropOnDay = (e: DragEvent, iso: string) => {
+    e.preventDefault()
+    const id = dragId ?? e.dataTransfer.getData('text/plain')
+    const appt = data.appointments.find((a) => a.id === id)
+    if (appt) {
+      const time = appt.startsAt.slice(11, 16)
+      dispatch({ type: 'rescheduleAppointment', id: appt.id, startsAt: `${iso}T${time}:00${CLINIC_TZ_SUFFIX}` })
+    }
+    endDrag()
+  }
 
   const vets = data.users.filter((u) => u.role === 'veterinarian')
 
@@ -147,11 +218,19 @@ export function ScheduleView() {
       />
       <div className="toolbar">
         <div className="date-nav">
-          <button className="icon-button" onClick={() => setDayIso(shiftDays(dayIso, mode === 'week' ? -7 : -1))} aria-label="Previous day">
+          <button
+            className="icon-button"
+            onClick={() => setDayIso(mode === 'week' ? shiftDays(dayIso, -7) : mode === 'month' ? shiftMonth(dayIso, -1) : shiftDays(dayIso, -1))}
+            aria-label="Previous day"
+          >
             <ChevronLeft size={17} />
           </button>
-          <strong>{mode === 'day' ? dayLabel(dayIso) : `Week of ${dayLabel(weekDays(dayIso)[0])}`}</strong>
-          <button className="icon-button" onClick={() => setDayIso(shiftDays(dayIso, mode === 'week' ? 7 : 1))} aria-label="Next day">
+          <strong>{mode === 'day' ? dayLabel(dayIso) : mode === 'week' ? `Week of ${dayLabel(weekDays(dayIso)[0])}` : monthLabel(dayIso)}</strong>
+          <button
+            className="icon-button"
+            onClick={() => setDayIso(mode === 'week' ? shiftDays(dayIso, 7) : mode === 'month' ? shiftMonth(dayIso, 1) : shiftDays(dayIso, 1))}
+            aria-label="Next day"
+          >
             <ChevronRight size={17} />
           </button>
           <button className="small-button today-button" onClick={() => setDayIso(todayKey())}>
@@ -159,9 +238,9 @@ export function ScheduleView() {
           </button>
         </div>
         <div className="seg" role="tablist" aria-label="Calendar mode">
-          {(['day', 'week'] as const).map((m) => (
+          {(['day', 'week', 'month'] as const).map((m) => (
             <button key={m} role="tab" aria-selected={mode === m} className={mode === m ? 'active' : ''} onClick={() => setMode(m)}>
-              {m === 'day' ? 'Day' : 'Week'}
+              {m === 'day' ? 'Day' : m === 'week' ? 'Week' : 'Month'}
             </button>
           ))}
         </div>
@@ -178,12 +257,25 @@ export function ScheduleView() {
                 return (
                   <div className="cal-row" key={hour}>
                     <time>{slot}</time>
-                    <div className="cal-cells">
+                    <div
+                      className={`cal-cells${dropTarget === `${dayIso}-${hour}` && dragId ? ' drop-target' : ''}`}
+                      onDragOver={(e) => dragOver(e, `${dayIso}-${hour}`)}
+                      onDragLeave={() => dragLeave(`${dayIso}-${hour}`)}
+                      onDrop={(e) => dropOnHour(e, hour)}
+                    >
                       {inSlot.map((a) => {
                         const patient = data.patients.find((p) => p.id === a.patientId)
                         const vet = data.users.find((u) => u.id === a.vetId)
+                        const draggable = canDrag(a)
                         return (
-                          <div className={`cal-appt status-${a.status}`} key={a.id}>
+                          <div
+                            className={`cal-appt status-${a.status}${dragId === a.id ? ' dragging' : ''}`}
+                            key={a.id}
+                            draggable={draggable}
+                            onDragStart={(e) => startDrag(e, a.id)}
+                            onDragEnd={endDrag}
+                            title={draggable ? 'Drag to another hour to reschedule' : undefined}
+                          >
                             <div className="appointment-main">
                               <strong>
                                 {patient?.name ?? 'Unknown'} <span className="cal-time-chip">{formatTime(a.startsAt)} · {a.durationMin}min</span>
@@ -282,7 +374,7 @@ export function ScheduleView() {
             </Panel>
           </div>
         </div>
-      ) : (
+      ) : mode === 'week' ? (
         <Panel title="Week overview" description="Appointments across the clinic week">
           <div className="week-grid">
             {weekDays(dayIso).map((iso) => {
@@ -293,11 +385,25 @@ export function ScheduleView() {
                     <strong>{shortDayLabel(iso)}</strong>
                     <span>{list.length}</span>
                   </header>
-                  <div className="week-cells">
+                  <div
+                    className={`week-cells${dropTarget === `week-${iso}` && dragId ? ' drop-target' : ''}`}
+                    onDragOver={(e) => dragOver(e, `week-${iso}`)}
+                    onDragLeave={() => dragLeave(`week-${iso}`)}
+                    onDrop={(e) => dropOnDay(e, iso)}
+                  >
                     {list.map((a) => {
                       const patient = data.patients.find((p) => p.id === a.patientId)
+                      const draggable = canDrag(a)
                       return (
-                        <button className={`cal-appt compact status-${a.status}`} key={a.id} onClick={() => { setDayIso(iso); setMode('day') }} title={`${patient?.name} · ${a.reason}`}>
+                        <button
+                          className={`cal-appt compact status-${a.status}${dragId === a.id ? ' dragging' : ''}`}
+                          key={a.id}
+                          draggable={draggable}
+                          onDragStart={(e) => startDrag(e, a.id)}
+                          onDragEnd={endDrag}
+                          onClick={() => { setDayIso(iso); setMode('day') }}
+                          title={`${patient?.name} · ${a.reason}${draggable ? ' · drag to another day to reschedule' : ''}`}
+                        >
                           <strong>{formatTime(a.startsAt)}</strong>
                           <span>{patient?.name}</span>
                         </button>
@@ -305,6 +411,32 @@ export function ScheduleView() {
                     })}
                   </div>
                 </div>
+              )
+             })}
+           </div>
+         </Panel>
+      ) : (
+        <Panel title={monthLabel(dayIso)} description="Appointments per day — select a day to open it">
+          <div className="month-grid" role="grid" aria-label={`${monthLabel(dayIso)} calendar`}>
+            {WEEKDAY_HEADERS.map((label) => (
+              <div className="month-head" key={label}>{label}</div>
+            ))}
+            {monthGrid(dayIso).map((iso) => {
+              const list = weekAppointments.get(iso) ?? []
+              const inMonth = iso.slice(0, 7) === dayIso.slice(0, 7)
+              return (
+                <button
+                  className={`month-cell ${iso === todayKey() ? 'today' : ''} ${inMonth ? '' : 'outside'}`}
+                  key={iso}
+                  onClick={() => {
+                    setDayIso(iso)
+                    setMode('day')
+                  }}
+                  aria-label={`${dayLabel(iso)} — ${list.length} appointments`}
+                >
+                  <span className="month-day">{Number(iso.slice(8))}</span>
+                  {list.length > 0 && <span className="month-count">{list.length}</span>}
+                </button>
               )
             })}
           </div>
@@ -386,7 +518,7 @@ export function ScheduleView() {
   )
 }
 
-function WalkInForm({
+const WalkInForm = ({
   patients,
   onSubmit,
   onCancel,
@@ -396,7 +528,7 @@ function WalkInForm({
   onSubmit: (patientId: string, reason: string) => void
   onCancel: () => void
   disabled: boolean
-}) {
+}) => {
   const [patientId, setPatientId] = useState(patients[0]?.id ?? '')
   const [reason, setReason] = useState('')
   return (

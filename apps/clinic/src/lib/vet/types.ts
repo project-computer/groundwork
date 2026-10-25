@@ -25,6 +25,9 @@ export interface Owner {
   version: number
 }
 
+export const SPECIES: Patient['species'][] = ['Dog', 'Cat', 'Rabbit', 'Bird', 'Other']
+export const SEXES: Patient['sex'][] = ['Male', 'Female', 'Male (neutered)', 'Female (spayed)', 'Unknown']
+
 export interface Patient {
   id: string
   ownerId: string
@@ -34,6 +37,7 @@ export interface Patient {
   breed: string
   sex: 'Male' | 'Female' | 'Male (neutered)' | 'Female (spayed)' | 'Unknown'
   birthDate: string
+  weightKg?: string
   microchip?: string
   allergies: string[]
   medicalAlerts: string[]
@@ -183,12 +187,30 @@ export interface Invoice {
   version: number
 }
 
+export type PaymentMethod = 'cash' | 'card' | 'promptpay' | 'transfer'
+export const PAYMENT_METHODS: PaymentMethod[] = ['cash', 'card', 'promptpay', 'transfer']
+
 export interface Payment {
   id: string
   invoiceId: string
   amount: number
-  method: 'cash' | 'card' | 'promptpay'
+  method: PaymentMethod
   receivedAt: string
+}
+
+/** Vaccination is a discrete clinical event where a vaccine was administered
+ * (see CONTEXT.md). Carries vaccine name, lot, date, vet and next-due date. */
+export interface Vaccination {
+  id: string
+  patientId: string
+  encounterId?: string
+  vaccineName: string
+  lotNumber?: string
+  administeredAt: string
+  nextDueAt?: string
+  vetId: string
+  notes?: string
+  version: number
 }
 
 export interface AuditEvent {
@@ -223,6 +245,7 @@ export interface ClinicState {
   inventoryLots: InventoryLot[]
   invoices: Invoice[]
   payments: Payment[]
+  vaccinations: Vaccination[]
   audit: AuditEvent[]
   outbox: SyncChange[]
   lastSyncedAt?: string

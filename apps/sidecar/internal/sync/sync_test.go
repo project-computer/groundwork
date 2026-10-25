@@ -38,8 +38,11 @@ func sampleState() map[string]any {
 		"stockMovements": []any{},
 		"invoices":       []any{},
 		"payments":       []any{},
-		"audit":          []any{},
-		"outbox":         []any{},
+		"vaccinations": []any{
+			map[string]any{"id": "vac-1", "patientId": "patient-1", "vaccineName": "Rabies vaccine", "administeredAt": "2026-10-25T10:00:00Z", "nextDueAt": "2027-10-25", "vetId": "u-pim", "version": json.Number("1")},
+		},
+		"audit": []any{},
+		"outbox": []any{},
 	}
 }
 
@@ -388,5 +391,51 @@ func TestDeleteOutboxSendsTombstone(t *testing.T) {
 	}
 	if result.Pushed != 1 {
 		t.Fatalf("expected 1 pushed, got %d", result.Pushed)
+	}
+}
+
+func TestVaccinationPushesAndMerges(t *testing.T) {
+	var pushed PushRequest
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v1/sync/push":
+			json.NewDecoder(r.Body).Decode(&pushed)
+			json.NewEncoder(w).Encode(PushResponse{})
+		case "/api/v1/sync/pull":
+			json.NewEncoder(w).Encode(PullResponse{Changes: []RemoteChange{}, LatestVersion: 9})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	engine, _ := newEngine(t, server)
+	state := sampleState()
+	state["outbox"] = []any{
+		map[string]any{"changeId": "c1", "entityType": "vaccination", "entityId": "vac-1", "operation": "upsert", "occurredAt": "2026-10-25T10:00:00Z"},
+	}
+	if _, err := engine.Run(context.Background(), encode(t, state)); err != nil {
+		t.Fatal(err)
+	}
+	if len(pushed.Changes) != 1 || pushed.Changes[0].EntityType != "vaccination" {
+		t.Fatalf("expected vaccination push, got %+v", pushed.Changes)
+	}
+
+	// A pulled vaccination merges into the vaccinations collection.
+	merged := sampleState()
+	merged["vaccinations"] = []any{}
+	payload, _ := envelope(map[string]any{
+		"id": "vac-9", "patientId": "patient-1", "vaccineName": "FVRCP", "administeredAt": "2026-10-25T11:00:00Z", "vetId": "u-pim",
+	}, "")
+	applied, err := Merge(merged, []RemoteChange{{EntityType: "vaccination", EntityID: "vac-9", Operation: "upsert", Payload: payload}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if applied != 1 {
+		t.Fatalf("expected 1 applied, got %d", applied)
+	}
+	vaccinations := merged["vaccinations"].([]any)
+	if len(vaccinations) != 1 || vaccinations[0].(map[string]any)["vaccineName"] != "FVRCP" {
+		t.Fatalf("expected merged FVRCP vaccination, got %+v", vaccinations)
 	}
 }

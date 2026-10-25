@@ -106,20 +106,3 @@ func (h *PatientHandler) Delete(c fiber.Ctx) error {
 
 	return utils.SuccessResponse(c, "Patient deleted successfully", nil)
 }
-
-func (h *PatientHandler) GetHistory(c fiber.Ctx) error {
-	id, err := utils.GetParamInt(c, "id")
-	if err != nil {
-		return utils.ErrorResponse(c, fiber.StatusBadRequest, "invalid_id", "Invalid patient ID")
-	}
-
-	// TODO: Implement medical history fetching
-	// This would include visits, prescriptions, bills, etc.
-
-	return c.JSON(fiber.Map{
-		"patientId":     id,
-		"visits":        []interface{}{},
-		"prescriptions": []interface{}{},
-		"bills":         []interface{}{},
-	})
-}

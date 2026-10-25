@@ -3,7 +3,7 @@ import { ClinicApp } from "@/features/vet/clinic-shell";
 import { ClinicProvider } from "@/lib/vet/store";
 import { applyTheme, watchSystemTheme } from "@/lib/theme";
 
-export default function App() {
+export const App = () => {
   useEffect(() => {
     applyTheme();
     return watchSystemTheme();

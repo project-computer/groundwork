@@ -9,16 +9,16 @@ import (
 // are read-only projections from the linked owner row — they live on this struct only
 // to avoid an extra JOIN at the call site.
 type Patient struct {
-	ID              int        `json:"id"`
-	ClinicID        int        `json:"clinicId"`
-	MRN             string     `json:"mrn"`
-	Name            string     `json:"name"`
-	Species         string     `json:"species"`
-	Breed           NullString `json:"breed,omitempty"`
-	DateOfBirth     NullTime   `json:"dateOfBirth,omitempty"`
-	Weight          NullFloat64 `json:"weight,omitempty"`
+	ID          int         `json:"id"`
+	ClinicID    int         `json:"clinicId"`
+	MRN         string      `json:"mrn"`
+	Name        string      `json:"name"`
+	Species     string      `json:"species"`
+	Breed       NullString  `json:"breed,omitempty"`
+	DateOfBirth NullTime    `json:"dateOfBirth,omitempty"`
+	Weight      NullFloat64 `json:"weight,omitempty"`
 
-	OwnerID  int    `json:"ownerId"`
+	OwnerID int `json:"ownerId"`
 	// Derived from JOIN owners
 	OwnerName       string     `json:"ownerName"`
 	OwnerPhone      string     `json:"ownerPhone"`
@@ -26,9 +26,9 @@ type Patient struct {
 	OwnerNationalID NullString `json:"ownerNationalId,omitempty"`
 	OwnerNotes      NullString `json:"ownerNotes,omitempty"`
 
-	Status              string  `json:"status"`
-	LastAppointmentDate NullTime `json:"lastAppointmentDate,omitempty"`
-	NextAppointmentDate NullTime `json:"nextAppointmentDate,omitempty"`
+	Status              string    `json:"status"`
+	LastAppointmentDate NullTime  `json:"lastAppointmentDate,omitempty"`
+	NextAppointmentDate NullTime  `json:"nextAppointmentDate,omitempty"`
 	CreatedAt           time.Time `json:"createdAt"`
 	UpdatedAt           time.Time `json:"updatedAt"`
 	DeletedAt           NullTime  `json:"-"`
@@ -68,4 +68,14 @@ type PatientListQuery struct {
 	Species string `query:"species"`
 	Status  string `query:"status"`
 	MRN     string `query:"mrn"`
+}
+
+// PatientHistory is the read model behind GET /patients/:id/history — the
+// patient's medical timeline (visits, prescriptions, bills, vaccinations).
+type PatientHistory struct {
+	Patient       *Patient        `json:"patient"`
+	Visits        []*Visit        `json:"visits"`
+	Prescriptions []*Prescription `json:"prescriptions"`
+	Bills         []*Bill         `json:"bills"`
+	Vaccinations  []*Vaccination  `json:"vaccinations"`
 }

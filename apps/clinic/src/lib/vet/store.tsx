@@ -23,6 +23,7 @@ import type {
   StockMovement,
   StockReason,
   Supplier,
+  Vaccination,
   Vitals,
 } from './types'
 
@@ -76,7 +77,10 @@ type Action =
   | { type: 'amendNote'; encounterId: string; noteId: string; body: string; reason: string }
   | { type: 'addDiagnosis'; encounterId: string; diagnosis: Omit<Diagnosis, 'id'> }
   | { type: 'addPrescription'; encounterId: string; prescription: Omit<Prescription, 'id' | 'prescriberId'> }
+  | { type: 'removePrescription'; encounterId: string; prescriptionId: string }
+  | { type: 'recordVaccination'; patientId: string; vaccination: Omit<Vaccination, 'id' | 'patientId' | 'vetId' | 'version'> }
   | { type: 'closeEncounter'; encounterId: string }
+  | { type: 'createInvoice'; ownerId: string; items: Omit<InvoiceItem, 'id'>[] }
   | { type: 'addInvoiceItem'; invoiceId: string; item: Omit<InvoiceItem, 'id'> }
   | { type: 'postInvoice'; invoiceId: string }
   | { type: 'recordPayment'; payment: Omit<Payment, 'id' | 'receivedAt'>; settles: boolean }
@@ -100,11 +104,11 @@ type Action =
  * then persisted atomically to the local store (SQLite on Tauri, localStorage
  * on the web).
  */
-function commit(
+const commit = (
   store: Store,
   data: ClinicState,
   entry: { action: string; entityType: string; entityId: string; summary: string; operation?: 'upsert' | 'append' },
-): Store {
+): Store => {
   const occurredAt = now()
   return {
     ...store,
@@ -130,20 +134,20 @@ function commit(
   }
 }
 
-function updateEncounter(data: ClinicState, id: string, fn: (e: Encounter) => Encounter): ClinicState {
+const updateEncounter = (data: ClinicState, id: string, fn: (e: Encounter) => Encounter): ClinicState => {
   return { ...data, encounters: data.encounters.map((e) => (e.id === id && e.status === 'open' ? { ...fn(e), version: e.version + 1 } : e)) }
 }
 
 const patientName = (data: ClinicState, id: string) => data.patients.find((p) => p.id === id)?.name ?? 'patient'
 
 /** Human-readable Medical Record Number, e.g. PT-2026-0042 (see CONTEXT.md). */
-export function formatMrn(sequence: number, year = new Date().getFullYear()) {
+export const formatMrn = (sequence: number, year = new Date().getFullYear()) => {
   return `PT-${year}-${String(sequence).padStart(4, '0')}`
 }
 
 /** Clinical profile fields arrive after the first release — documents saved
  * before them are backfilled so the reducer never sees undefined arrays. */
-function backfillPatient(patient: Patient, index: number): Patient {
+const backfillPatient = (patient: Patient, index: number): Patient => {
   return {
     ...patient,
     mrn: patient.mrn ?? formatMrn(index + 1),
@@ -152,7 +156,7 @@ function backfillPatient(patient: Patient, index: number): Patient {
   }
 }
 
-function reducer(store: Store, action: Action): Store {
+const reducer = (store: Store, action: Action): Store => {
   const { data, session } = store
 
   if (action.type === 'session') return { ...store, session: { ...session, ...action.patch } }
@@ -373,6 +377,34 @@ function reducer(store: Store, action: Action): Store {
         summary: `Prescribed ${rx.medication}`,
       })
     }
+    case 'removePrescription': {
+      const enc = data.encounters.find((e) => e.id === action.encounterId)
+      const rx = enc?.prescriptions.find((p) => p.id === action.prescriptionId)
+      if (!enc || enc.status !== 'open' || !rx) return store
+      return commit(
+        store,
+        updateEncounter(data, action.encounterId, (e) => ({ ...e, prescriptions: e.prescriptions.filter((p) => p.id !== action.prescriptionId) })),
+        { action: 'prescription.remove', entityType: 'prescription', entityId: rx.id, summary: `Removed prescription for ${rx.medication}` },
+      )
+    }
+    case 'recordVaccination': {
+      const patient = data.patients.find((p) => p.id === action.patientId)
+      if (!patient || !action.vaccination.vaccineName.trim()) return store
+      const vac: Vaccination = {
+        ...action.vaccination,
+        vaccineName: action.vaccination.vaccineName.trim(),
+        id: uid(),
+        patientId: patient.id,
+        vetId: session.currentUserId,
+        version: 1,
+      }
+      return commit(store, { ...data, vaccinations: [vac, ...data.vaccinations] }, {
+        action: 'vaccination.record',
+        entityType: 'vaccination',
+        entityId: vac.id,
+        summary: `Vaccinated ${patient.name} — ${vac.vaccineName}${vac.nextDueAt ? ` (next due ${vac.nextDueAt})` : ''}`,
+      })
+    }
     case 'closeEncounter': {
       const enc = data.encounters.find((e) => e.id === action.encounterId)
       if (!enc || enc.status === 'closed') return store
@@ -380,25 +412,52 @@ function reducer(store: Store, action: Action): Store {
       if (!patient) return store
       const closedAt = now()
       const consult = data.products.find((p) => p.id === 'svc-1')
-      const items: InvoiceItem[] = [
-        ...(consult ? [{ id: uid(), description: consult.name, quantity: 1, unitPrice: consult.unitPrice, productId: consult.id }] : []),
-        ...enc.prescriptions.flatMap((rx) => {
-          const product = data.products.find((p) => p.id === rx.productId)
-          return product ? [{ id: uid(), description: product.name, quantity: rx.quantity, unitPrice: product.unitPrice, productId: product.id }] : []
-        }),
-      ]
-      const dispenses = enc.prescriptions
-        .filter((rx) => rx.productId)
-        .map((rx) => ({ id: uid(), productId: rx.productId!, delta: -rx.quantity, reason: 'dispense' as const, referenceId: enc.id, createdAt: closedAt }))
+      // Resolve each prescription against the catalog: legacy products first,
+      // then inventory items (the live pharmacy model). Inventory dispenses
+      // deduct lots FEFO (first-expiry-first-out) so the ledger and the
+      // cached lot quantities stay reconciled.
+      const items: InvoiceItem[] = consult
+        ? [{ id: uid(), description: consult.name, quantity: 1, unitPrice: consult.unitPrice, productId: consult.id }]
+        : []
+      const productDispenses: StockMovement[] = []
+      const lotDispenses: StockMovement[] = []
+      let lots = data.inventoryLots
+      for (const rx of enc.prescriptions) {
+        const product = rx.productId ? data.products.find((p) => p.id === rx.productId) : undefined
+        const item = rx.productId ? data.inventoryItems.find((i) => i.id === rx.productId) : undefined
+        if (product) {
+          items.push({ id: uid(), description: product.name, quantity: rx.quantity, unitPrice: product.unitPrice, productId: product.id })
+          productDispenses.push({ id: uid(), productId: product.id, delta: -rx.quantity, reason: 'dispense', referenceId: enc.id, createdAt: closedAt })
+          continue
+        }
+        if (item) {
+          items.push({ id: uid(), description: item.name, quantity: rx.quantity, unitPrice: item.sellingPrice, productId: item.id })
+          let remaining = rx.quantity
+          const fefo = lots
+            .filter((l) => l.itemId === item.id && l.quantity > 0)
+            .sort((a, b) => (a.expiryDate ?? '9999-12-31').localeCompare(b.expiryDate ?? '9999-12-31'))
+          for (const lot of fefo) {
+            if (remaining <= 0) break
+            const take = Math.min(lot.quantity, remaining)
+            lotDispenses.push({ id: uid(), lotId: lot.id, delta: -take, reason: 'stock_out', referenceId: enc.id, notes: `dispense for ${patient.name}`, createdAt: closedAt })
+            lots = lots.map((l) => (l.id === lot.id ? { ...l, quantity: l.quantity - take } : l))
+            remaining -= take
+          }
+          continue
+        }
+        items.push({ id: uid(), description: rx.medication, quantity: rx.quantity, unitPrice: 0 })
+      }
       const invoiceId = uid()
-      const number = `INV-${new Date().getFullYear()}-${String(142 + data.invoices.length).padStart(4, '0')}`
+      const number = `INV-${new Date(closedAt).getFullYear()}-${String(142 + data.invoices.length).padStart(4, '0')}`
       return commit(
         store,
         {
           ...data,
           encounters: data.encounters.map((e) => (e.id === enc.id ? { ...e, status: 'closed', closedAt, version: e.version + 1 } : e)),
           appointments: data.appointments.map((a) => (a.id === enc.appointmentId ? { ...a, status: 'completed', version: a.version + 1 } : a)),
-          stockMovements: [...data.stockMovements, ...dispenses],
+          patients: data.patients.map((p) => (p.id === patient.id ? { ...p, lastVisit: closedAt.slice(0, 10) } : p)),
+          stockMovements: [...data.stockMovements, ...productDispenses, ...lotDispenses],
+          inventoryLots: lots,
           invoices: [
             { id: invoiceId, number, ownerId: patient.ownerId, encounterId: enc.id, status: 'draft', items, createdAt: closedAt, version: 1 },
             ...data.invoices,
@@ -406,6 +465,28 @@ function reducer(store: Store, action: Action): Store {
         },
         { action: 'encounter.close', entityType: 'encounter', entityId: enc.id, summary: `Closed consultation for ${patient.name}; draft ${number}` },
       )
+    }
+    case 'createInvoice': {
+      if (!action.items.length) return store
+      const owner = data.owners.find((o) => o.id === action.ownerId)
+      if (!owner) return store
+      const invoiceId = uid()
+      const number = `INV-${new Date().getFullYear()}-${String(142 + data.invoices.length).padStart(4, '0')}`
+      const invoice = {
+        id: invoiceId,
+        number,
+        ownerId: owner.id,
+        status: 'draft' as const,
+        items: action.items.map((item) => ({ ...item, id: uid() })),
+        createdAt: now(),
+        version: 1,
+      }
+      return commit(store, { ...data, invoices: [invoice, ...data.invoices] }, {
+        action: 'invoice.create',
+        entityType: 'invoice',
+        entityId: invoiceId,
+        summary: `Created draft ${number} for ${owner.name}`,
+      })
     }
     case 'addInvoiceItem': {
       const item = { ...action.item, id: uid() }
@@ -567,7 +648,7 @@ function reducer(store: Store, action: Action): Store {
 /* ---------- persistence ---------- */
 
 /** Structural guard so a corrupt or foreign payload never reaches the reducer. */
-export function isClinicState(value: unknown): value is ClinicState {
+export const isClinicState = (value: unknown): value is ClinicState => {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   return (
@@ -581,7 +662,7 @@ export function isClinicState(value: unknown): value is ClinicState {
   )
 }
 
-function parseState(raw: unknown): ClinicState | null {
+const parseState = (raw: unknown): ClinicState | null => {
   if (!isClinicState(raw)) return null
   // Documents persisted before staff activation existed default to active.
   return {
@@ -591,10 +672,11 @@ function parseState(raw: unknown): ClinicState | null {
     suppliers: raw.suppliers ?? [],
     inventoryItems: raw.inventoryItems ?? [],
     inventoryLots: raw.inventoryLots ?? [],
+    vaccinations: raw.vaccinations ?? [],
   }
 }
 
-export async function loadState(): Promise<ClinicState | null> {
+export const loadState = async (): Promise<ClinicState | null> => {
   if (isTauri()) {
     try {
       const fromSidecar = parseState(await fetchState())
@@ -615,7 +697,7 @@ export async function loadState(): Promise<ClinicState | null> {
   }
 }
 
-export function saveState(data: ClinicState) {
+export const saveState = (data: ClinicState) => {
   if (isTauri()) {
     void (async () => {
       try {
@@ -651,7 +733,7 @@ const initialSession: Session = {
 
 const StoreContext = createContext<{ store: Store; dispatch: (a: Action) => void } | null>(null)
 
-export function ClinicProvider({ children }: { children: ReactNode }) {
+export const ClinicProvider = ({ children }: { children: ReactNode }) => {
   const [hydrated, setHydrated] = useState(false)
   const [store, dispatch] = useReducer(reducer, { data: seedState, session: initialSession })
   const { plan, internetOnline, lanOnline, syncing } = store.session
@@ -774,7 +856,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }
 
-export function useClinic() {
+export const useClinic = () => {
   const ctx = useContext(StoreContext)
   if (!ctx) throw new Error('useClinic must be used inside ClinicProvider')
   const { store, dispatch } = ctx
@@ -782,7 +864,7 @@ export function useClinic() {
   return { data: store.data, session: store.session, user, dispatch }
 }
 
-export function usePermission(permission: Permission) {
+export const usePermission = (permission: Permission) => {
   const { user, session } = useClinic()
   if (!session.lanOnline) return { allowed: false, reason: 'Offline from clinic server — read-only' }
   if (!can(user.role, permission)) return { allowed: false, reason: 'Your role does not permit this action' }
@@ -791,7 +873,7 @@ export function usePermission(permission: Permission) {
 
 export type SyncState = 'lan_offline' | 'local_only' | 'cloud_offline' | 'syncing' | 'pending' | 'synced'
 
-export function useSyncState(): { state: SyncState; pending: number } {
+export const useSyncState = (): { state: SyncState; pending: number } => {
   const { data, session } = useClinic()
   const pending = data.outbox.length
   if (!session.lanOnline) return { state: 'lan_offline', pending }

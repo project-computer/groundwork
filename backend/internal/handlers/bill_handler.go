@@ -93,3 +93,68 @@ func (h *BillHandler) Update(c fiber.Ctx) error {
 
 	return utils.SuccessResponse(c, "Bill updated successfully", nil)
 }
+
+func (h *BillHandler) RecordPayment(c fiber.Ctx) error {
+	id, err := utils.GetParamInt(c, "id")
+	if err != nil {
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, "invalid_id", "Invalid bill ID")
+	}
+
+	var req models.CreateBillPaymentRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, "invalid_request", "Invalid request body")
+	}
+
+	if err := h.validator.Struct(req); err != nil {
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, "validation_error", err.Error())
+	}
+
+	payment, summary, err := h.service.RecordPayment(c.Context(), middleware.GetClinicID(c), id, middleware.GetUserID(c), req)
+	if err != nil {
+		if err.Error() == "bill not found" {
+			return utils.ErrorResponse(c, fiber.StatusNotFound, "not_found", "Bill not found")
+		}
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, "payment_failed", err.Error())
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"payment": payment,
+		"summary": summary,
+	})
+}
+
+func (h *BillHandler) ListPayments(c fiber.Ctx) error {
+	id, err := utils.GetParamInt(c, "id")
+	if err != nil {
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, "invalid_id", "Invalid bill ID")
+	}
+
+	payments, summary, err := h.service.ListPayments(c.Context(), middleware.GetClinicID(c), id)
+	if err != nil {
+		if err.Error() == "bill not found" {
+			return utils.ErrorResponse(c, fiber.StatusNotFound, "not_found", "Bill not found")
+		}
+		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "fetch_failed", "Failed to fetch payments")
+	}
+
+	return c.JSON(fiber.Map{
+		"payments": payments,
+		"summary":  summary,
+	})
+}
+
+func (h *BillHandler) Void(c fiber.Ctx) error {
+	id, err := utils.GetParamInt(c, "id")
+	if err != nil {
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, "invalid_id", "Invalid bill ID")
+	}
+
+	if err := h.service.Void(c.Context(), middleware.GetClinicID(c), id, middleware.GetUserID(c)); err != nil {
+		if err.Error() == "bill not found" {
+			return utils.ErrorResponse(c, fiber.StatusNotFound, "not_found", "Bill not found")
+		}
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, "void_failed", err.Error())
+	}
+
+	return utils.SuccessResponse(c, "Bill voided successfully", nil)
+}

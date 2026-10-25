@@ -10,7 +10,7 @@ import type { ClinicState } from './types'
 
 let resolved: Promise<string | null> | null = null
 
-async function discover(): Promise<string | null> {
+const discover = async (): Promise<string | null> => {
   for (let attempt = 0; attempt < 10; attempt += 1) {
     try {
       const url = await invoke<string | null>('backend_url')
@@ -23,7 +23,7 @@ async function discover(): Promise<string | null> {
   return null
 }
 
-export function backendUrl(): Promise<string | null> {
+export const backendUrl = (): Promise<string | null> => {
   if (!isTauri()) return Promise.resolve(null)
   if (!resolved) resolved = discover()
   return resolved
@@ -46,7 +46,7 @@ export interface SyncRunResult {
   lastSyncedAt?: string
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const base = await backendUrl()
   if (!base) throw new Error('sidecar unavailable')
   const response = await fetch(`${base}${path}`, {
@@ -60,12 +60,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
-export async function fetchState(): Promise<unknown | null> {
+export const fetchState = async (): Promise<unknown | null> => {
   const body = await request<{ state: unknown }>('/state')
   return body.state ?? null
 }
 
-export async function pushState(state: ClinicState): Promise<boolean> {
+export const pushState = async (state: ClinicState): Promise<boolean> => {
   const base = await backendUrl()
   if (!base) return false
   await request('/state', { method: 'PUT', body: JSON.stringify(state) })
@@ -77,7 +77,7 @@ export async function pushState(state: ClinicState): Promise<boolean> {
  * demo can keep simulating acks. In Tauri a missing sidecar or a 503 from an
  * unconfigured cloud is an error: the outbox must stay queued.
  */
-export async function runSync(state: ClinicState): Promise<SyncRunResult | null> {
+export const runSync = async (state: ClinicState): Promise<SyncRunResult | null> => {
   const base = await backendUrl()
   if (!base) {
     if (isTauri()) throw new SyncNotConfiguredError('Local sync sidecar is unavailable')

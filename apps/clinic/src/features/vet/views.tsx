@@ -7,7 +7,7 @@ import type { StaffUser } from '@/lib/vet/types'
 
 /* ---------- Medical records ---------- */
 
-export function RecordsView({ onOpenConsult }: { onOpenConsult: (encounterId: string) => void }) {
+export const RecordsView = ({ onOpenConsult }: { onOpenConsult: (encounterId: string) => void }) => {
   const { data } = useClinic()
   const [query, setQuery] = useState('')
   const encounters = data.encounters
@@ -32,7 +32,7 @@ export function RecordsView({ onOpenConsult }: { onOpenConsult: (encounterId: st
         }
       />
       <Panel title={`${encounters.length} encounters`} description="Newest first">
-        <div className="records-table">
+        <div className="records-table encounters-table">
           <div className="table-head">
             <span>Patient</span>
             <span>Opened</span>
@@ -51,9 +51,9 @@ export function RecordsView({ onOpenConsult }: { onOpenConsult: (encounterId: st
                     <span>{encounter.status === 'open' ? 'Consultation in progress' : `Closed ${encounter.closedAt ? formatDate(encounter.closedAt) : ''}`}</span>
                   </div>
                 </div>
-                <span>{formatDate(encounter.openedAt)}</span>
-                <span>{encounter.diagnoses.map((d) => d.description).join(', ') || '—'}</span>
-                <span>{encounter.notes.length}</span>
+                <span data-label="Opened">{formatDate(encounter.openedAt)}</span>
+                <span data-label="Diagnoses">{encounter.diagnoses.map((d) => d.description).join(', ') || '—'}</span>
+                <span data-label="Notes">{encounter.notes.length}</span>
                 {encounter.status === 'open' ? (
                   <button className="small-button" onClick={() => onOpenConsult(encounter.id)}>
                     <Stethoscope size={13} /> Continue
@@ -66,9 +66,111 @@ export function RecordsView({ onOpenConsult }: { onOpenConsult: (encounterId: st
               </div>
             )
           })}
+          {encounters.length === 0 && <p className="empty-state">No encounters match your search.</p>}
         </div>
       </Panel>
+      <Vaccinations />
     </>
+  )
+}
+
+/* ---------- Vaccinations ---------- */
+
+const Vaccinations = () => {
+  const { data, dispatch } = useClinic()
+  const canWrite = usePermission('records.write').allowed
+  const [patientId, setPatientId] = useState('')
+  const [vaccineName, setVaccineName] = useState('')
+  const [lotNumber, setLotNumber] = useState('')
+  const [administeredAt, setAdministeredAt] = useState(todayKey())
+  const [nextDueAt, setNextDueAt] = useState('')
+
+  const record = () => {
+    if (!patientId || !vaccineName.trim()) return
+    dispatch({
+      type: 'recordVaccination',
+      patientId,
+      vaccination: {
+        vaccineName,
+        lotNumber: lotNumber.trim() || undefined,
+        administeredAt: `${administeredAt}T00:00:00+07:00`,
+        nextDueAt: nextDueAt ? `${nextDueAt}T00:00:00+07:00` : undefined,
+      },
+    })
+    setPatientId('')
+    setVaccineName('')
+    setLotNumber('')
+    setNextDueAt('')
+  }
+
+  const rows = [...data.vaccinations]
+    .sort((a, b) => b.administeredAt.localeCompare(a.administeredAt))
+    .map((v) => {
+      const patient = data.patients.find((p) => p.id === v.patientId)
+      const vet = data.users.find((u) => u.id === v.vetId)
+      const overdue = v.nextDueAt ? v.nextDueAt < new Date().toISOString() : false
+      return { ...v, patient, vet, overdue }
+    })
+
+  return (
+    <Panel title="Vaccinations" description="Vaccine history and next-due dates">
+      {canWrite && (
+        <div className="vaccination-form">
+          <select value={patientId} onChange={(e) => setPatientId(e.target.value)} aria-label="Patient">
+            <option value="">Select patient…</option>
+            {data.patients.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.mrn})
+              </option>
+            ))}
+          </select>
+          <input value={vaccineName} onChange={(e) => setVaccineName(e.target.value)} placeholder="Vaccine name" aria-label="Vaccine name" />
+          <input value={lotNumber} onChange={(e) => setLotNumber(e.target.value)} placeholder="Lot number" aria-label="Lot number" />
+          <input type="date" value={administeredAt} onChange={(e) => setAdministeredAt(e.target.value)} aria-label="Date administered" />
+          <input type="date" value={nextDueAt} onChange={(e) => setNextDueAt(e.target.value)} aria-label="Next due date" />
+          <button className="small-button" onClick={record} disabled={!patientId || !vaccineName.trim()}>
+            Record
+          </button>
+        </div>
+      )}
+      <div className="records-table vaccinations-table">
+        <div className="table-head">
+          <span>Patient</span>
+          <span>Vaccine</span>
+          <span>Given</span>
+          <span>Next due</span>
+          <span>Vet</span>
+        </div>
+        {rows.length === 0 && <p className="empty-state">No vaccinations recorded yet.</p>}
+        {rows.map(({ patient, vet, overdue, ...v }) => (
+          <div className="table-row" key={v.id}>
+            <div className="patient-cell">
+              <div className="pet-avatar">{patient?.name.slice(0, 1) ?? '?'}</div>
+              <div>
+                <strong>{patient?.name ?? 'Unknown'}</strong>
+                <span>{patient?.mrn}</span>
+              </div>
+            </div>
+            <span data-label="Vaccine">
+              {v.vaccineName}
+              {v.lotNumber ? ` · ${v.lotNumber}` : ''}
+            </span>
+            <span data-label="Given">{formatDate(v.administeredAt)}</span>
+            <span data-label="Next due">
+              {v.nextDueAt ? (
+                <Pill tone={overdue ? 'bad' : 'muted'} dot>
+                  {overdue ? 'Overdue ' : ''}
+                  {formatDate(v.nextDueAt)}
+                </Pill>
+              ) : (
+                '—'
+              )}
+            </span>
+            <span data-label="Vet">{vet?.name ?? '—'}</span>
+          </div>
+        ))}
+      </div>
+    </Panel>
   )
 }
 
@@ -76,7 +178,7 @@ export function RecordsView({ onOpenConsult }: { onOpenConsult: (encounterId: st
 
 const roleOptions: StaffUser['role'][] = ['reception', 'veterinarian', 'pharmacist', 'admin']
 
-export function StaffView() {
+export const StaffView = () => {
   const { data, session, dispatch } = useClinic()
   const manage = usePermission('staff.manage')
   const [name, setName] = useState('')
@@ -121,7 +223,7 @@ export function StaffView() {
         </Panel>
       )}
       <Panel title={`${data.users.filter((u) => u.active).length} active staff members`} description="Current clinic team">
-        <div className="records-table table-wide">
+        <div className="records-table table-wide staff-table">
           <div className="table-head">
             <span>Member</span>
             <span>Role</span>
@@ -223,7 +325,7 @@ export function StaffView() {
 
 /* ---------- Settings (local data, sync & plan) ---------- */
 
-export function SettingsView() {
+export const SettingsView = () => {
   const { data, session, dispatch } = useClinic()
   const sync = useSyncState()
 

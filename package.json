@@ -6,12 +6,12 @@
     "dev": "pnpm --filter @vet/clinic dev",
     "build": "pnpm --filter @vet/clinic build",
     "lint": "pnpm -r lint",
-    "test": "pnpm sidecar && pnpm -r test && (cd desktop && go test ./...) && (cd backend && go test ./...) && cargo test --manifest-path apps/clinic/src-tauri/Cargo.toml",
+    "test": "pnpm sidecar && pnpm -r test && (cd backend && go test ./...) && cargo test --manifest-path apps/clinic/src-tauri/Cargo.toml",
     "test:ts": "pnpm -r test",
     "test:pages": "pnpm --filter @vet/clinic test:pages",
     "test:rust": "pnpm sidecar && cargo test --manifest-path apps/clinic/src-tauri/Cargo.toml",
     "tauri": "pnpm --filter @vet/clinic tauri",
-    "test:go": "(cd desktop && go test ./...) && (cd backend && go test ./...)",
+    "test:go": "(cd backend && go test ./...)",
     "sidecar": "pnpm --filter @vet/clinic sidecar"
   },
   "devDependencies": {

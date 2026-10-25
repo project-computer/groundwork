@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test'
 // layout behavior (agenda compaction, week columns, touch targets) rather than
 // exact pixels, which the browser-mode screenshot tests cover separately.
 
-async function openAppointments(page: import('@playwright/test').Page, width: number) {
+const openAppointments = async (page: import('@playwright/test').Page, width: number) => {
   await page.setViewportSize({ width, height: 900 })
   await page.goto('/')
   if (width <= 900) await page.getByRole('button', { name: 'Open menu' }).click()

@@ -1,3 +1,7 @@
 {
-  "ignorePatterns": ["dist", "src-tauri/target", "node_modules"]
+  "ignorePatterns": ["dist", "src-tauri/target", "node_modules"],
+  "rules": {
+    "func-style": ["error", "expression"],
+    "prefer-arrow-callback": "error"
+  }
 }

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic } from '@/lib/vet/store'
-import { formatDate, formatMoney, initials, invoiceTotals, stockOnHand, todayKey } from '@/lib/vet/format'
+import { formatDate, formatMoney, initials, invoiceTotals, itemOnHand, lotsExpiringWithin, stockValuation, todayKey } from '@/lib/vet/format'
 import type { AppointmentStatus, ClinicState } from '@/lib/vet/types'
 
 /* ---------- period helpers ---------- */
@@ -58,7 +58,7 @@ const endOfDay = (date: Date) => {
   return next
 }
 
-function reportPeriod(range: ReportRange, now: Date): Period {
+const reportPeriod = (range: ReportRange, now: Date): Period => {
   const end = endOfDay(now)
   if (range === 'all') return { start: null, end }
   if (range === 'today') return { start: startOfDay(now), end }
@@ -69,14 +69,14 @@ function reportPeriod(range: ReportRange, now: Date): Period {
   return { start, end }
 }
 
-function within(iso: string, period: Period) {
+const within = (iso: string, period: Period) => {
   const time = new Date(iso).getTime()
   if (!Number.isFinite(time)) return false
   if (time > period.end.getTime()) return false
   return !period.start || time >= period.start.getTime()
 }
 
-function periodLabel(period: Period) {
+const periodLabel = (period: Period) => {
   if (!period.start) return `All activity through ${formatDate(period.end.toISOString())}`
   const start = formatDate(period.start.toISOString())
   const end = formatDate(period.end.toISOString())
@@ -107,12 +107,12 @@ const STATUS_TONE: Record<AppointmentStatus, BarTone> = {
 
 const STATUS_ORDER: AppointmentStatus[] = ['booked', 'checked_in', 'in_consult', 'completed', 'cancelled', 'no_show']
 
-function addTrendAmount(buckets: Map<string, TrendBucket>, key: string, kind: 'collected' | 'billed', amount: number) {
+const addTrendAmount = (buckets: Map<string, TrendBucket>, key: string, kind: 'collected' | 'billed', amount: number) => {
   const bucket = buckets.get(key)
   if (bucket) bucket[kind] += amount
 }
 
-function buildTrend(data: ClinicState, range: ReportRange, period: Period, now: Date) {
+const buildTrend = (data: ClinicState, range: ReportRange, period: Period, now: Date) => {
   const payments = data.payments.filter((p) => within(p.receivedAt, period))
   const invoices = data.invoices.filter((i) => i.status !== 'draft' && within(i.createdAt, period))
 
@@ -179,7 +179,7 @@ function buildTrend(data: ClinicState, range: ReportRange, period: Period, now: 
   return { buckets, caption, max: Math.max(0, ...buckets.map((bucket) => Math.max(bucket.collected, bucket.billed))) }
 }
 
-function buildReport(data: ClinicState, range: ReportRange) {
+const buildReport = (data: ClinicState, range: ReportRange) => {
   const now = new Date()
   const period = reportPeriod(range, now)
 
@@ -245,15 +245,13 @@ function buildReport(data: ClinicState, range: ReportRange) {
     .sort((a, b) => b.revenue - a.revenue || b.visits - a.visits)
   const maxVetRevenue = Math.max(1, ...vetRows.map((row) => row.revenue))
 
-  const stockRows = data.products
-    .filter((product) => product.kind !== 'service')
-    .map((product) => ({ product, onHand: stockOnHand(product.id, data.stockMovements) }))
-    .filter((row) => row.onHand <= row.product.reorderThreshold)
-    .sort(
-      (a, b) =>
-        a.onHand / Math.max(a.product.reorderThreshold, 1) - b.onHand / Math.max(b.product.reorderThreshold, 1),
-    )
+  const stockRows = data.inventoryItems
+    .map((item) => ({ item, onHand: itemOnHand(item.id, data.inventoryLots) }))
+    .filter((row) => row.onHand <= row.item.reorderLevel)
+    .sort((a, b) => a.onHand / Math.max(a.item.reorderLevel, 1) - b.onHand / Math.max(b.item.reorderLevel, 1))
     .slice(0, 6)
+  const stockValue = stockValuation(data.inventoryLots)
+  const expiringLots = lotsExpiringWithin(data.inventoryLots, 30)
 
   return {
     range,
@@ -282,6 +280,8 @@ function buildReport(data: ClinicState, range: ReportRange) {
     vetRows,
     maxVetRevenue,
     stockRows,
+    stockValue,
+    expiringLots,
   }
 }
 
@@ -290,7 +290,7 @@ function buildReport(data: ClinicState, range: ReportRange) {
 const csvCell = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`
 const csvMoney = (minor: number) => (minor / 100).toFixed(2)
 
-function exportReport(report: ReturnType<typeof buildReport>, data: ClinicState) {
+const exportReport = (report: ReturnType<typeof buildReport>, data: ClinicState) => {
   const { metrics } = report
   const lines: string[] = [
     csvCell('Vettera clinic report'),
@@ -333,8 +333,13 @@ function exportReport(report: ReturnType<typeof buildReport>, data: ClinicState)
     csvCell('Inventory attention'),
     [csvCell('Item'), csvCell('On hand'), csvCell('Reorder level'), csvCell('Unit')].join(','),
     ...report.stockRows.map((row) =>
-      [csvCell(row.product.name), csvCell(row.onHand), csvCell(row.product.reorderThreshold), csvCell(row.product.unit)].join(','),
+      [csvCell(row.item.name), csvCell(row.onHand), csvCell(row.item.reorderLevel), csvCell(row.item.unit)].join(','),
     ),
+    '',
+    csvCell('Stock valuation'),
+    [csvCell('Metric'), csvCell('Value')].join(','),
+    [csvCell('Inventory value at cost'), csvCell(csvMoney(report.stockValue))].join(','),
+    [csvCell('Lots expiring within 30 days'), csvCell(report.expiringLots.length)].join(','),
   ]
 
   const blob = new Blob([`\uFEFF${lines.join('\r\n')}`], { type: 'text/csv;charset=utf-8' })
@@ -348,7 +353,7 @@ function exportReport(report: ReturnType<typeof buildReport>, data: ClinicState)
 
 /* ---------- view ---------- */
 
-export function ReportsView() {
+export const ReportsView = () => {
   const { data } = useClinic()
   const [range, setRange] = useState<ReportRange>('30d')
   const report = useMemo(() => buildReport(data, range), [data, range])
@@ -567,7 +572,7 @@ export function ReportsView() {
       <Panel
         className="report-stock"
         title="Inventory attention"
-        description="Items at or below their reorder level, based on the stock ledger."
+        description="Items at or below their reorder level, from live lot quantities."
         action={
           <Pill tone={report.stockRows.length > 0 ? 'warn' : 'ok'} dot>
             {report.stockRows.length > 0 ? `${report.stockRows.length} to reorder` : 'All healthy'}
@@ -579,29 +584,39 @@ export function ReportsView() {
         ) : (
           <div className="bar-list">
             {report.stockRows.map((row) => (
-              <div className="bar-row stock-bar-row" key={row.product.id}>
-                <span className="bar-label" title={row.product.name}>
-                  {row.product.name}
+              <div className="bar-row stock-bar-row" key={row.item.id}>
+                <span className="bar-label" title={row.item.name}>
+                  {row.item.name}
                   <span>
-                    reorder at {row.product.reorderThreshold} {row.product.unit}
+                    reorder at {row.item.reorderLevel} {row.item.unit}
                   </span>
                 </span>
                 <div className="bar-track">
                   <span
                     className={`bar-fill ${row.onHand === 0 ? 'red' : 'amber'}`}
                     style={{
-                      width: `${Math.min(100, Math.max(4, (row.onHand / Math.max(row.product.reorderThreshold, 1)) * 100))}%`,
+                      width: `${Math.min(100, Math.max(4, (row.onHand / Math.max(row.item.reorderLevel, 1)) * 100))}%`,
                     }}
                   />
                 </div>
                 <strong className="bar-value">
                   {row.onHand}
-                  <small>{row.product.unit}</small>
+                  <small>{row.item.unit}</small>
                 </strong>
               </div>
             ))}
           </div>
         )}
+        <div className="report-summary">
+          <div>
+            <small>Stock value at cost</small>
+            <strong>{formatMoney(report.stockValue)}</strong>
+          </div>
+          <div>
+            <small>Lots expiring ≤ 30 days</small>
+            <strong>{report.expiringLots.length}</strong>
+          </div>
+        </div>
         <p className="report-footnote">
           <AlertTriangle size={12} /> Stock levels are a projection of the append-only movement ledger.
         </p>
