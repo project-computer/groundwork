@@ -5,13 +5,21 @@ import path from "node:path";
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      "@": path.resolve(import.meta.dirname, "./src"),
-    },
+    alias: [
+      {
+        find: /^vitest\/browser$/,
+        replacement: "@vitest/browser/client",
+      },
+      {
+        find: "@",
+        replacement: path.resolve(import.meta.dirname, "./src"),
+      },
+    ],
   },
   test: {
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
   },
 });

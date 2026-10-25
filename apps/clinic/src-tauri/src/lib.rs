@@ -1,9 +1,117 @@
+use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
+use std::process::{Child, Command, Stdio};
+use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
 use db::Db;
 use serde_json::Value;
 use tauri::Manager;
 
 pub mod clinic;
 pub mod db;
+
+/// Owns the clinic-core sidecar process and the loopback URL it announced.
+pub struct Sidecar {
+    pub base_url: Arc<Mutex<Option<String>>>,
+    child: Mutex<Option<Child>>,
+}
+
+impl Drop for Sidecar {
+    fn drop(&mut self) {
+        if let Ok(mut guard) = self.child.lock() {
+            if let Some(mut child) = guard.take() {
+                let _ = child.kill();
+                let _ = child.wait();
+            }
+        }
+    }
+}
+
+fn sidecar_binary() -> Option<PathBuf> {
+    if let Ok(path) = std::env::var("VET_SIDECAR_BIN") {
+        let path = PathBuf::from(path);
+        if path.exists() {
+            return Some(path);
+        }
+    }
+
+    // Production: Tauri copies external binaries next to the app executable.
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let candidate = dir.join("clinic-core");
+            if candidate.exists() {
+                return Some(candidate);
+            }
+        }
+    }
+
+    // Development: use the build produced by desktop/scripts/build-sidecar.sh.
+    let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../desktop/bin/clinic-core");
+    if dev.exists() {
+        return Some(dev);
+    }
+
+    None
+}
+
+fn spawn_sidecar(app: &tauri::AppHandle) -> Option<Sidecar> {
+    let binary = sidecar_binary()?;
+    let data_dir = app.path().app_data_dir().ok()?;
+    let db_path = data_dir.join("clinic.db");
+
+    let mut command = Command::new(&binary);
+    command
+        .env("VET_DB", &db_path)
+        .env("VET_PORT", "0")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit());
+
+    let mut child = match command.spawn() {
+        Ok(child) => child,
+        Err(error) => {
+            eprintln!("failed to spawn clinic-core sidecar: {error}");
+            return None;
+        }
+    };
+
+    let stdout = child.stdout.take()?;
+    let base_url = Arc::new(Mutex::new(None));
+    let (tx, rx) = mpsc::channel::<String>();
+    let shared = Arc::clone(&base_url);
+
+    std::thread::spawn(move || {
+        let reader = BufReader::new(stdout);
+        for line in reader.lines().map_while(Result::ok) {
+            if let Some(addr) = line.strip_prefix("LISTENING ") {
+                let url = addr.trim().to_string();
+                if let Ok(mut guard) = shared.lock() {
+                    *guard = Some(url.clone());
+                }
+                let _ = tx.send(url);
+            } else if !line.trim().is_empty() {
+                eprintln!("clinic-core: {line}");
+            }
+        }
+    });
+
+    match rx.recv_timeout(Duration::from_secs(10)) {
+        Ok(url) => println!("clinic-core listening at {url}"),
+        Err(_) => eprintln!("clinic-core did not report a listening address"),
+    }
+
+    Some(Sidecar {
+        base_url,
+        child: Mutex::new(Some(child)),
+    })
+}
+
+#[tauri::command]
+fn backend_url(sidecar: tauri::State<Sidecar>) -> Option<String> {
+    sidecar.base_url.lock().ok().and_then(|guard| guard.clone())
+}
 
 pub fn run() {
     tauri::Builder::default()
@@ -15,103 +123,38 @@ pub fn run() {
             let database =
                 db::open(&data_dir.join("clinic.db")).expect("failed to initialize local database");
             app.manage(database);
+
+            match spawn_sidecar(app.handle()) {
+                Some(sidecar) => {
+                    app.manage(sidecar);
+                }
+                None => {
+                    eprintln!(
+                        "clinic-core unavailable; falling back to in-process SQLite commands"
+                    );
+                    app.manage(Sidecar {
+                        base_url: Arc::new(Mutex::new(None)),
+                        child: Mutex::new(None),
+                    });
+                }
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            clinic_load_command,
-            patient_upsert_command,
-            patient_delete_command,
-            appointment_upsert_command,
-            appointment_delete_command,
-            appointment_set_status_command,
-            record_upsert_command,
-            record_set_paid_command,
-            settings_save_command,
-            data_replace_command,
-            data_merge_command,
-            consult_start_command,
-            walk_in_start_command,
-            visit_finish_command,
+            state_load_command,
+            state_save_command,
+            backend_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
 
 #[tauri::command]
-fn clinic_load_command(db: tauri::State<Db>) -> Result<Value, String> {
-    clinic::clinic_load(&db)
+fn state_load_command(db: tauri::State<Db>) -> Result<Value, String> {
+    clinic::state_load(&db)
 }
 
 #[tauri::command]
-fn patient_upsert_command(db: tauri::State<Db>, patient: Value) -> Result<(), String> {
-    clinic::patient_upsert(&db, &patient)
-}
-
-#[tauri::command]
-fn patient_delete_command(db: tauri::State<Db>, id: String) -> Result<(), String> {
-    clinic::patient_delete(&db, &id)
-}
-
-#[tauri::command]
-fn appointment_upsert_command(db: tauri::State<Db>, appointment: Value) -> Result<(), String> {
-    clinic::appointment_upsert(&db, &appointment)
-}
-
-#[tauri::command]
-fn appointment_delete_command(db: tauri::State<Db>, id: String) -> Result<(), String> {
-    clinic::appointment_delete(&db, &id)
-}
-
-#[tauri::command]
-fn appointment_set_status_command(
-    db: tauri::State<Db>,
-    id: String,
-    status: String,
-) -> Result<(), String> {
-    clinic::appointment_set_status(&db, &id, &status)
-}
-
-#[tauri::command]
-fn record_upsert_command(db: tauri::State<Db>, record: Value) -> Result<(), String> {
-    clinic::record_upsert(&db, &record)
-}
-
-#[tauri::command]
-fn record_set_paid_command(db: tauri::State<Db>, id: String, paid: bool) -> Result<(), String> {
-    clinic::record_set_paid(&db, &id, paid)
-}
-
-#[tauri::command]
-fn settings_save_command(db: tauri::State<Db>, settings: Value) -> Result<(), String> {
-    clinic::settings_save(&db, &settings)
-}
-
-#[tauri::command]
-fn data_replace_command(db: tauri::State<Db>, data: Value) -> Result<(), String> {
-    clinic::data_replace(&db, &data)
-}
-
-#[tauri::command]
-fn data_merge_command(db: tauri::State<Db>, data: Value) -> Result<(), String> {
-    clinic::data_merge(&db, &data)
-}
-
-#[tauri::command]
-fn consult_start_command(db: tauri::State<Db>, appointmentId: String) -> Result<Value, String> {
-    clinic::consult_start(&db, &appointmentId)
-}
-
-#[tauri::command]
-fn walk_in_start_command(
-    db: tauri::State<Db>,
-    patientId: String,
-    reason: String,
-    vet: String,
-) -> Result<Value, String> {
-    clinic::walk_in_start(&db, &patientId, &reason, &vet)
-}
-
-#[tauri::command]
-fn visit_finish_command(db: tauri::State<Db>, record: Value) -> Result<Value, String> {
-    clinic::visit_finish(&db, &record)
+fn state_save_command(db: tauri::State<Db>, state: Value) -> Result<(), String> {
+    clinic::state_save(&db, &state)
 }
