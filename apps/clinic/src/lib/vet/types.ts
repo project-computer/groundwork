@@ -1,4 +1,4 @@
-export type Role = 'reception' | 'veterinarian' | 'admin'
+export type Role = 'reception' | 'veterinarian' | 'pharmacist' | 'admin'
 
 export type Permission =
   | 'records.write'
@@ -6,12 +6,14 @@ export type Permission =
   | 'clinical.write'
   | 'billing.write'
   | 'inventory.write'
+  | 'staff.manage'
   | 'data.export'
 
 export interface StaffUser {
   id: string
   name: string
   role: Role
+  active: boolean
 }
 
 export interface Owner {
@@ -26,11 +28,15 @@ export interface Owner {
 export interface Patient {
   id: string
   ownerId: string
+  mrn: string
   name: string
   species: 'Dog' | 'Cat' | 'Rabbit' | 'Bird' | 'Other'
   breed: string
   sex: 'Male' | 'Female' | 'Male (neutered)' | 'Female (spayed)' | 'Unknown'
   birthDate: string
+  microchip?: string
+  allergies: string[]
+  medicalAlerts: string[]
   lastVisit?: string
   weightUnit?: string
   version: number
@@ -109,13 +115,51 @@ export interface Product {
   kind: 'medication' | 'service' | 'supply'
 }
 
+export type StockReason = 'stock_in' | 'stock_out' | 'adjustment' | 'waste'
+
 export interface StockMovement {
   id: string
-  productId: string
+  productId?: string
+  lotId?: string
   delta: number
-  reason: 'receipt' | 'dispense' | 'adjustment'
+  reason: StockReason | 'receipt' | 'dispense'
   referenceId?: string
+  notes?: string
   createdAt: string
+}
+
+export type InventoryCategory = 'medicine' | 'vaccine' | 'equipment' | 'supply'
+
+/** Supplier is an external vendor an InventoryLot was purchased from. */
+export interface Supplier {
+  id: string
+  name: string
+  phone?: string
+  email?: string
+  address?: string
+}
+
+/** InventoryItem is a clinic's stock-keeping definition (e.g. "Amoxicillin 250mg"). */
+export interface InventoryItem {
+  id: string
+  name: string
+  category: InventoryCategory
+  unit: string
+  reorderLevel: number
+  sellingPrice: number // minor units
+  notes?: string
+}
+
+/** InventoryLot is a specific batch of an InventoryItem from a Supplier. */
+export interface InventoryLot {
+  id: string
+  itemId: string
+  lotNumber: string
+  quantity: number
+  expiryDate?: string // YYYY-MM-DD
+  supplierId?: string
+  costPerUnit?: number // minor units
+  receivedDate: string // YYYY-MM-DD
 }
 
 export interface InvoiceItem {
@@ -174,6 +218,9 @@ export interface ClinicState {
   encounters: Encounter[]
   products: Product[]
   stockMovements: StockMovement[]
+  suppliers: Supplier[]
+  inventoryItems: InventoryItem[]
+  inventoryLots: InventoryLot[]
   invoices: Invoice[]
   payments: Payment[]
   audit: AuditEvent[]

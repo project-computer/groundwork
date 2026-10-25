@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Activity, BarChart3, Database, ShieldCheck, Stethoscope } from 'lucide-react'
-import { Panel, PageHeader, Pill } from '@/components/vet/fields'
-import { useClinic, useSyncState } from '@/lib/vet/store'
-import { formatDate, formatMoney, invoiceTotals, permissionsFor, roleLabel, statusTone, todayKey } from '@/lib/vet/format'
+import { Activity, Database, ShieldCheck, Stethoscope } from 'lucide-react'
+import { Field, Panel, PageHeader, Pill } from '@/components/vet/fields'
+import { useClinic, usePermission, useSyncState } from '@/lib/vet/store'
+import { formatDate, permissionsFor, roleLabel, statusTone, todayKey } from '@/lib/vet/format'
+import type { StaffUser } from '@/lib/vet/types'
 
 /* ---------- Medical records ---------- */
 
@@ -25,7 +26,7 @@ export function RecordsView({ onOpenConsult }: { onOpenConsult: (encounterId: st
             className="search-input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by patient or diagnosis"
+            placeholder="Search by patient or diagnosis…"
             aria-label="Search medical records"
           />
         }
@@ -71,63 +72,56 @@ export function RecordsView({ onOpenConsult }: { onOpenConsult: (encounterId: st
   )
 }
 
-/* ---------- Reports ---------- */
-
-export function ReportsView() {
-  const { data } = useClinic()
-  const today = todayKey()
-  const paidToday = data.payments
-    .filter((p) => p.receivedAt.startsWith(today))
-    .reduce((sum, p) => sum + p.amount, 0)
-  const outstanding = data.invoices
-    .filter((i) => i.status !== 'paid')
-    .reduce((sum, invoice) => sum + invoiceTotals(invoice, data.clinic.vatRate, data.payments).balance, 0)
-  const monthPrefix = today.slice(0, 7)
-  const visitsThisMonth = data.encounters.filter((e) => e.openedAt.startsWith(monthPrefix)).length
-  const newClients = data.owners.filter((o) => o.version === 1).length
-  const noShows = data.appointments.filter((a) => a.status === 'no_show').length
-  const stats = [
-    { label: 'Payments received today', value: formatMoney(paidToday), note: `${data.payments.filter((p) => p.receivedAt.startsWith(today)).length} payments` },
-    { label: 'Outstanding balance', value: formatMoney(outstanding), note: `${data.invoices.filter((i) => i.status !== 'paid').length} open invoices` },
-    { label: 'Encounters this month', value: String(visitsThisMonth), note: 'Consultation volume' },
-    { label: 'No-shows (all time)', value: String(noShows), note: `${newClients} owners on file` },
-  ]
-  return (
-    <>
-      <PageHeader title="Reports" description="Daily numbers from your local data — no cloud required." />
-      <div className="stat-grid">
-        {stats.map((s) => (
-          <div className="stat-card" key={s.label}>
-            <span className="stat-icon teal">
-              <BarChart3 size={19} />
-            </span>
-            <div>
-              <small>{s.label}</small>
-              <strong>{s.value}</strong>
-              <span className="stat-note">{s.note}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-      <Panel title="Coming in phase 2" description="Planned reporting capabilities">
-        <p className="empty-state">
-          Revenue by service, payment-method breakdown, stock valuation, expiry losses and CSV/Excel exports for owners, pets,
-          visits, invoices and inventory.
-        </p>
-      </Panel>
-    </>
-  )
-}
-
 /* ---------- Staff & permissions ---------- */
 
+const roleOptions: StaffUser['role'][] = ['reception', 'veterinarian', 'pharmacist', 'admin']
+
 export function StaffView() {
-  const { data, session } = useClinic()
+  const { data, session, dispatch } = useClinic()
+  const manage = usePermission('staff.manage')
+  const [name, setName] = useState('')
+  const [role, setRole] = useState<StaffUser['role']>('reception')
+  const [showAllAudit, setShowAllAudit] = useState(false)
+
+  const addStaff = () => {
+    if (!name.trim()) return
+    dispatch({ type: 'addStaff', name, role })
+    setName('')
+    setRole('reception')
+  }
+
   return (
     <>
       <PageHeader title="Staff & permissions" description="Roles decide who can write records, bill, adjust stock and export." />
-      <Panel title={`${data.users.length} staff members`} description="Current clinic team">
-        <div className="records-table">
+      {manage.allowed && (
+        <Panel title="Add staff member" description="New members start active with the permissions of their role">
+          <div className="form-grid">
+            <Field label="Full name" htmlFor="staff-name">
+              <input
+                id="staff-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addStaff()}
+                placeholder="e.g. Anong Srisuk…"
+              />
+            </Field>
+            <Field label="Role" htmlFor="staff-role">
+              <select id="staff-role" value={role} onChange={(e) => setRole(e.target.value as StaffUser['role'])}>
+                {roleOptions.map((r) => (
+                  <option key={r} value={r}>
+                    {roleLabel[r]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <button className="button primary" onClick={addStaff} disabled={!name.trim()}>
+            Add member
+          </button>
+        </Panel>
+      )}
+      <Panel title={`${data.users.filter((u) => u.active).length} active staff members`} description="Current clinic team">
+        <div className="records-table table-wide">
           <div className="table-head">
             <span>Member</span>
             <span>Role</span>
@@ -135,36 +129,79 @@ export function StaffView() {
             <span />
             <span />
           </div>
-          {data.users.map((user) => (
-            <div className="table-row" key={user.id}>
-              <div className="patient-cell">
-                <div className="pet-avatar">{user.name.slice(0, 1)}</div>
-                <div>
-                  <strong>{user.name}</strong>
-                  <span>{user.id === session.currentUserId ? 'Signed in on this device' : 'Team member'}</span>
+          {data.users.map((user) => {
+            const isSelf = user.id === session.currentUserId
+            return (
+              <div className="table-row" key={user.id} style={!user.active ? { opacity: 0.5 } : undefined}>
+                <div className="patient-cell">
+                  <div className="pet-avatar">{user.name.slice(0, 1)}</div>
+                  <div>
+                    <strong>{user.name}</strong>
+                    <span>{isSelf ? 'Signed in on this device' : user.active ? 'Team member' : 'Deactivated'}</span>
+                  </div>
                 </div>
+                <span>
+                  {manage.allowed ? (
+                    <select
+                      aria-label={`Role for ${user.name}`}
+                      value={user.role}
+                      onChange={(e) => dispatch({ type: 'updateStaff', id: user.id, role: e.target.value as StaffUser['role'] })}
+                    >
+                      {roleOptions.map((r) => (
+                        <option key={r} value={r}>
+                          {roleLabel[r]}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className={isSelf ? 'role-badge is-self' : 'role-badge'}>{roleLabel[user.role]}</span>
+                  )}
+                </span>
+                <span className="perm-list">
+                  {permissionsFor(user.role).map((permission) => (
+                    <span key={permission} className="perm-tag">
+                      {permission}
+                    </span>
+                  ))}
+                </span>
+                <span>
+                  {!isSelf && user.active && (
+                    <button className="small-button" onClick={() => dispatch({ type: 'switchUser', userId: user.id })}>
+                      Sign in as
+                    </button>
+                  )}
+                </span>
+                <span>
+                  {manage.allowed &&
+                    !isSelf &&
+                    (user.active ? (
+                      <button className="small-button" onClick={() => dispatch({ type: 'setStaffActive', id: user.id, active: false })}>
+                        Deactivate
+                      </button>
+                    ) : (
+                      <button className="small-button" onClick={() => dispatch({ type: 'setStaffActive', id: user.id, active: true })}>
+                        Reactivate
+                      </button>
+                    ))}
+                </span>
               </div>
-              <span>
-                <Pill tone={user.id === session.currentUserId ? 'ok' : 'muted'} dot={user.id === session.currentUserId}>
-                  {roleLabel[user.role]}
-                </Pill>
-              </span>
-              <span className="perm-list">
-                {permissionsFor(user.role).map((permission) => (
-                  <Pill key={permission} tone="muted">
-                    {permission}
-                  </Pill>
-                ))}
-              </span>
-              <span />
-              <span />
-            </div>
-          ))}
+            )
+          })}
         </div>
       </Panel>
-      <Panel title="Audit trail" description="Every write lands here with actor and timestamp">
+      <Panel
+        title="Audit trail"
+        description="Every write lands here with actor and timestamp"
+        action={
+          data.audit.length > 12 ? (
+            <button className="small-button" onClick={() => setShowAllAudit((v) => !v)}>
+              {showAllAudit ? 'Show recent' : `Show all ${data.audit.length}`}
+            </button>
+          ) : undefined
+        }
+      >
         <div className="activity-list">
-          {data.audit.slice(0, 12).map((item) => (
+          {(showAllAudit ? data.audit : data.audit.slice(0, 12)).map((item) => (
             <div className="activity-row" key={item.id}>
               <div className="activity-mark">
                 <ShieldCheck size={14} />
@@ -177,6 +214,7 @@ export function StaffView() {
               </div>
             </div>
           ))}
+          {data.audit.length === 0 && <p className="empty-state">No activity recorded yet.</p>}
         </div>
       </Panel>
     </>

@@ -18,6 +18,9 @@ type DashboardRepo interface {
 	MonthlyRevenueSeries(ctx context.Context, clinicID, months int) ([]models.DashboardRevenueEntry, error)
 	GetUpcomingVaccinations(ctx context.Context, clinicID, withinDays int) ([]models.DashboardVaccinationItem, error)
 	GetOverdueVaccinations(ctx context.Context, clinicID int) ([]models.DashboardVaccinationItem, error)
+	GetLowStockItems(ctx context.Context, clinicID int) ([]models.DashboardLowStockItem, error)
+	GetExpiringLots(ctx context.Context, clinicID, withinDays int) ([]models.DashboardExpiringLot, error)
+	GetMostUsedMedicines(ctx context.Context, clinicID, sinceDays int) ([]models.DashboardMostUsedItem, error)
 }
 
 type DashboardService struct {
@@ -72,6 +75,25 @@ func (s *DashboardService) GetStats(ctx context.Context, clinicID int) (models.D
 		return stats, err
 	}
 	stats.OverdueVaccinations = ensureNonNil(overdue)
+
+	// Inventory widgets per slice 0009.
+	lowStock, err := s.repo.GetLowStockItems(ctx, clinicID)
+	if err != nil {
+		return stats, err
+	}
+	stats.LowStockItems = ensureNonNil(lowStock)
+
+	expiring, err := s.repo.GetExpiringLots(ctx, clinicID, 30)
+	if err != nil {
+		return stats, err
+	}
+	stats.ExpiringLots = ensureNonNil(expiring)
+
+	mostUsed, err := s.repo.GetMostUsedMedicines(ctx, clinicID, 30)
+	if err != nil {
+		return stats, err
+	}
+	stats.MostUsedMedicines = ensureNonNil(mostUsed)
 
 	return stats, nil
 }

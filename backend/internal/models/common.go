@@ -172,6 +172,40 @@ type DashboardStats struct {
 	ActivePatients         int                        `json:"activePatients"`
 	UpcomingVaccinations   []DashboardVaccinationItem `json:"upcomingVaccinations,omitempty"`
 	OverdueVaccinations    []DashboardVaccinationItem `json:"overdueVaccinations,omitempty"`
+	LowStockItems          []DashboardLowStockItem    `json:"lowStockItems,omitempty"`
+	ExpiringLots           []DashboardExpiringLot     `json:"expiringLots,omitempty"`
+	MostUsedMedicines      []DashboardMostUsedItem    `json:"mostUsedMedicines,omitempty"`
+}
+
+// DashboardLowStockItem is one row of the "Low Stock" widget (slice 0009).
+// On-hand is the SUM of active lots; low means on_hand <= reorder_level > 0.
+type DashboardLowStockItem struct {
+	ItemID       int    `json:"itemId"`
+	Name         string `json:"name"`
+	Category     string `json:"category"`
+	OnHand       int    `json:"onHand"`
+	ReorderLevel int    `json:"reorderLevel"`
+	Link         string `json:"link"`
+}
+
+// DashboardExpiringLot is one row of the "Expiring Soon" widget (slice 0009).
+type DashboardExpiringLot struct {
+	LotID     int    `json:"lotId"`
+	ItemID    int    `json:"itemId"`
+	ItemName  string `json:"itemName"`
+	LotNumber string `json:"lotNumber"`
+	ExpiryDate string `json:"expiryDate"`
+	Quantity  int    `json:"quantity"`
+	Link      string `json:"link"`
+}
+
+// DashboardMostUsedItem is one row of the "Top Used Medicines" widget (slice 0009).
+// Source of truth is stock_movements stock_out rows — NOT prescriptions JSON.
+type DashboardMostUsedItem struct {
+	ItemID  int    `json:"itemId"`
+	Name    string `json:"name"`
+	UsedQty int    `json:"usedQty"`
+	Link    string `json:"link"`
 }
 
 // DashboardVaccinationItem is one row of the dashboard's "Vaccinations Due" widget.

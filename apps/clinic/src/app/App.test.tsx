@@ -113,6 +113,38 @@ describe("App", () => {
     expect(document.body.textContent).toContain("Closed consultation for Tiger");
   });
 
+  it("registers a patient with a microchip and edits the clinical profile", async () => {
+    renderApp();
+    await flush();
+    click(findButton("Owners & Pets"));
+    await flush();
+
+    click(findButton("Register Patient"));
+    setValue(document.getElementById("owner") as HTMLInputElement, "Anong Srisuk");
+    setValue(document.getElementById("pet") as HTMLInputElement, "Milo");
+    setValue(document.getElementById("microchip") as HTMLInputElement, "988100011122333");
+    click(findButton("Save Records"));
+    await flush();
+
+    // MRN assigned and microchip searchable
+    expect(document.body.textContent).toContain("PT-2026-0006");
+    setValue(
+      document.querySelector(".search-field input") as HTMLInputElement,
+      "988100011122333",
+    );
+    await flush();
+    expect(document.body.textContent).toContain("Milo");
+
+    // Clinical profile dialog: add an allergy, verify the flag appears
+    click(findButton("View"));
+    const dialog = document.querySelector(".modal");
+    expect(dialog).toBeTruthy();
+    setValue(document.getElementById("pt-allergies") as HTMLInputElement, "Penicillin");
+    click(findButton("Save Profile"));
+    await flush();
+    expect(document.body.textContent).toContain("Allergy: Penicillin");
+  });
+
   it("cycles the theme and reflects it on <html>", async () => {
     renderApp();
     await flush();

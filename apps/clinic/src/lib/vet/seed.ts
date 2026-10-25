@@ -13,10 +13,11 @@ export const seedState: ClinicState = {
     vatRate: 0.07,
   },
   users: [
-    { id: 'u-nok', name: 'Nok Srisuk', role: 'reception' },
-    { id: 'u-pim', name: 'Dr. Pim Chaiyasit', role: 'veterinarian' },
-    { id: 'u-arun', name: 'Dr. Arun Wongsa', role: 'veterinarian' },
-    { id: 'u-mai', name: 'Mai Rattana', role: 'admin' },
+    { id: 'u-nok', name: 'Nok Srisuk', role: 'reception', active: true },
+    { id: 'u-pim', name: 'Dr. Pim Chaiyasit', role: 'veterinarian', active: true },
+    { id: 'u-arun', name: 'Dr. Arun Wongsa', role: 'veterinarian', active: true },
+    { id: 'u-beer', name: 'Beer Chaiyaphon', role: 'pharmacist', active: true },
+    { id: 'u-mai', name: 'Mai Rattana', role: 'admin', active: true },
   ],
   owners: [
     { id: 'o-1', name: 'Kanya Thongdee', phone: '081 234 5678', email: 'kanya@example.com', version: 1 },
@@ -25,11 +26,11 @@ export const seedState: ClinicState = {
     { id: 'o-4', name: 'Anan Kittisak', phone: '095 111 2233', email: 'anan@example.com', version: 1 },
   ],
   patients: [
-    { id: 'p-1', ownerId: 'o-1', name: 'Moo Daeng', species: 'Dog', breed: 'Thai Ridgeback', sex: 'Male (neutered)', birthDate: '2021-03-12', version: 1 },
-    { id: 'p-2', ownerId: 'o-1', name: 'Khao Niao', species: 'Cat', breed: 'Khao Manee', sex: 'Female (spayed)', birthDate: '2019-08-02', version: 1 },
-    { id: 'p-3', ownerId: 'o-2', name: 'Tiger', species: 'Dog', breed: 'Golden Retriever', sex: 'Male', birthDate: '2017-11-20', version: 1 },
-    { id: 'p-4', ownerId: 'o-3', name: 'Mochi', species: 'Rabbit', breed: 'Holland Lop', sex: 'Female', birthDate: '2023-05-14', version: 1 },
-    { id: 'p-5', ownerId: 'o-4', name: 'Pla Too', species: 'Cat', breed: 'Domestic Shorthair', sex: 'Male (neutered)', birthDate: '2022-01-09', version: 1 },
+    { id: 'p-1', ownerId: 'o-1', mrn: 'PT-2026-0001', name: 'Moo Daeng', species: 'Dog', breed: 'Thai Ridgeback', sex: 'Male (neutered)', birthDate: '2021-03-12', microchip: '988100012345670', allergies: [], medicalAlerts: [], version: 1 },
+    { id: 'p-2', ownerId: 'o-1', mrn: 'PT-2026-0002', name: 'Khao Niao', species: 'Cat', breed: 'Khao Manee', sex: 'Female (spayed)', birthDate: '2019-08-02', allergies: ['Penicillin'], medicalAlerts: [], version: 1 },
+    { id: 'p-3', ownerId: 'o-2', mrn: 'PT-2026-0003', name: 'Tiger', species: 'Dog', breed: 'Golden Retriever', sex: 'Male', birthDate: '2017-11-20', microchip: '988100098765432', allergies: [], medicalAlerts: ['Chronic stifle strain — avoid vigorous exercise'], version: 1 },
+    { id: 'p-4', ownerId: 'o-3', mrn: 'PT-2026-0004', name: 'Mochi', species: 'Rabbit', breed: 'Holland Lop', sex: 'Female', birthDate: '2023-05-14', allergies: [], medicalAlerts: [], version: 1 },
+    { id: 'p-5', ownerId: 'o-4', mrn: 'PT-2026-0005', name: 'Pla Too', species: 'Cat', breed: 'Domestic Shorthair', sex: 'Male (neutered)', birthDate: '2022-01-09', microchip: '988100055544433', allergies: ['Flea topical (pyrethrin)'], medicalAlerts: ['Aggressive during handling — muzzle first'], version: 1 },
   ],
   appointments: [
     { id: 'a-1', patientId: 'p-3', startsAt: at('09:00'), durationMin: 30, reason: 'Limping, right hind leg', vetId: 'u-pim', status: 'completed', version: 3 },
@@ -79,6 +80,33 @@ export const seedState: ClinicState = {
     { id: 'sm-4', productId: 'pr-4', delta: 9, reason: 'receipt', createdAt: '2026-10-01T09:00:00+07:00' },
     { id: 'sm-5', productId: 'pr-5', delta: 40, reason: 'receipt', createdAt: '2026-10-01T09:00:00+07:00' },
     { id: 'sm-6', productId: 'pr-1', delta: -1, reason: 'dispense', referenceId: 'e-1', createdAt: at('09:41') },
+    // Lot-tagged ledger rows for the slice 0007/0008 inventory model
+    { id: 'sm-7', lotId: 'lot-1', delta: 60, reason: 'stock_in', notes: 'initial receipt', createdAt: '2026-09-20T09:00:00+07:00' },
+    { id: 'sm-8', lotId: 'lot-2', delta: 24, reason: 'stock_in', notes: 'initial receipt', createdAt: '2026-09-25T09:00:00+07:00' },
+    { id: 'sm-9', lotId: 'lot-3', delta: 12, reason: 'stock_in', notes: 'initial receipt', createdAt: '2026-10-02T09:00:00+07:00' },
+    { id: 'sm-10', lotId: 'lot-3', delta: -2, reason: 'stock_out', referenceId: 'e-1', createdAt: at('09:41') },
+    { id: 'sm-11', lotId: 'lot-4', delta: 8, reason: 'stock_in', notes: 'initial receipt', createdAt: '2026-10-05T09:00:00+07:00' },
+    { id: 'sm-12', lotId: 'lot-4', delta: -6, reason: 'stock_out', createdAt: '2026-10-18T11:00:00+07:00' },
+    { id: 'sm-13', lotId: 'lot-5', delta: 100, reason: 'stock_in', notes: 'initial receipt', createdAt: '2026-09-12T09:00:00+07:00' },
+    { id: 'sm-14', lotId: 'lot-5', delta: -94, reason: 'stock_out', createdAt: '2026-10-20T15:30:00+07:00' },
+  ],
+  suppliers: [
+    { id: 'sup-1', name: 'Thai Vet Pharma Co.', phone: '02 712 3456', email: 'sales@thaivetpharma.co.th' },
+    { id: 'sup-2', name: 'Bangkok Animal Health', phone: '02 998 1122', email: 'orders@bkkah.com' },
+  ],
+  inventoryItems: [
+    { id: 'it-1', name: 'Meloxicam 1.5 mg/ml oral 10ml', category: 'medicine', unit: 'bottle', reorderLevel: 5, sellingPrice: 42000 },
+    { id: 'it-2', name: 'Amoxicillin 250 mg tablet', category: 'medicine', unit: 'tablet', reorderLevel: 50, sellingPrice: 1500 },
+    { id: 'it-3', name: 'Rabies vaccine', category: 'vaccine', unit: 'dose', reorderLevel: 10, sellingPrice: 35000 },
+    { id: 'it-4', name: 'DHPPi vaccine', category: 'vaccine', unit: 'dose', reorderLevel: 10, sellingPrice: 55000 },
+    { id: 'it-5', name: 'Cohesive bandage 5cm', category: 'supply', unit: 'roll', reorderLevel: 20, sellingPrice: 9000 },
+  ],
+  inventoryLots: [
+    { id: 'lot-1', itemId: 'it-1', lotNumber: 'MEL-2609A', quantity: 60, expiryDate: '2027-09-30', supplierId: 'sup-1', costPerUnit: 26000, receivedDate: '2026-09-20' },
+    { id: 'lot-2', itemId: 'it-2', lotNumber: 'AMX-2611C', quantity: 24, expiryDate: '2026-11-10', supplierId: 'sup-1', costPerUnit: 900, receivedDate: '2026-09-25' },
+    { id: 'lot-3', itemId: 'it-3', lotNumber: 'RAB-2610B', quantity: 10, expiryDate: '2026-11-05', supplierId: 'sup-2', costPerUnit: 21000, receivedDate: '2026-10-02' },
+    { id: 'lot-4', itemId: 'it-4', lotNumber: 'DHP-2608F', quantity: 2, expiryDate: '2027-08-15', supplierId: 'sup-2', costPerUnit: 33000, receivedDate: '2026-10-05' },
+    { id: 'lot-5', itemId: 'it-5', lotNumber: 'BND-2609D', quantity: 6, expiryDate: '2028-01-01', supplierId: 'sup-1', costPerUnit: 5200, receivedDate: '2026-09-12' },
   ],
   invoices: [
     {

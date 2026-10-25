@@ -40,13 +40,15 @@ func (r *OwnerRepository) GetByID(ctx context.Context, clinicID, id int) (*model
 	var secContact []byte
 	query := `
 		SELECT id, clinic_id, name, phone, email, national_id, notes,
-		       secondary_contact, created_at, updated_at
+		       secondary_contact, preferred_channel, notify_opt_out, line_user_id,
+		       created_at, updated_at
 		FROM owners
 		WHERE id = $1 AND clinic_id = $2
 	`
 	err := r.db.QueryRow(ctx, query, id, clinicID).Scan(
 		&o.ID, &o.ClinicID, &o.Name, &o.Phone, &o.Email, &o.NationalID, &o.Notes,
-		&secContact, &o.CreatedAt, &o.UpdatedAt,
+		&secContact, &o.PreferredChannel, &o.NotifyOptOut, &o.LineUserID,
+		&o.CreatedAt, &o.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -87,7 +89,8 @@ func (r *OwnerRepository) List(ctx context.Context, clinicID int, query models.O
 
 	listQuery := fmt.Sprintf(`
 		SELECT id, clinic_id, name, phone, email, national_id, notes,
-		       secondary_contact, created_at, updated_at
+		       secondary_contact, preferred_channel, notify_opt_out, line_user_id,
+		       created_at, updated_at
 		FROM owners
 		WHERE %s
 		ORDER BY created_at DESC
@@ -107,7 +110,8 @@ func (r *OwnerRepository) List(ctx context.Context, clinicID int, query models.O
 		var secContact []byte
 		if err := rows.Scan(
 			&o.ID, &o.ClinicID, &o.Name, &o.Phone, &o.Email, &o.NationalID, &o.Notes,
-			&secContact, &o.CreatedAt, &o.UpdatedAt,
+			&secContact, &o.PreferredChannel, &o.NotifyOptOut, &o.LineUserID,
+			&o.CreatedAt, &o.UpdatedAt,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -196,7 +200,8 @@ func (r *OwnerRepository) GetByPhone(ctx context.Context, clinicID int, phone, n
 	`
 	err := r.db.QueryRow(ctx, query, clinicID, phone, nationalID).Scan(
 		&o.ID, &o.ClinicID, &o.Name, &o.Phone, &o.Email, &o.NationalID, &o.Notes,
-		&secContact, &o.CreatedAt, &o.UpdatedAt,
+		&secContact, &o.PreferredChannel, &o.NotifyOptOut, &o.LineUserID,
+		&o.CreatedAt, &o.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err

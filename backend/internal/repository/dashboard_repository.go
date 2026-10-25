@@ -112,6 +112,115 @@ func (r *DashboardRepository) GetOverdueVaccinations(ctx context.Context, clinic
 	return scanVaccinationWidgetRows(rows)
 }
 
+// GetLowStockItems returns items whose SUM(active lots quantity) <= reorder_level,
+// where reorder_level > 0 (slice 0009).
+func (r *DashboardRepository) GetLowStockItems(ctx context.Context, clinicID int) ([]models.DashboardLowStockItem, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT i.id, i.name, i.category, COALESCE(lot_sum.qty, 0), i.reorder_level
+		  FROM inventory_items i
+		  LEFT JOIN (
+			SELECT item_id, SUM(quantity) AS qty
+			  FROM inventory_lots
+			 WHERE deleted_at IS NULL
+			 GROUP BY item_id
+		  ) lot_sum ON lot_sum.item_id = i.id
+		 WHERE i.clinic_id = $1
+		   AND i.deleted_at IS NULL
+		   AND i.reorder_level > 0
+		   AND COALESCE(lot_sum.qty, 0) <= i.reorder_level
+		 ORDER BY COALESCE(lot_sum.qty, 0) ASC
+		 LIMIT 20
+	`, clinicID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []models.DashboardLowStockItem
+	for rows.Next() {
+		var it models.DashboardLowStockItem
+		if err := rows.Scan(&it.ItemID, &it.Name, &it.Category, &it.OnHand, &it.ReorderLevel); err != nil {
+			return nil, err
+		}
+		it.Link = fmt.Sprintf("/inventory/%d", it.ItemID)
+		out = append(out, it)
+	}
+	return out, rows.Err()
+}
+
+// GetExpiringLots returns active lots whose expiry_date falls within
+// [today, today + withinDays] (slice 0009).
+func (r *DashboardRepository) GetExpiringLots(ctx context.Context, clinicID, withinDays int) ([]models.DashboardExpiringLot, error) {
+	if withinDays < 1 {
+		withinDays = 30
+	}
+	rows, err := r.db.Query(ctx, `
+		SELECT l.id, i.id, i.name, l.lot_number, l.expiry_date, l.quantity
+		  FROM inventory_lots l
+		  JOIN inventory_items i ON i.id = l.item_id
+		 WHERE l.clinic_id = $1
+		   AND l.deleted_at IS NULL
+		   AND l.expiry_date IS NOT NULL
+		   AND l.expiry_date >= CURRENT_DATE
+		   AND l.expiry_date <= (CURRENT_DATE + ($2 || ' days')::interval)
+		 ORDER BY l.expiry_date ASC
+		 LIMIT 20
+	`, clinicID, withinDays)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []models.DashboardExpiringLot
+	for rows.Next() {
+		var lot models.DashboardExpiringLot
+		var expiry time.Time
+		if err := rows.Scan(&lot.LotID, &lot.ItemID, &lot.ItemName, &lot.LotNumber, &expiry, &lot.Quantity); err != nil {
+			return nil, err
+		}
+		lot.ExpiryDate = expiry.Format("2006-01-02")
+		lot.Link = fmt.Sprintf("/inventory/%d", lot.ItemID)
+		out = append(out, lot)
+	}
+	return out, rows.Err()
+}
+
+// GetMostUsedMedicines aggregates stock_movements stock_out rows over sinceDays for
+// medicine + vaccine items only (equipment/supply excluded per slice 0009).
+func (r *DashboardRepository) GetMostUsedMedicines(ctx context.Context, clinicID, sinceDays int) ([]models.DashboardMostUsedItem, error) {
+	if sinceDays < 1 {
+		sinceDays = 30
+	}
+	rows, err := r.db.Query(ctx, `
+		SELECT i.id, i.name, SUM(ABS(m.delta)) AS used_qty
+		  FROM stock_movements m
+		  JOIN inventory_lots l ON l.id = m.lot_id
+		  JOIN inventory_items i ON i.id = l.item_id
+		 WHERE m.clinic_id = $1
+		   AND m.reason = 'stock_out'
+		   AND m.created_at >= NOW() - ($2 || ' days')::interval
+		   AND i.category IN ('medicine', 'vaccine')
+		 GROUP BY i.id, i.name
+		 ORDER BY used_qty DESC
+		 LIMIT 5
+	`, clinicID, sinceDays)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []models.DashboardMostUsedItem
+	for rows.Next() {
+		var it models.DashboardMostUsedItem
+		if err := rows.Scan(&it.ItemID, &it.Name, &it.UsedQty); err != nil {
+			return nil, err
+		}
+		it.Link = fmt.Sprintf("/inventory/%d", it.ItemID)
+		out = append(out, it)
+	}
+	return out, rows.Err()
+}
+
 func scanVaccinationWidgetRows(rows pgx.Rows) ([]models.DashboardVaccinationItem, error) {
 	var out []models.DashboardVaccinationItem
 	for rows.Next() {

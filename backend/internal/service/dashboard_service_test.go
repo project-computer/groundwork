@@ -35,6 +35,10 @@ type fakeDashboardRepo struct {
 	overdue       []models.DashboardVaccinationItem
 	upcomingErr   error
 	overdueErr    error
+
+	lowStock  []models.DashboardLowStockItem
+	expiring  []models.DashboardExpiringLot
+	mostUsed  []models.DashboardMostUsedItem
 }
 
 func (f *fakeDashboardRepo) CountTodayAppointments(_ context.Context, _ int, _ string) (int, error) {
@@ -70,6 +74,18 @@ func (f *fakeDashboardRepo) GetOverdueVaccinations(_ context.Context, _ int) ([]
 	return f.overdue, f.overdueErr
 }
 
+func (f *fakeDashboardRepo) GetLowStockItems(_ context.Context, _ int) ([]models.DashboardLowStockItem, error) {
+	return f.lowStock, nil
+}
+
+func (f *fakeDashboardRepo) GetExpiringLots(_ context.Context, _, _ int) ([]models.DashboardExpiringLot, error) {
+	return f.expiring, nil
+}
+
+func (f *fakeDashboardRepo) GetMostUsedMedicines(_ context.Context, _, _ int) ([]models.DashboardMostUsedItem, error) {
+	return f.mostUsed, nil
+}
+
 func TestDashboardServiceGetStatsPayloadShape(t *testing.T) {
 	repo := &fakeDashboardRepo{
 		countToday:    7,
@@ -90,6 +106,9 @@ func TestDashboardServiceGetStatsPayloadShape(t *testing.T) {
 		ActivePatients:    42,
 		UpcomingVaccinations: []models.DashboardVaccinationItem{},
 		OverdueVaccinations:  []models.DashboardVaccinationItem{},
+		LowStockItems:        []models.DashboardLowStockItem{},
+		ExpiringLots:         []models.DashboardExpiringLot{},
+		MostUsedMedicines:    []models.DashboardMostUsedItem{},
 	}, got)
 }
 

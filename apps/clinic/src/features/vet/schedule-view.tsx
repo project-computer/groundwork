@@ -171,6 +171,7 @@ export function ScheduleView() {
         <div className="dashboard-grid">
           <Panel title={`Schedule — ${dayLabel(dayIso)}`} description={`${dayAppointments.length} appointments`}>
             <div className="cal-day">
+              {dayAppointments.length === 0 && <p className="empty-state">No appointments scheduled for this day.</p>}
               {HOURS.map((hour) => {
                 const slot = `${pad(hour)}:00`
                 const inSlot = dayAppointments.filter((a) => a.startsAt.slice(11, 13) === slot.slice(0, 2))
@@ -367,7 +368,7 @@ export function ScheduleView() {
                 </NativeSelect>
               </Field>
               <Field label="Reason" htmlFor="bk-reason">
-                <input id="bk-reason" value={dialog.draft.reason} placeholder="e.g. Annual vaccination" onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, reason: e.target.value } })} />
+                <input id="bk-reason" value={dialog.draft.reason} placeholder="e.g. Annual vaccination…" onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, reason: e.target.value } })} />
               </Field>
             </div>
             <div className="panel-footer">
@@ -407,7 +408,7 @@ function WalkInForm({
           </option>
         ))}
       </NativeSelect>
-      <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason" aria-label="Walk-in reason" />
+      <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Nail trim…" aria-label="Walk-in reason" />
       <button className="button primary" disabled={disabled || !patientId} onClick={() => { onSubmit(patientId, reason); onCancel() }}>
         Add
       </button>

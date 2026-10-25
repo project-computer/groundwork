@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { invoke } from '@tauri-apps/api/core'
 import { isTauri } from '@/platform'
 import { fetchState, pushState, runSync } from './backend'
-import { can } from './format'
+import { can, roleLabel } from './format'
 import { seedState } from './seed'
 import type {
   Appointment,
@@ -10,12 +10,19 @@ import type {
   ClinicState,
   Diagnosis,
   Encounter,
+  InventoryItem,
+  InventoryLot,
   InvoiceItem,
   Owner,
   Patient,
   Payment,
   Permission,
   Prescription,
+  Role,
+  StaffUser,
+  StockMovement,
+  StockReason,
+  Supplier,
   Vitals,
 } from './types'
 
@@ -56,8 +63,9 @@ const now = () => new Date().toISOString()
 
 type Action =
   | { type: 'session'; patch: Partial<Session> }
-  | { type: 'registerOwner'; owner: Omit<Owner, 'id' | 'version'>; patient: Omit<Patient, 'id' | 'ownerId' | 'version'> }
-  | { type: 'addPatient'; patient: Omit<Patient, 'id' | 'version'> }
+  | { type: 'registerOwner'; owner: Omit<Owner, 'id' | 'version'>; patient: Omit<Patient, 'id' | 'ownerId' | 'mrn' | 'version'> }
+  | { type: 'addPatient'; patient: Omit<Patient, 'id' | 'mrn' | 'version'> }
+  | { type: 'updatePatient'; id: string; patch: Partial<Pick<Patient, 'microchip' | 'allergies' | 'medicalAlerts'>> }
   | { type: 'bookAppointment'; appointment: Omit<Appointment, 'id' | 'version' | 'status'> }
   | { type: 'walkIn'; patientId: string; reason: string; vetId: string }
   | { type: 'rescheduleAppointment'; id: string; startsAt: string; durationMin?: number }
@@ -73,6 +81,14 @@ type Action =
   | { type: 'postInvoice'; invoiceId: string }
   | { type: 'recordPayment'; payment: Omit<Payment, 'id' | 'receivedAt'>; settles: boolean }
   | { type: 'receiveStock'; productId: string; quantity: number }
+  | { type: 'addSupplier'; supplier: Omit<Supplier, 'id'> }
+  | { type: 'addInventoryItem'; item: Omit<InventoryItem, 'id'> }
+  | { type: 'receiveLot'; lot: Omit<InventoryLot, 'id' | 'quantity'>; quantity: number }
+  | { type: 'recordStockMovement'; lotId: string; delta: number; reason: StockReason; notes?: string }
+  | { type: 'addStaff'; name: string; role: Role }
+  | { type: 'updateStaff'; id: string; name?: string; role?: Role }
+  | { type: 'setStaffActive'; id: string; active: boolean }
+  | { type: 'switchUser'; userId: string }
   | { type: 'syncComplete'; changeIds: string[] }
   | { type: 'syncResult'; data: ClinicState }
   | { type: 'restore'; data: ClinicState }
@@ -120,6 +136,22 @@ function updateEncounter(data: ClinicState, id: string, fn: (e: Encounter) => En
 
 const patientName = (data: ClinicState, id: string) => data.patients.find((p) => p.id === id)?.name ?? 'patient'
 
+/** Human-readable Medical Record Number, e.g. PT-2026-0042 (see CONTEXT.md). */
+export function formatMrn(sequence: number, year = new Date().getFullYear()) {
+  return `PT-${year}-${String(sequence).padStart(4, '0')}`
+}
+
+/** Clinical profile fields arrive after the first release — documents saved
+ * before them are backfilled so the reducer never sees undefined arrays. */
+function backfillPatient(patient: Patient, index: number): Patient {
+  return {
+    ...patient,
+    mrn: patient.mrn ?? formatMrn(index + 1),
+    allergies: patient.allergies ?? [],
+    medicalAlerts: patient.medicalAlerts ?? [],
+  }
+}
+
 function reducer(store: Store, action: Action): Store {
   const { data, session } = store
 
@@ -140,13 +172,37 @@ function reducer(store: Store, action: Action): Store {
     return { data: action.data, session: { ...session, view: 'dashboard', activeEncounterId: undefined } }
   }
 
+  // Switching the signed-in account is a session change, not a write — it
+  // stays available in read-only mode but never onto a deactivated member.
+  if (action.type === 'switchUser') {
+    const target = data.users.find((u) => u.id === action.userId)
+    if (!target || !target.active) return store
+    return { ...store, session: { ...session, currentUserId: target.id } }
+  }
+
   // Writes require a reachable clinic server; cached data stays readable.
   if (!session.lanOnline) return store
+
+  // Staff administration is reserved for clinic admins and blocked offline
+  // like every other write. The signed-in admin cannot lock themselves out.
+  if (action.type === 'addStaff' || action.type === 'updateStaff' || action.type === 'setStaffActive') {
+    const actor = data.users.find((u) => u.id === session.currentUserId)
+    if (!actor || actor.role !== 'admin') return store
+    if (action.type === 'setStaffActive' && !action.active && action.id === session.currentUserId) return store
+    if (action.type === 'addStaff' && !action.name.trim()) return store
+  }
+
+  // Inventory writes follow the slice 0007/0008 RBAC matrix: admin and
+  // pharmacist write; veterinarian and reception read-only.
+  if (action.type === 'addSupplier' || action.type === 'addInventoryItem' || action.type === 'receiveLot' || action.type === 'recordStockMovement') {
+    const actor = data.users.find((u) => u.id === session.currentUserId)
+    if (!actor || (actor.role !== 'admin' && actor.role !== 'pharmacist')) return store
+  }
 
   switch (action.type) {
     case 'registerOwner': {
       const owner: Owner = { ...action.owner, id: uid(), version: 1 }
-      const patient: Patient = { ...action.patient, id: uid(), ownerId: owner.id, version: 1 }
+      const patient: Patient = { ...action.patient, id: uid(), ownerId: owner.id, mrn: formatMrn(data.patients.length + 1), version: 1 }
       return commit(store, { ...data, owners: [owner, ...data.owners], patients: [patient, ...data.patients] }, {
         action: 'owner.create',
         entityType: 'owner',
@@ -155,12 +211,31 @@ function reducer(store: Store, action: Action): Store {
       })
     }
     case 'addPatient': {
-      const patient: Patient = { ...action.patient, id: uid(), version: 1 }
+      const patient: Patient = { ...action.patient, id: uid(), mrn: formatMrn(data.patients.length + 1), version: 1 }
       return commit(store, { ...data, patients: [patient, ...data.patients] }, {
         action: 'patient.create',
         entityType: 'patient',
         entityId: patient.id,
         summary: `Added patient ${patient.name}`,
+      })
+    }
+    case 'updatePatient': {
+      const patient = data.patients.find((p) => p.id === action.id)
+      if (!patient) return store
+      const next: Patient = { ...patient, ...action.patch, version: patient.version + 1 }
+      if (
+        next.microchip === patient.microchip &&
+        next.allergies.length === patient.allergies.length &&
+        next.medicalAlerts.length === patient.medicalAlerts.length &&
+        next.allergies.every((a, i) => a === patient.allergies[i]) &&
+        next.medicalAlerts.every((a, i) => a === patient.medicalAlerts[i])
+      )
+        return store
+      return commit(store, { ...data, patients: data.patients.map((p) => (p.id === next.id ? next : p)) }, {
+        action: 'patient.update',
+        entityType: 'patient',
+        entityId: next.id,
+        summary: `Updated clinical profile for ${next.name}`,
       })
     }
     case 'bookAppointment': {
@@ -379,6 +454,113 @@ function reducer(store: Store, action: Action): Store {
         operation: 'append',
       })
     }
+    case 'addSupplier': {
+      if (!action.supplier.name.trim()) return store
+      const supplier: Supplier = { ...action.supplier, id: uid(), name: action.supplier.name.trim() }
+      return commit(store, { ...data, suppliers: [supplier, ...data.suppliers] }, {
+        action: 'supplier.create',
+        entityType: 'supplier',
+        entityId: supplier.id,
+        summary: `Added supplier ${supplier.name}`,
+      })
+    }
+    case 'addInventoryItem': {
+      if (!action.item.name.trim()) return store
+      const item: InventoryItem = { ...action.item, id: uid(), name: action.item.name.trim() }
+      return commit(store, { ...data, inventoryItems: [item, ...data.inventoryItems] }, {
+        action: 'inventory_item.create',
+        entityType: 'inventory_item',
+        entityId: item.id,
+        summary: `Added inventory item ${item.name}`,
+      })
+    }
+    case 'receiveLot': {
+      // A received lot lands at quantity 0 and the initial stock_in movement
+      // brings it up — the ledger reconciles with the cached quantity, mirroring
+      // the backend's transactional rule (slice 0008).
+      const item = data.inventoryItems.find((i) => i.id === action.lot.itemId)
+      if (!item || !action.lot.lotNumber.trim() || action.quantity <= 0) return store
+      const lot: InventoryLot = { ...action.lot, id: uid(), lotNumber: action.lot.lotNumber.trim(), quantity: 0 }
+      const movement: StockMovement = {
+        id: uid(),
+        lotId: lot.id,
+        delta: action.quantity,
+        reason: 'stock_in',
+        notes: 'initial receipt',
+        createdAt: now(),
+      }
+      return commit(
+        store,
+        {
+          ...data,
+          inventoryLots: [lot, ...data.inventoryLots],
+          stockMovements: [...data.stockMovements, movement],
+        },
+        { action: 'stock.lot_receive', entityType: 'inventory_lot', entityId: lot.id, summary: `Received lot ${lot.lotNumber} — ${action.quantity} × ${item.name}`, operation: 'append' },
+      )
+    }
+    case 'recordStockMovement': {
+      // Append-only ledger: the movement row and the lot's cached quantity update
+      // in the same transition; negative stock is refused (CHECK-equivalent).
+      const lot = data.inventoryLots.find((l) => l.id === action.lotId)
+      if (!lot) return store
+      if (lot.quantity + action.delta < 0) return store
+      const movement: StockMovement = {
+        id: uid(),
+        lotId: lot.id,
+        delta: action.delta,
+        reason: action.reason,
+        notes: action.notes,
+        createdAt: now(),
+      }
+      return commit(
+        store,
+        {
+          ...data,
+          inventoryLots: data.inventoryLots.map((l) => (l.id === lot.id ? { ...l, quantity: l.quantity + action.delta } : l)),
+          stockMovements: [...data.stockMovements, movement],
+        },
+        { action: `stock.${action.reason}`, entityType: 'stock_movement', entityId: movement.id, summary: `${action.reason} ${action.delta} of lot ${lot.lotNumber}`, operation: 'append' },
+      )
+    }
+    case 'addStaff': {
+      const member: StaffUser = { id: uid(), name: action.name.trim(), role: action.role, active: true }
+      return commit(store, { ...data, users: [...data.users, member] }, {
+        action: 'staff.create',
+        entityType: 'staff_user',
+        entityId: member.id,
+        summary: `Added ${member.name} as ${roleLabel[member.role].toLowerCase()}`,
+      })
+    }
+    case 'updateStaff': {
+      const member = data.users.find((u) => u.id === action.id)
+      if (!member) return store
+      const next: StaffUser = {
+        ...member,
+        name: action.name?.trim() || member.name,
+        role: action.role ?? member.role,
+      }
+      if (next.name === member.name && next.role === member.role) return store
+      return commit(store, { ...data, users: data.users.map((u) => (u.id === next.id ? next : u)) }, {
+        action: 'staff.update',
+        entityType: 'staff_user',
+        entityId: next.id,
+        summary:
+          next.role !== member.role
+            ? `Changed ${next.name}'s role to ${roleLabel[next.role].toLowerCase()}`
+            : `Renamed ${member.name} to ${next.name}`,
+      })
+    }
+    case 'setStaffActive': {
+      const member = data.users.find((u) => u.id === action.id)
+      if (!member || member.active === action.active) return store
+      return commit(store, { ...data, users: data.users.map((u) => (u.id === member.id ? { ...u, active: action.active } : u)) }, {
+        action: action.active ? 'staff.reactivate' : 'staff.deactivate',
+        entityType: 'staff_user',
+        entityId: member.id,
+        summary: `${action.active ? 'Reactivated' : 'Deactivated'} ${member.name}`,
+      })
+    }
   }
 }
 
@@ -400,7 +582,16 @@ export function isClinicState(value: unknown): value is ClinicState {
 }
 
 function parseState(raw: unknown): ClinicState | null {
-  return isClinicState(raw) ? raw : null
+  if (!isClinicState(raw)) return null
+  // Documents persisted before staff activation existed default to active.
+  return {
+    ...raw,
+    users: raw.users.map((u) => ({ ...u, active: u.active ?? true })),
+    patients: raw.patients.map(backfillPatient),
+    suppliers: raw.suppliers ?? [],
+    inventoryItems: raw.inventoryItems ?? [],
+    inventoryLots: raw.inventoryLots ?? [],
+  }
 }
 
 export async function loadState(): Promise<ClinicState | null> {

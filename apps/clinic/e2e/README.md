@@ -1,9 +1,38 @@
 # End-to-End Tests (reserved)
 
-E2E coverage starts in Phase 2 with Playwright against the Tauri desktop
-shell (and later the web target).
+## Page tests (Playwright) — minimal by design
 
-Intended workflow test:
+Page tests render the app in a real browser (Chromium) against the Vite dev
+server. They cover **shell-level wiring only** — the app boots and each nav
+item mounts its view. View behavior (forms, tables, search, mutations) is
+covered by **component tests** (vitest browser mode), so keep this suite
+small: if a test needs more than "goto → click nav → assert heading", it
+probably belongs in a component test.
+
+
+- Config: `apps/clinic/playwright.config.ts` (starts the dev server on port
+  1420 automatically, reuses an already-running one locally)
+- Tests: `apps/clinic/e2e/pages/*.spec.ts`
+
+Run them:
+
+```sh
+pnpm test:pages                # from repo root
+pnpm --filter @vet/clinic test:pages   # or from apps/clinic
+pnpm --filter @vet/clinic exec playwright test --ui   # interactive UI mode
+pnpm --filter @vet/clinic exec playwright test --headed e2e/pages/clinic-shell.spec.ts  # single file, visible browser
+```
+
+Notes:
+
+- Fresh machine? Download the browser once: `pnpm exec playwright install chromium`.
+- The app has **no router** — views are switched by clicking sidebar nav
+  buttons (state-driven). Tests navigate via `getByRole('button', ...)`.
+- Traces for failed runs are kept in `playwright-report/` / `test-results/`
+  (gitignored).
+- Full Tauri E2E (restart persistence, backup/restore) remains Phase 2+.
+
+Intended Tauri E2E workflow test (Phase 2):
 
 1. Create an owner.
 2. Register a pet.

@@ -40,6 +40,10 @@ func main() {
 	vaccinationRepo := repository.NewVaccinationRepository(db)
 	vaccineProtocolRepo := repository.NewVaccineProtocolRepository(db)
 	syncRepo := repository.NewSyncRepository(db)
+	supplierRepo := repository.NewSupplierRepository(db)
+	inventoryItemRepo := repository.NewInventoryItemRepository(db)
+	inventoryLotRepo := repository.NewInventoryLotRepository(db)
+	notificationRepo := repository.NewNotificationRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, cfg.JWT.Secret, cfg.JWT.AccessExpiry, cfg.JWT.RefreshExpiry)
@@ -52,6 +56,10 @@ func main() {
 	dashboardService := service.NewDashboardService(dashboardRepo)
 	vaccinationService := service.NewVaccinationService(vaccinationRepo, vaccineProtocolRepo, patientRepo)
 	syncService := service.NewSyncService(syncRepo)
+	supplierService := service.NewSupplierService(supplierRepo)
+	itemService := service.NewItemService(inventoryItemRepo, inventoryLotRepo)
+	notificationService := service.NewNotificationService(notificationRepo, ownerRepo, notificationRepo, nil)
+	reminderService := service.NewReminderService(notificationRepo, notificationService)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
@@ -64,6 +72,11 @@ func main() {
 	dashboardHandler := handlers.NewDashboardHandler(dashboardService)
 	vaccinationHandler := handlers.NewVaccinationHandler(vaccinationService)
 	syncHandler := handlers.NewSyncHandler(syncService)
+	supplierHandler := handlers.NewSupplierHandler(supplierService)
+	itemHandler := handlers.NewItemHandler(itemService)
+	lotHandler := handlers.NewLotHandler(itemService)
+	notificationHandler := handlers.NewNotificationHandler(notificationService)
+	reminderHandler := handlers.NewReminderHandler(reminderService)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(cfg.JWT.Secret)
@@ -130,7 +143,19 @@ func main() {
 	owners := protected.Group("/owners")
 	owners.Get("/", ownerHandler.List)
 	owners.Post("/", ownerHandler.Create)
+	// Notifications (slice 0010): test send is admin-only; prefs + log follow owner access
+	notificationsAdmin := protected.Group("/admin/notifications", authMiddleware.RequireRole("admin"))
+	notificationsAdmin.Post("/test", notificationHandler.SendTest)
+
+	// Reminder scheduler endpoints (slices 0011/0012) — admin only
+	remindersAdmin := protected.Group("/admin/reminders", authMiddleware.RequireRole("admin"))
+	remindersAdmin.Post("/run", reminderHandler.Run)
+	remindersAdmin.Get("/window", reminderHandler.GetWindow)
+	remindersAdmin.Put("/window", reminderHandler.UpdateWindow)
+
 	owners.Get("/:id", ownerHandler.Get)
+	owners.Get("/:id/notifications", notificationHandler.ListByOwner)
+	owners.Put("/:id/notification-preferences", notificationHandler.UpdateOwnerPrefs)
 	owners.Put("/:id", ownerHandler.Update)
 	owners.Delete("/:id", ownerHandler.Delete)
 	owners.Get("/:id/patients", ownerHandler.ListPatients)
@@ -180,6 +205,32 @@ func main() {
 	vaccinations.Get("/:id", vaccinationHandler.Get)
 	vaccinations.Delete("/:id", vaccinationHandler.Delete)
 	vaccinations.Get("/protocols", vaccinationHandler.ListProtocols)
+
+	// Inventory: read = admin/pharmacist/veterinarian; write = admin/pharmacist (slices 0007/0008 RBAC matrix)
+	inventoryRead := protected.Group("/inventory", authMiddleware.RequireRole("admin", "pharmacist", "veterinarian"))
+	inventoryRead.Get("/items", itemHandler.List)
+	inventoryRead.Get("/items/:id", itemHandler.Get)
+	inventoryRead.Get("/items/:id/lots", itemHandler.ListLots)
+	inventoryRead.Get("/lots/:id", lotHandler.Get)
+	inventoryRead.Get("/lots/:id/movements", lotHandler.Movements)
+
+	inventoryWrite := protected.Group("/inventory", authMiddleware.RequireRole("admin", "pharmacist"))
+	inventoryWrite.Post("/items", itemHandler.Create)
+	inventoryWrite.Put("/items/:id", itemHandler.Update)
+	inventoryWrite.Delete("/items/:id", itemHandler.Delete)
+	inventoryWrite.Post("/items/:id/lots", itemHandler.CreateLot)
+	inventoryWrite.Put("/lots/:id", lotHandler.Update)
+	inventoryWrite.Post("/lots/:id/movements", lotHandler.Movement)
+
+	// Suppliers: same RBAC as inventory
+	supplierRead := protected.Group("/suppliers", authMiddleware.RequireRole("admin", "pharmacist", "veterinarian"))
+	supplierRead.Get("/", supplierHandler.List)
+	supplierRead.Get("/:id", supplierHandler.Get)
+
+	supplierWrite := protected.Group("/suppliers", authMiddleware.RequireRole("admin", "pharmacist"))
+	supplierWrite.Post("/", supplierHandler.Create)
+	supplierWrite.Put("/:id", supplierHandler.Update)
+	supplierWrite.Delete("/:id", supplierHandler.Delete)
 
 	// Desktop sync routes (sidecar -> cloud)
 	sync := protected.Group("/sync")

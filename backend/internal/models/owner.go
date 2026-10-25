@@ -16,6 +16,10 @@ type Owner struct {
 	NationalID       NullString       `json:"nationalId,omitempty"`
 	Notes            NullString       `json:"notes,omitempty"`
 	SecondaryContact *SecondaryContact `json:"secondaryContact,omitempty"`
+	// Notification prefs (slice 0010)
+	PreferredChannel NullString `json:"preferredChannel,omitempty"` // line | sms | email
+	NotifyOptOut     bool       `json:"notifyOptOut"`
+	LineUserID       NullString `json:"lineUserId,omitempty"`
 	CreatedAt        time.Time        `json:"createdAt"`
 	UpdatedAt        time.Time        `json:"updatedAt"`
 }

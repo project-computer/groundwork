@@ -1,4 +1,4 @@
-import type { Invoice, Payment, Permission, Role, StockMovement } from './types'
+import type { InventoryItem, InventoryLot, Invoice, Payment, Permission, Role, StockMovement } from './types'
 
 /** Shared pill tone mapping for entity statuses across views. */
 export function statusTone(status: string): 'ok' | 'warn' | 'bad' | 'muted' | 'info' {
@@ -55,10 +55,59 @@ export function stockOnHand(productId: string, movements: StockMovement[]) {
   return movements.filter((m) => m.productId === productId).reduce((s, m) => s + m.delta, 0)
 }
 
+/** Quantity-on-hand for an item is the sum of its lots' quantities (slice 0008). */
+export function itemOnHand(itemId: string, lots: InventoryLot[]) {
+  return lots.filter((l) => l.itemId === itemId).reduce((s, l) => s + l.quantity, 0)
+}
+
+/** Lots expiring within `days` from today (slice 0009 "Expiring Soon" widget). */
+export function lotsExpiringWithin(lots: InventoryLot[], days = 30, today = todayKey()) {
+  const limit = new Date(today)
+  limit.setDate(limit.getDate() + days)
+  return lots
+    .filter((l) => l.expiryDate && l.quantity > 0)
+    .filter((l) => {
+      const expiry = new Date(l.expiryDate!)
+      return expiry >= new Date(today) && expiry <= limit
+    })
+    .sort((a, b) => a.expiryDate!.localeCompare(b.expiryDate!))
+}
+
+/** Top stock_out items over `days`, medicine + vaccine only (slice 0009). */
+export function mostUsedItems(
+  items: InventoryItem[],
+  movements: StockMovement[],
+  lots: InventoryLot[],
+  days = 30,
+  today = new Date(),
+) {
+  const since = new Date(today)
+  since.setDate(since.getDate() - days)
+  const lotById = new Map(lots.map((l) => [l.id, l]))
+  const itemById = new Map(items.map((i) => [i.id, i]))
+  const usage = new Map<string, number>()
+  for (const m of movements) {
+    if (m.reason !== 'stock_out' || !m.lotId) continue
+    const createdAt = new Date(m.createdAt)
+    if (createdAt < since) continue
+    const lot = lotById.get(m.lotId)
+    if (!lot) continue
+    const item = itemById.get(lot.itemId)
+    if (!item || (item.category !== 'medicine' && item.category !== 'vaccine')) continue
+    usage.set(item.id, (usage.get(item.id) ?? 0) + Math.abs(m.delta))
+  }
+  return [...usage.entries()]
+    .map(([id, usedQty]) => ({ item: itemById.get(id)!, usedQty }))
+    .filter((r) => r.item)
+    .sort((a, b) => b.usedQty - a.usedQty)
+    .slice(0, 5)
+}
+
 const rolePermissions: Record<Role, Permission[]> = {
   reception: ['records.write', 'appointments.write', 'billing.write'],
   veterinarian: ['records.write', 'appointments.write', 'clinical.write', 'inventory.write'],
-  admin: ['records.write', 'appointments.write', 'billing.write', 'inventory.write', 'data.export'],
+  pharmacist: ['records.write', 'billing.write', 'inventory.write'],
+  admin: ['records.write', 'appointments.write', 'billing.write', 'inventory.write', 'staff.manage', 'data.export'],
 }
 
 export const can = (role: Role, permission: Permission) => rolePermissions[role].includes(permission)
@@ -70,5 +119,6 @@ export function permissionsFor(role: Role): Permission[] {
 export const roleLabel: Record<Role, string> = {
   reception: 'Reception',
   veterinarian: 'Veterinarian',
+  pharmacist: 'Pharmacist',
   admin: 'Clinic admin',
 }

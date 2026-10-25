@@ -42,16 +42,16 @@ export function Panel({ title, description, action, children, className }: { tit
 export type Tone = 'ok' | 'warn' | 'bad' | 'muted' | 'info'
 
 const toneClass: Record<Tone, string> = {
-  ok: 'bg-primary/20 text-primary border-transparent',
-  info: 'bg-accent text-accent-foreground border-transparent',
-  warn: 'bg-warning/30 text-warning-foreground border-transparent dark:bg-warning/20 dark:text-warning',
-  bad: 'bg-destructive/20 text-destructive border-transparent',
-  muted: 'bg-muted text-foreground/80 border-transparent',
+  ok: 'border-primary/30 bg-primary/10 text-primary',
+  info: 'border-foreground/10 bg-accent text-accent-foreground',
+  warn: 'border-warning/40 bg-warning/20 text-warning-foreground',
+  bad: 'border-destructive/30 bg-destructive/10 text-destructive dark:bg-destructive/15',
+  muted: 'border-border bg-muted text-foreground',
 }
 
 export function Pill({ tone, children, dot }: { tone: Tone; children: ReactNode; dot?: boolean }) {
   return (
-    <span className={cn('inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold whitespace-nowrap', toneClass[tone])}>
+    <span className={cn('pill', 'inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap', toneClass[tone])}>
       {dot && <span aria-hidden className="size-1.5 rounded-full bg-current" />}
       {children}
     </span>

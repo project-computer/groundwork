@@ -2,7 +2,9 @@
 node_modules/
 
 # Build output
-frontend/dist/
+apps/clinic/dist/
+apps/clinic/src-tauri/target/
+apps/clinic/src-tauri/binaries/
 backend/bin/
 
 # Environment files
@@ -38,3 +40,9 @@ postgres_data/
 test-results/
 playwright-report/
 playwright/.cache/
+# Vitest browser screenshots: keep baselines, ignore failure artifacts
+__screenshots__/**/*-diff-*.png
+__screenshots__/**/*-failed-*.png
+
+# Go sidecar artifacts
+apps/sidecar/bin/
