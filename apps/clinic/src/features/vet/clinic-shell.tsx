@@ -535,7 +535,7 @@ const Owners = ({
   }, [showForm, formMode])
   const filtered = data.patients.filter((p) => {
     const owner = data.owners.find((o) => o.id === p.ownerId)
-    return `${p.name} ${owner?.name ?? ''} ${owner?.phone ?? ''} ${p.mrn} ${p.microchip ?? ''}`
+    return `${p.name} ${owner?.name ?? ''} ${owner?.phone ?? ''} ${owner?.email ?? ''} ${p.mrn} ${p.microchip ?? ''}`
       .toLowerCase()
       .includes(query.toLowerCase())
   })
@@ -816,9 +816,20 @@ const Owners = ({
 const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: string; onClose: () => void; canWrite: boolean }) => {
   const { data, dispatch } = useClinic()
   const patient = data.patients.find((p) => p.id === patientId)
+  const owner = data.owners.find((o) => o.id === patient?.ownerId)
+  const [name, setName] = useState(patient?.name ?? '')
+  const [species, setSpecies] = useState<Patient['species']>(patient?.species ?? 'Dog')
+  const [breed, setBreed] = useState(patient?.breed ?? '')
+  const [sex, setSex] = useState<Patient['sex']>(patient?.sex ?? 'Unknown')
+  const [birthDate, setBirthDate] = useState(patient?.birthDate ?? '')
+  const [weightKg, setWeightKg] = useState(patient?.weightKg ?? '')
   const [microchip, setMicrochip] = useState(patient?.microchip ?? '')
   const [allergies, setAllergies] = useState(patient?.allergies.join(', ') ?? '')
   const [alerts, setAlerts] = useState(patient?.medicalAlerts.join(', ') ?? '')
+  const [ownerName, setOwnerName] = useState(owner?.name ?? '')
+  const [ownerPhone, setOwnerPhone] = useState(owner?.phone ?? '')
+  const [ownerEmail, setOwnerEmail] = useState(owner?.email ?? '')
+  const [ownerAddress, setOwnerAddress] = useState(owner?.address ?? '')
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -827,7 +838,6 @@ const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: st
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onClose])
   if (!patient) return null
-  const owner = data.owners.find((o) => o.id === patient.ownerId)
   const splitList = (value: string) =>
     value
       .split(',')
@@ -859,69 +869,182 @@ const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: st
       <div className="modal modal-wide" role="dialog" aria-modal="true" aria-label={`Clinical profile for ${patient.name}`}>
         <div className="form-heading">
           <div>
-            <strong>{patient.name}</strong>
+            <strong>{name || patient.name}</strong>
             <span>
-              {patient.mrn} · {owner?.name ?? 'No owner'}{owner?.phone ? ` · ${owner.phone}` : ''} · {patient.species} · {patient.breed}
+              {patient.mrn} · {ownerName || owner?.name || 'No owner'}{ownerPhone ? ` · ${ownerPhone}` : ''} · {species} · {breed}
             </span>
           </div>
           <button className="icon-button" onClick={onClose} aria-label="Close dialog">
             <X size={17} />
           </button>
         </div>
-        <div className="form-grid">
-          <Field label="Microchip" htmlFor="pt-microchip">
-            <input
-              id="pt-microchip"
-              name="microchip"
-              autoComplete="off"
-              inputMode="numeric"
-              spellCheck={false}
-              value={microchip}
-              onChange={(e) => setMicrochip(e.target.value)}
-              placeholder="e.g. 985141002341238…"
-              disabled={!canWrite}
-            />
-          </Field>
-          <Field label="Allergies (comma-separated)" htmlFor="pt-allergies">
-            <input
-              id="pt-allergies"
-              name="allergies"
-              autoComplete="off"
-              value={allergies}
-              onChange={(e) => setAllergies(e.target.value)}
-              placeholder="e.g. Penicillin, Flea topical (pyrethrin)…"
-              disabled={!canWrite}
-            />
-          </Field>
-          <Field label="Medical alerts (comma-separated)" htmlFor="pt-alerts">
-            <input
-              id="pt-alerts"
-              name="medical-alerts"
-              autoComplete="off"
-              value={alerts}
-              onChange={(e) => setAlerts(e.target.value)}
-              placeholder="e.g. Aggressive during handling — muzzle first…"
-              disabled={!canWrite}
-            />
-          </Field>
-        </div>
+        <fieldset className="form-section" disabled={!canWrite}>
+          <legend>Owner</legend>
+          <div className="form-grid">
+            <Field label="Owner name" htmlFor="pt-owner-name">
+              <input
+                id="pt-owner-name"
+                name="owner-name"
+                autoComplete="off"
+                value={ownerName}
+                onChange={(e) => setOwnerName(e.target.value)}
+                placeholder="e.g. Anong Srisuk…"
+              />
+            </Field>
+            <Field label="Phone" htmlFor="pt-owner-phone">
+              <input
+                id="pt-owner-phone"
+                name="owner-phone"
+                type="tel"
+                autoComplete="off"
+                value={ownerPhone}
+                onChange={(e) => setOwnerPhone(e.target.value)}
+                placeholder="e.g. 081 234 5678…"
+              />
+            </Field>
+            <Field label="Email" htmlFor="pt-owner-email">
+              <input
+                id="pt-owner-email"
+                name="owner-email"
+                type="email"
+                autoComplete="off"
+                value={ownerEmail}
+                onChange={(e) => setOwnerEmail(e.target.value)}
+                placeholder="e.g. anong@example.com…"
+              />
+            </Field>
+            <Field label="Address" htmlFor="pt-owner-address">
+              <input
+                id="pt-owner-address"
+                name="owner-address"
+                autoComplete="off"
+                value={ownerAddress}
+                onChange={(e) => setOwnerAddress(e.target.value)}
+                placeholder="Street, city, postcode…"
+              />
+            </Field>
+          </div>
+        </fieldset>
+
+        <fieldset className="form-section" disabled={!canWrite}>
+          <legend>Patient</legend>
+          <div className="form-grid">
+            <Field label="Patient name" htmlFor="pt-name">
+              <input
+                id="pt-name"
+                name="patient-name"
+                autoComplete="off"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Milo…"
+              />
+            </Field>
+            <Field label="Species" htmlFor="pt-species">
+              <NativeSelect id="pt-species" value={species} onChange={(e) => setSpecies(e.target.value as Patient['species'])}>
+                {SPECIES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field label="Breed" htmlFor="pt-breed">
+              <input id="pt-breed" autoComplete="off" value={breed} onChange={(e) => setBreed(e.target.value)} placeholder="e.g. Golden Retriever…" />
+            </Field>
+            <Field label="Sex" htmlFor="pt-sex">
+              <NativeSelect id="pt-sex" value={sex} onChange={(e) => setSex(e.target.value as Patient['sex'])}>
+                {SEXES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field label="Date of birth" htmlFor="pt-birth">
+              <input id="pt-birth" type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+            </Field>
+            <Field label="Weight (kg)" htmlFor="pt-weight">
+              <input
+                id="pt-weight"
+                inputMode="decimal"
+                autoComplete="off"
+                value={weightKg}
+                onChange={(e) => setWeightKg(e.target.value)}
+                placeholder="e.g. 4.2…"
+              />
+            </Field>
+          </div>
+        </fieldset>
+
+        <fieldset className="form-section" disabled={!canWrite}>
+          <legend>Clinical</legend>
+          <div className="form-grid">
+            <Field label="Microchip" htmlFor="pt-microchip">
+              <input
+                id="pt-microchip"
+                name="microchip"
+                autoComplete="off"
+                inputMode="numeric"
+                spellCheck={false}
+                value={microchip}
+                onChange={(e) => setMicrochip(e.target.value)}
+                placeholder="e.g. 985141002341238…"
+              />
+            </Field>
+            <Field label="Allergies (comma-separated)" htmlFor="pt-allergies">
+              <input
+                id="pt-allergies"
+                name="allergies"
+                autoComplete="off"
+                value={allergies}
+                onChange={(e) => setAllergies(e.target.value)}
+                placeholder="e.g. Penicillin, Flea topical (pyrethrin)…"
+              />
+            </Field>
+            <Field label="Medical alerts (comma-separated)" htmlFor="pt-alerts">
+              <input
+                id="pt-alerts"
+                name="medical-alerts"
+                autoComplete="off"
+                value={alerts}
+                onChange={(e) => setAlerts(e.target.value)}
+                placeholder="e.g. Aggressive during handling — muzzle first…"
+              />
+            </Field>
+          </div>
+        </fieldset>
+
         <div className="panel-footer">
           <button className="button secondary" onClick={onClose}>
             Cancel
           </button>
           <button
             className="button primary"
-            disabled={!canWrite}
+            disabled={!canWrite || !name.trim() || (!!owner && !ownerName.trim())}
             onClick={() => {
               dispatch({
                 type: 'updatePatient',
                 id: patient.id,
                 patch: {
+                  name: name.trim(),
+                  species,
+                  breed: breed.trim(),
+                  sex,
+                  birthDate,
+                  weightKg: weightKg.trim() || undefined,
                   microchip: microchip.trim() || undefined,
                   allergies: splitList(allergies),
                   medicalAlerts: splitList(alerts),
                 },
               })
+              if (owner) {
+                dispatch({
+                  type: 'updateOwner',
+                  id: owner.id,
+                  patch: {
+                    name: ownerName.trim(),
+                    phone: ownerPhone.trim(),
+                    email: ownerEmail.trim(),
+                    address: ownerAddress.trim() || undefined,
+                  },
+                })
+              }
               onClose()
             }}
           >

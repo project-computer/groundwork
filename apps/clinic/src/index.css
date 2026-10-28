@@ -943,6 +943,24 @@ button:disabled {
   gap: 13px;
   margin-bottom: 15px;
 }
+.form-section {
+  border: 0;
+  padding: 0;
+  margin: 0 0 16px;
+  min-width: 0;
+}
+.form-section > legend {
+  padding: 0;
+  margin-bottom: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.form-section > .form-grid {
+  margin-bottom: 0;
+}
 .inline-form input,
 .inline-form select,
 .inline-form textarea {
@@ -1829,19 +1847,27 @@ button:disabled {
   .workspace-grid {
     grid-template-columns: 1fr;
   }
+  .workspace-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .workspace-tabs button {
+    flex: 0 0 auto;
+  }
   .workspace-member {
     flex-wrap: wrap;
   }
   .workspace-member-main {
     order: 2;
-    flex: 1 1 100%;
+    flex: 1 1 150px;
   }
   .workspace-role-select {
     order: 3;
   }
   .workspace-member-actions {
     order: 4;
-    margin-left: auto;
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 

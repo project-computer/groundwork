@@ -70,7 +70,8 @@ type Action =
   | { type: 'session'; patch: Partial<Session> }
   | { type: 'registerOwner'; owner: Omit<Owner, 'id' | 'version'>; patient: Omit<Patient, 'id' | 'ownerId' | 'mrn' | 'version'> }
   | { type: 'addPatient'; patient: Omit<Patient, 'id' | 'mrn' | 'version'> }
-  | { type: 'updatePatient'; id: string; patch: Partial<Pick<Patient, 'microchip' | 'allergies' | 'medicalAlerts'>> }
+  | { type: 'updatePatient'; id: string; patch: Partial<Pick<Patient, 'name' | 'species' | 'breed' | 'sex' | 'birthDate' | 'weightKg' | 'weightUnit' | 'microchip' | 'allergies' | 'medicalAlerts'>> }
+  | { type: 'updateOwner'; id: string; patch: Partial<Pick<Owner, 'name' | 'phone' | 'email' | 'address'>> }
   | { type: 'bookAppointment'; appointment: Omit<Appointment, 'id' | 'version' | 'status'> }
   | { type: 'walkIn'; patientId: string; reason: string; vetId: string }
   | { type: 'rescheduleAppointment'; id: string; startsAt: string; durationMin?: number }
@@ -266,19 +267,39 @@ const reducer = (store: Store, action: Action): Store => {
       const patient = data.patients.find((p) => p.id === action.id)
       if (!patient) return store
       const next: Patient = { ...patient, ...action.patch, version: patient.version + 1 }
-      if (
-        next.microchip === patient.microchip &&
-        next.allergies.length === patient.allergies.length &&
-        next.medicalAlerts.length === patient.medicalAlerts.length &&
-        next.allergies.every((a, i) => a === patient.allergies[i]) &&
-        next.medicalAlerts.every((a, i) => a === patient.medicalAlerts[i])
+      const changed = (Object.keys(action.patch) as (keyof typeof action.patch)[]).some(
+        (key) => JSON.stringify(patient[key]) !== JSON.stringify(next[key]),
       )
-        return store
+      if (!changed) return store
       return commit(store, { ...data, patients: data.patients.map((p) => (p.id === next.id ? next : p)) }, {
         action: 'patient.update',
         entityType: 'patient',
         entityId: next.id,
-        summary: `Updated clinical profile for ${next.name}`,
+        summary:
+          next.name !== patient.name
+            ? `Renamed ${patient.name} to ${next.name}`
+            : `Updated profile for ${next.name}`,
+      })
+    }
+    case 'updateOwner': {
+      const owner = data.owners.find((o) => o.id === action.id)
+      if (!owner) return store
+      if (action.patch.name !== undefined && !action.patch.name.trim()) return store
+      const next: Owner = {
+        ...owner,
+        ...action.patch,
+        name: (action.patch.name ?? owner.name).trim(),
+        version: owner.version + 1,
+      }
+      const changed = (Object.keys(action.patch) as (keyof typeof action.patch)[]).some(
+        (key) => action.patch[key] !== owner[key],
+      )
+      if (!changed) return store
+      return commit(store, { ...data, owners: data.owners.map((o) => (o.id === next.id ? next : o)) }, {
+        action: 'owner.update',
+        entityType: 'owner',
+        entityId: next.id,
+        summary: `Updated owner ${next.name}`,
       })
     }
     case 'bookAppointment': {
@@ -876,15 +897,19 @@ export const loadState = async (): Promise<ClinicState | null> => {
 export const saveState = (data: ClinicState) => {
   if (isTauri()) {
     void (async () => {
-      try {
-        if (await pushState(data)) return
-      } catch (error) {
-        console.error('failed to persist clinic state via sidecar', error)
-      }
+      // The SQLite document is the source of truth for every collection
+      // (owners, users, invoices, PIN hashes…). The sidecar's normalized tables
+      // only model a subset, so always persist the full document here.
       try {
         await invoke('state_save_command', { state: data })
       } catch (error) {
         console.error('failed to persist clinic state', error)
+      }
+      // Keep the sidecar's extracted copy current for cloud sync.
+      try {
+        await pushState(data)
+      } catch (error) {
+        console.error('failed to persist clinic state via sidecar', error)
       }
     })()
     return
