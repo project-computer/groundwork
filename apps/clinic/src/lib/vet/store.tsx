@@ -13,6 +13,7 @@ import type {
   InventoryItem,
   InventoryLot,
   InvoiceItem,
+  CaseBundle,
   Owner,
   Patient,
   Payment,
@@ -79,11 +80,14 @@ type Action =
   | { type: 'addPrescription'; encounterId: string; prescription: Omit<Prescription, 'id' | 'prescriberId'> }
   | { type: 'removePrescription'; encounterId: string; prescriptionId: string }
   | { type: 'recordVaccination'; patientId: string; vaccination: Omit<Vaccination, 'id' | 'patientId' | 'vetId' | 'version'> }
+  | { type: 'exportCaseBundle'; bundle: CaseBundle }
+  | { type: 'importCaseBundle'; bundle: CaseBundle }
   | { type: 'closeEncounter'; encounterId: string }
   | { type: 'createInvoice'; ownerId: string; items: Omit<InvoiceItem, 'id'>[] }
   | { type: 'addInvoiceItem'; invoiceId: string; item: Omit<InvoiceItem, 'id'> }
   | { type: 'postInvoice'; invoiceId: string }
   | { type: 'recordPayment'; payment: Omit<Payment, 'id' | 'receivedAt'>; settles: boolean }
+  | { type: 'voidInvoice'; invoiceId: string }
   | { type: 'receiveStock'; productId: string; quantity: number }
   | { type: 'addSupplier'; supplier: Omit<Supplier, 'id'> }
   | { type: 'addInventoryItem'; item: Omit<InventoryItem, 'id'> }
@@ -405,6 +409,68 @@ const reducer = (store: Store, action: Action): Store => {
         summary: `Vaccinated ${patient.name} — ${vac.vaccineName}${vac.nextDueAt ? ` (next due ${vac.nextDueAt})` : ''}`,
       })
     }
+    case 'exportCaseBundle': {
+      const bundle = action.bundle
+      if (!data.patients.some((p) => p.id === bundle.patient.id)) return store
+      return commit(store, { ...data, caseTransfers: [bundle, ...data.caseTransfers] }, {
+        action: 'case.export',
+        entityType: 'case_transfer',
+        entityId: bundle.token,
+        summary: `Shared ${bundle.patient.name}'s case (${bundle.encounters.length} visits) — token ${bundle.token.slice(0, 8)}…`,
+      })
+    }
+    case 'importCaseBundle': {
+      const bundle = action.bundle
+      if (bundle.format !== 'vetcare-case-bundle') return store
+      // Guard: the same share token can only be received once.
+      if (data.caseTransfers.some((t) => t.token === bundle.token)) return store
+      // Guard: a locally-registered patient with the same MRN would fork identity.
+      if (data.patients.some((p) => p.mrn === bundle.patient.mrn && !p.originClinicId)) return store
+
+      // Owner is matched by phone (joint records stay linked); created if new.
+      let owner = data.owners.find((o) => o.phone === bundle.owner.phone)
+      const owners = owner ? data.owners : [...data.owners, { ...bundle.owner, id: uid(), version: 1 }]
+      if (!owner) owner = owners[owners.length - 1]
+
+      const patient: Patient = {
+        ...bundle.patient,
+        id: uid(),
+        ownerId: owner.id,
+        mrn: formatMrn(data.patients.length + 1),
+        originClinicId: bundle.fromClinic.id,
+        originClinicName: bundle.fromClinic.name,
+        originPatientId: bundle.patient.id,
+        version: 1,
+      }
+
+      const encounters = bundle.encounters.map((e) => ({
+        ...e,
+        id: uid(),
+        patientId: patient.id,
+        status: 'closed' as const,
+        originClinicId: bundle.fromClinic.id,
+        originEncounterId: e.id,
+        version: 1,
+      }))
+
+      const vaccinations = bundle.vaccinations.map((v) => ({
+        ...v,
+        id: uid(),
+        patientId: patient.id,
+        encounterId: undefined,
+        originClinicId: bundle.fromClinic.id,
+        originVaccinationId: v.id,
+        version: 1,
+      }))
+
+      const ledger: CaseBundle = { ...bundle, encounters: [], vaccinations: [] }
+      return commit(store, { ...data, owners, patients: [patient, ...data.patients], encounters: [...encounters, ...data.encounters], vaccinations: [...vaccinations, ...data.vaccinations], caseTransfers: [ledger, ...data.caseTransfers] }, {
+        action: 'case.import',
+        entityType: 'case_transfer',
+        entityId: bundle.token,
+        summary: `Received ${patient.name} from ${bundle.fromClinic.name} (${encounters.length} visits, ${vaccinations.length} vaccinations) as ${patient.mrn}`,
+      })
+    }
     case 'closeEncounter': {
       const enc = data.encounters.find((e) => e.id === action.encounterId)
       if (!enc || enc.status === 'closed') return store
@@ -522,6 +588,19 @@ const reducer = (store: Store, action: Action): Store => {
           invoices: action.settles ? data.invoices.map((i) => (i.id === inv.id ? { ...i, status: 'paid', version: i.version + 1 } : i)) : data.invoices,
         },
         { action: 'payment.record', entityType: 'payment', entityId: payment.id, summary: `Payment on ${inv.number} (${payment.method})`, operation: 'append' },
+      )
+    }
+    case 'voidInvoice': {
+      const inv = data.invoices.find((i) => i.id === action.invoiceId)
+      if (!inv || inv.status === 'draft' || inv.status === 'void') return store
+      // Parity with the cloud API's void rule: invoices with recorded payments
+      // cannot be voided — refunds must be handled explicitly first.
+      const hasPayments = data.payments.some((p) => p.invoiceId === inv.id)
+      if (hasPayments) return store
+      return commit(
+        store,
+        { ...data, invoices: data.invoices.map((i) => (i.id === inv.id ? { ...i, status: 'void' as const, version: i.version + 1 } : i)) },
+        { action: 'invoice.void', entityType: 'invoice', entityId: inv.id, summary: `Voided ${inv.number}` },
       )
     }
     case 'receiveStock': {
@@ -673,6 +752,7 @@ const parseState = (raw: unknown): ClinicState | null => {
     inventoryItems: raw.inventoryItems ?? [],
     inventoryLots: raw.inventoryLots ?? [],
     vaccinations: raw.vaccinations ?? [],
+    caseTransfers: raw.caseTransfers ?? [],
   }
 }
 

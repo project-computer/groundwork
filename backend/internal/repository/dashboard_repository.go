@@ -81,7 +81,7 @@ func (r *DashboardRepository) GetUpcomingVaccinations(ctx context.Context, clini
 		 WHERE v.clinic_id = $1
 		   AND v.next_due_date IS NOT NULL
 		   AND v.next_due_date >= CURRENT_DATE
-		   AND v.next_due_date <= (CURRENT_DATE + ($2 || ' days')::interval)
+		   AND v.next_due_date <= (CURRENT_DATE + make_interval(days => $2::int))
 		 ORDER BY v.next_due_date ASC
 		 LIMIT 50
 	`, clinicID, withinDays)
@@ -162,7 +162,7 @@ func (r *DashboardRepository) GetExpiringLots(ctx context.Context, clinicID, wit
 		   AND l.deleted_at IS NULL
 		   AND l.expiry_date IS NOT NULL
 		   AND l.expiry_date >= CURRENT_DATE
-		   AND l.expiry_date <= (CURRENT_DATE + ($2 || ' days')::interval)
+		   AND l.expiry_date <= (CURRENT_DATE + make_interval(days => $2::int))
 		 ORDER BY l.expiry_date ASC
 		 LIMIT 20
 	`, clinicID, withinDays)
@@ -198,7 +198,7 @@ func (r *DashboardRepository) GetMostUsedMedicines(ctx context.Context, clinicID
 		  JOIN inventory_items i ON i.id = l.item_id
 		 WHERE m.clinic_id = $1
 		   AND m.reason = 'stock_out'
-		   AND m.created_at >= NOW() - ($2 || ' days')::interval
+		   AND m.created_at >= NOW() - make_interval(days => $2::int)
 		   AND i.category IN ('medicine', 'vaccine')
 		 GROUP BY i.id, i.name
 		 ORDER BY used_qty DESC

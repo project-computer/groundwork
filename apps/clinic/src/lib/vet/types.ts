@@ -43,6 +43,11 @@ export interface Patient {
   medicalAlerts: string[]
   lastVisit?: string
   weightUnit?: string
+  /** Provenance (case transfer): set when this Patient is a copy received
+   * from another clinic. NULL/undefined = registered locally. */
+  originClinicId?: string
+  originClinicName?: string
+  originPatientId?: string
   version: number
 }
 
@@ -106,6 +111,9 @@ export interface Encounter {
   notes: ClinicalNote[]
   diagnoses: Diagnosis[]
   prescriptions: Prescription[]
+  /** Provenance (case transfer): origin of a copied encounter. */
+  originClinicId?: string
+  originEncounterId?: string
   version: number
 }
 
@@ -174,7 +182,7 @@ export interface InvoiceItem {
   productId?: string
 }
 
-export type InvoiceStatus = 'draft' | 'posted' | 'paid'
+export type InvoiceStatus = 'draft' | 'posted' | 'paid' | 'void'
 
 export interface Invoice {
   id: string
@@ -210,7 +218,44 @@ export interface Vaccination {
   nextDueAt?: string
   vetId: string
   notes?: string
+  /** Provenance (case transfer): origin of a copied vaccination. */
+  originClinicId?: string
+  originVaccinationId?: string
   version: number
+}
+
+/**
+ * CaseBundle is the shareable payload of a CaseTransfer (see CONTEXT.md): one
+ * Patient's encounters and vaccinations, carried from one clinic to another.
+ * The receiving clinic creates its own copies stamped with origin fields —
+ * no rows are shared. The unguessable token guards against double-import.
+ */
+export interface CaseBundle {
+  format: 'vetcare-case-bundle'
+  version: 1
+  token: string
+  sharedAt: string
+  fromClinic: { id: string; name: string }
+  owner: Owner
+  patient: Patient
+  encounters: Encounter[]
+  vaccinations: Vaccination[]
+}
+
+export const isCaseBundle = (value: unknown): value is CaseBundle => {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  return (
+    v.format === 'vetcare-case-bundle' &&
+    v.version === 1 &&
+    typeof v.token === 'string' &&
+    v.token.length > 0 &&
+    !!v.fromClinic &&
+    !!v.owner &&
+    !!v.patient &&
+    Array.isArray(v.encounters) &&
+    Array.isArray(v.vaccinations)
+  )
 }
 
 export interface AuditEvent {
@@ -246,6 +291,7 @@ export interface ClinicState {
   invoices: Invoice[]
   payments: Payment[]
   vaccinations: Vaccination[]
+  caseTransfers: CaseBundle[]
   audit: AuditEvent[]
   outbox: SyncChange[]
   lastSyncedAt?: string

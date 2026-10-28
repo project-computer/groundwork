@@ -11,9 +11,9 @@ import (
 )
 
 type fakeReminderRepo struct {
-	window   []int
-	due      map[int][]*models.ReminderDueVaccination // offset → rows
-	dedup    map[string]bool                          // "vid:offset:sendDate"
+	window    []int
+	due       map[int][]*models.ReminderDueVaccination // offset → rows
+	dedup     map[string]bool                          // "vid:offset:sendDate"
 	windowSet [][]int
 }
 

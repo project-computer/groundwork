@@ -43,6 +43,7 @@ func (m *AuthMiddleware) Protected() fiber.Handler {
 
 		// Store user info in context
 		c.Locals("userID", claims.UserID)
+		c.Locals("clinicID", claims.ClinicID)
 		c.Locals("userEmail", claims.Email)
 		c.Locals("userRole", claims.Role)
 
@@ -90,8 +91,9 @@ func GetUserRole(c fiber.Ctx) string {
 	return userRole.(string)
 }
 
-// GetClinicID returns the tenant clinic for the current request.
-// ADR-0004: returns 1 today; will read from a JWT claim when multi-branch goes live.
+// GetClinicID returns the tenant clinic for the current request, taken from
+// the JWT's clinicId claim (users.clinic_id at issuance). Tokens issued before
+// the claim existed fall back to clinic 1 (ADR-0004 single-tenant default).
 func GetClinicID(c fiber.Ctx) int {
 	if v := c.Locals("clinicID"); v != nil {
 		if id, ok := v.(int); ok {

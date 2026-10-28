@@ -126,6 +126,7 @@ export const seedState: ClinicState = {
     },
   ],
   payments: [],
+  caseTransfers: [],
   vaccinations: [
     { id: 'v-1', patientId: 'p-1', vaccineName: 'Rabies vaccine', lotNumber: 'RAB-2601A', administeredAt: '2025-10-15T10:20:00+07:00', nextDueAt: '2026-10-15', vetId: 'u-pim', version: 1 },
     { id: 'v-2', patientId: 'p-2', vaccineName: 'FVRCP', lotNumber: 'FVR-2603B', administeredAt: '2026-02-11T14:05:00+07:00', nextDueAt: '2027-02-11', vetId: 'u-arun', version: 1 },

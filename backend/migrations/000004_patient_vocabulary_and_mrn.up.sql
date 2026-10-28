@@ -12,15 +12,27 @@
 -- Rename table
 ALTER TABLE pets RENAME TO patients;
 
--- Rename FK columns on every child table that references pets
-ALTER TABLE appointments     RENAME COLUMN pet_id TO patient_id;
-ALTER TABLE bills            RENAME COLUMN pet_id TO patient_id;
-ALTER TABLE prescriptions    RENAME COLUMN pet_id TO patient_id;
-ALTER TABLE visits           RENAME COLUMN pet_id TO patient_id;
-ALTER TABLE case_transfers   RENAME COLUMN pet_id TO patient_id;
-ALTER TABLE visit_images     RENAME COLUMN pet_id TO patient_id;
-ALTER TABLE opd_records      RENAME COLUMN pet_id TO patient_id;
-ALTER TABLE ipd_records      RENAME COLUMN pet_id TO patient_id;
+-- Rename FK columns on every child table that references pets.
+-- IF EXISTS guards tables that were dropped in 000001 (opd/ipd_records) or never
+-- created there (case_transfers — its CREATE TABLE ships in 000011_case_transfers).
+ALTER TABLE IF EXISTS appointments     RENAME COLUMN pet_id TO patient_id;
+ALTER TABLE IF EXISTS bills            RENAME COLUMN pet_id TO patient_id;
+ALTER TABLE IF EXISTS prescriptions    RENAME COLUMN pet_id TO patient_id;
+ALTER TABLE IF EXISTS visits           RENAME COLUMN pet_id TO patient_id;
+ALTER TABLE IF EXISTS case_transfers   RENAME COLUMN pet_id TO patient_id;
+-- visit_images shipped in 000001 WITHOUT a pet_id column; rename only if a
+-- legacy database happens to have it (Postgres has no RENAME COLUMN IF EXISTS).
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'visit_images' AND column_name = 'pet_id'
+    ) THEN
+        ALTER TABLE visit_images RENAME COLUMN pet_id TO patient_id;
+    END IF;
+END $$;
+ALTER TABLE IF EXISTS opd_records      RENAME COLUMN pet_id TO patient_id;
+ALTER TABLE IF EXISTS ipd_records      RENAME COLUMN pet_id TO patient_id;
 
 -- Rename cosmetic pet_name → patient_name on appointments (per CONTEXT.md vocabulary).
 -- visits/prescriptions/bills/case_transfers keep pet_name as a snapshot column; the

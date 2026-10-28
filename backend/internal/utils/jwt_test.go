@@ -7,7 +7,7 @@ import (
 
 func TestGenerateAndValidateToken(t *testing.T) {
 	secret := "test-secret"
-	token, err := GenerateToken(1, "admin@happypaws.vet", "admin", secret, 15*time.Minute)
+	token, err := GenerateToken(1, 1, "admin@happypaws.vet", "admin", secret, 15*time.Minute)
 	if err != nil {
 		t.Fatalf("GenerateToken failed: %v", err)
 	}

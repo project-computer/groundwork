@@ -12,15 +12,24 @@ ALTER TABLE patients DROP CONSTRAINT IF EXISTS patients_mrn_unique;
 --  the human-readable MRN, not the year/id components. Reverse is data-discarding in
 --  that direction. Acceptable for dev; production down must use backup.)
 
--- Rename patient_id → pet_id on every FK
-ALTER TABLE appointments     RENAME COLUMN patient_id TO pet_id;
-ALTER TABLE bills            RENAME COLUMN patient_id TO pet_id;
-ALTER TABLE prescriptions    RENAME COLUMN patient_id TO pet_id;
-ALTER TABLE visits           RENAME COLUMN patient_id TO pet_id;
-ALTER TABLE case_transfers   RENAME COLUMN patient_id TO pet_id;
-ALTER TABLE visit_images     RENAME COLUMN patient_id TO pet_id;
-ALTER TABLE opd_records      RENAME COLUMN patient_id TO pet_id;
-ALTER TABLE ipd_records      RENAME COLUMN patient_id TO pet_id;
+-- Rename patient_id → pet_id on every FK (IF EXISTS: see matching note in the up migration)
+ALTER TABLE IF EXISTS appointments     RENAME COLUMN patient_id TO pet_id;
+ALTER TABLE IF EXISTS bills            RENAME COLUMN patient_id TO pet_id;
+ALTER TABLE IF EXISTS prescriptions    RENAME COLUMN patient_id TO pet_id;
+ALTER TABLE IF EXISTS visits           RENAME COLUMN patient_id TO pet_id;
+ALTER TABLE IF EXISTS case_transfers   RENAME COLUMN patient_id TO pet_id;
+-- Mirror of the guarded rename in the up migration
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'visit_images' AND column_name = 'patient_id'
+    ) THEN
+        ALTER TABLE visit_images RENAME COLUMN patient_id TO pet_id;
+    END IF;
+END $$;
+ALTER TABLE IF EXISTS opd_records      RENAME COLUMN patient_id TO pet_id;
+ALTER TABLE IF EXISTS ipd_records      RENAME COLUMN patient_id TO pet_id;
 
 -- Rename patient_name → pet_name on appointments
 ALTER TABLE appointments RENAME COLUMN patient_name TO pet_name;

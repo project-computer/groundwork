@@ -4,7 +4,7 @@ import type { InventoryItem, InventoryLot, Invoice, Payment, Permission, Role, S
 export const statusTone = (status: string): 'ok' | 'warn' | 'bad' | 'muted' | 'info' => {
   if (status === 'paid' || status === 'completed') return 'ok'
   if (status === 'draft' || status === 'booked') return 'info'
-  if (status === 'cancelled' || status === 'no_show') return 'bad'
+  if (status === 'cancelled' || status === 'no_show' || status === 'void') return 'bad'
   return 'warn'
 }
 

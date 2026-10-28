@@ -192,7 +192,8 @@ func (r *OwnerRepository) GetByPhone(ctx context.Context, clinicID int, phone, n
 	var secContact []byte
 	query := `
 		SELECT id, clinic_id, name, phone, email, national_id, notes,
-		       secondary_contact, created_at, updated_at
+		       secondary_contact, preferred_channel, notify_opt_out, line_user_id,
+		       created_at, updated_at
 		FROM owners
 		WHERE clinic_id = $1 AND phone = $2
 		  AND COALESCE(national_id, '') = $3

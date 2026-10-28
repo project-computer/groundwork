@@ -208,7 +208,7 @@ const Dashboard = ({ onNavigate, onStart }: { onNavigate: SetView; onStart: (id:
   const firstName = user.name.replace(/^Dr\.\s*/, '').split(' ')[0]
   const todaysAppointments = data.appointments.filter((a) => a.startsAt.startsWith(today))
   const outstanding = data.invoices
-    .filter((i) => i.status !== 'paid')
+    .filter((i) => i.status !== 'paid' && i.status !== 'void')
     .reduce((sum, invoice) => sum + invoiceTotals(invoice, data.clinic.vatRate, data.payments).balance, 0)
   const dueVaccinations = vaccinationsDue(data.vaccinations)
   return (
@@ -252,7 +252,7 @@ const Dashboard = ({ onNavigate, onStart }: { onNavigate: SetView; onStart: (id:
           <div>
             <small>Outstanding</small>
             <strong>{formatCurrency(outstanding)}</strong>
-            <span className="stat-note">{data.invoices.filter((i) => i.status !== 'paid').length} invoices</span>
+            <span className="stat-note">{data.invoices.filter((i) => i.status !== 'paid' && i.status !== 'void').length} invoices</span>
           </div>
         </div>
         <div className="stat-card">
@@ -1277,7 +1277,7 @@ const Billing = () => {
     [data.products, data.inventoryItems],
   )
 
-  const openInvoices = data.invoices.filter((i) => i.status !== 'paid')
+  const openInvoices = data.invoices.filter((i) => i.status !== 'paid' && i.status !== 'void')
   const outstanding = openInvoices.reduce(
     (sum, invoice) => sum + invoiceTotals(invoice, data.clinic.vatRate, data.payments).balance,
     0,
@@ -1456,6 +1456,20 @@ const Billing = () => {
                         }}
                       >
                         Record payment
+                      </button>
+                    )}
+                    {invoice.status === 'posted' && totals.paid === 0 && (
+                      <button
+                        className="row-action"
+                        disabled={!billing.allowed}
+                        title={billing.reason || undefined}
+                        onClick={() => {
+                          if (confirm(`Void ${invoice.number}? This cannot be undone.`)) {
+                            dispatch({ type: 'voidInvoice', invoiceId: invoice.id })
+                          }
+                        }}
+                      >
+                        Void
                       </button>
                     )}
                     {(invoice.status !== 'draft' || totals.balance === 0) && (

@@ -564,6 +564,11 @@ button:disabled {
   margin: auto;
   padding: 36px max(42px, calc(env(safe-area-inset-right) + 42px)) 60px;
   padding-left: max(42px, calc(env(safe-area-inset-left) + 42px));
+  /* One vertical rhythm for every page: header, toolbars, panels and grids
+     are all direct children, spaced by gap instead of per-block margins. */
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 .page-wrap h1 {
   margin: 0;
@@ -639,7 +644,6 @@ button:disabled {
      and lets four-card views (Billing, Reports) stretch without an empty track. */
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 13px;
-  margin: 28px 0 22px;
 }
 .stat-card {
   background: var(--paper);
@@ -805,6 +809,7 @@ button:disabled {
 }
 .activity-row {
   display: flex;
+  align-items: center;
   gap: 10px;
   padding: 12px 0;
   border-bottom: 1px solid var(--row-border);
@@ -825,13 +830,15 @@ button:disabled {
   color: var(--teal);
   border-radius: 7px;
 }
-.activity-row strong,
-.activity-row span {
+/* Text styles target the middle text column only — never the trailing
+   .pill, whose span would otherwise be blockified (display:block beats
+   Tailwind's inline-flex utility) and stack its dot above its label. */
+.activity-row > div:not(.activity-mark) :is(strong, span) {
   display: block;
   font-size: 11px;
   overflow-wrap: anywhere;
 }
-.activity-row span {
+.activity-row > div:not(.activity-mark) > span {
   color: var(--ink-muted);
   font-size: 10px;
   margin-top: 3px;
@@ -839,7 +846,6 @@ button:disabled {
 .toolbar {
   display: flex;
   gap: 10px;
-  margin: 25px 0 17px;
 }
 .search-field {
   display: flex;
@@ -1125,9 +1131,6 @@ button:disabled {
   height: 100%;
   background: var(--teal);
   border-radius: 5px;
-}
-.data-grid {
-  margin-top: 24px;
 }
 .status-stack {
   padding: 4px 0 8px;
@@ -1581,7 +1584,6 @@ button:disabled {
 .report-toolbar {
   align-items: center;
   justify-content: space-between;
-  margin: 22px 0 4px;
 }
 .report-period {
   color: var(--ink-muted);
@@ -1591,13 +1593,9 @@ button:disabled {
   display: grid;
   grid-template-columns: 1.55fr 1fr;
   gap: 18px;
-  margin-top: 18px;
 }
 .report-grid > * {
   min-width: 0;
-}
-.report-stock {
-  margin-top: 18px;
 }
 .report-summary {
   display: flex;
@@ -1821,7 +1819,6 @@ button:disabled {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin-top: 20px;
   color: var(--ink-muted);
   font-size: 10px;
 }
@@ -1867,10 +1864,13 @@ button:disabled {
 .billing-table .table-row {
   grid-template-columns: 1.25fr 1.05fr 0.55fr 0.85fr 0.85fr 0.85fr 1.4fr;
 }
-/* Staff table: permission tags are ~100px each and must wrap several per line. */
-.staff-table .table-head,
-.staff-table .table-row {
-  grid-template-columns: minmax(150px, 1.3fr) minmax(110px, 1fr) minmax(220px, 2fr) auto auto;
+/* Staff table: permission tags are ~100px each and must wrap several per line.
+   No min-width floor — the minmax tracks protect the layout and the table-wide
+   640px floor would force a sideways scroll on tight viewports. */
+.records-table.table-wide.staff-table .table-head,
+.records-table.table-wide.staff-table .table-row {
+  min-width: 0;
+  grid-template-columns: minmax(110px, 1.2fr) minmax(90px, 0.9fr) minmax(125px, 1.8fr) auto auto;
 }
 @media (max-width: 900px) {
   .cal-appt {
@@ -1955,9 +1955,17 @@ button:disabled {
   .records-table.table-wide.billing-table .table-row {
     grid-template-columns: 1.25fr 1.05fr 0.55fr 0.85fr 0.85fr 0.85fr 1.4fr;
   }
-  .records-table.table-wide.staff-table .table-head,
+  /* Staff rows stack into cards on phones: permissions stay visible
+     full-width instead of forcing a sideways scroll to reach them. */
+  .records-table.table-wide.staff-table .table-head {
+    display: none;
+  }
   .records-table.table-wide.staff-table .table-row {
-    grid-template-columns: minmax(120px, 1.2fr) minmax(105px, 1fr) minmax(220px, 2fr) auto auto;
+    min-width: 0;
+    grid-template-columns: 1fr auto;
+  }
+  .records-table.table-wide.staff-table .table-row > .perm-list {
+    grid-column: 1 / -1;
   }
   .records-table.table-wide .table-row > span:nth-child(2),
   .records-table.table-wide .table-row > span:nth-child(3),
@@ -2154,9 +2162,6 @@ button:disabled {
   /* The later laptop breakpoint re-declares .stat-grid; keep phones single-column. */
   .stat-grid.report-stat-grid {
     grid-template-columns: 1fr;
-  }
-  .report-toolbar {
-    margin-top: 18px;
   }
   .report-toolbar .seg {
     display: grid;

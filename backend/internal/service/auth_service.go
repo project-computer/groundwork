@@ -40,12 +40,12 @@ func (s *AuthService) Login(ctx context.Context, req models.LoginRequest) (*mode
 		return nil, errors.New("invalid credentials")
 	}
 
-	accessToken, err := utils.GenerateToken(user.ID, user.Email, user.Role, s.jwtSecret, s.accessExpiry)
+	accessToken, err := utils.GenerateToken(user.ID, user.ClinicID, user.Email, user.Role, s.jwtSecret, s.accessExpiry)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := utils.GenerateToken(user.ID, user.Email, user.Role, s.jwtSecret, s.refreshExpiry)
+	refreshToken, err := utils.GenerateToken(user.ID, user.ClinicID, user.Email, user.Role, s.jwtSecret, s.refreshExpiry)
 	if err != nil {
 		return nil, err
 	}
@@ -72,12 +72,12 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*m
 		return nil, errors.New("account is inactive")
 	}
 
-	newAccessToken, err := utils.GenerateToken(user.ID, user.Email, user.Role, s.jwtSecret, s.accessExpiry)
+	newAccessToken, err := utils.GenerateToken(user.ID, user.ClinicID, user.Email, user.Role, s.jwtSecret, s.accessExpiry)
 	if err != nil {
 		return nil, err
 	}
 
-	newRefreshToken, err := utils.GenerateToken(user.ID, user.Email, user.Role, s.jwtSecret, s.refreshExpiry)
+	newRefreshToken, err := utils.GenerateToken(user.ID, user.ClinicID, user.Email, user.Role, s.jwtSecret, s.refreshExpiry)
 	if err != nil {
 		return nil, err
 	}

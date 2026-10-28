@@ -71,6 +71,9 @@ func (r *VisitRepository) GetByID(ctx context.Context, id int) (*models.Visit, e
 		WHERE id = $1
 	`
 
+	// created_by is nullable in the schema (legacy/seeded rows); scan through a
+	// pointer and normalize to 0 rather than failing the whole fetch.
+	var createdBy *int32
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&v.ID, &v.ClinicID, &v.CustomID, &v.PetID, &v.AppointmentID,
 		&v.PetName, &v.OwnerName, &v.Type, &v.Purpose, &v.Status,
@@ -78,8 +81,11 @@ func (r *VisitRepository) GetByID(ctx context.Context, id int) (*models.Visit, e
 		&v.Vitals, &v.Examination, &v.DifferentialDiagnosis, &v.FinalDiagnosis,
 		&v.Treatment, &v.Advice, &v.FollowUpDate, &v.Medications,
 		&v.HasMedicationEnvelope, &v.HistoryNotes, &v.BillingStatus,
-		&v.CreatedBy, &v.CreatedAt, &v.UpdatedAt,
+		&createdBy, &v.CreatedAt, &v.UpdatedAt,
 	)
+	if createdBy != nil {
+		v.CreatedBy = int(*createdBy)
+	}
 
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("visit not found")

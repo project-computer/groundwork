@@ -5,10 +5,13 @@
 
 CREATE TABLE vaccine_protocols (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(120) NOT NULL UNIQUE,
+    name VARCHAR(120) NOT NULL,
     species VARCHAR(50) NOT NULL,
     default_interval_days INT NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+    -- A vaccine protocol is (name, species): the same vaccine name has a
+    -- different canonical schedule per species (e.g. Rabies dog vs cat).
+    UNIQUE (name, species)
 );
 
 -- Seed common veterinary vaccines per the slice spec.

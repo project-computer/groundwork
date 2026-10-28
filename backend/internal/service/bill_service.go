@@ -8,18 +8,32 @@ import (
 	"time"
 
 	"github.com/vet-clinic/api/internal/models"
-	"github.com/vet-clinic/api/internal/repository"
 )
 
 const floatTolerance = 0.005
 
+// BillRepo and BillPaymentRepo are the persistence seams for billing. They are
+// interfaces so the settlement rules below can be tested without Postgres.
+type BillRepo interface {
+	Create(ctx context.Context, clinicID int, bill *models.Bill) error
+	GetByID(ctx context.Context, id int) (*models.Bill, error)
+	List(ctx context.Context, clinicID int, query models.BillListQuery) ([]*models.Bill, int, error)
+	Update(ctx context.Context, id int, updates map[string]interface{}) error
+}
+
+type BillPaymentRepo interface {
+	Create(ctx context.Context, clinicID int, p *models.BillPayment) error
+	ListByBill(ctx context.Context, billID int) ([]*models.BillPayment, error)
+	SumByBill(ctx context.Context, billID int) (float64, error)
+}
+
 type BillService struct {
-	repo  *repository.BillRepository
-	pay   *repository.BillPaymentRepository
+	repo  BillRepo
+	pay   BillPaymentRepo
 	audit *AuditService
 }
 
-func NewBillService(repo *repository.BillRepository, pay *repository.BillPaymentRepository, audit *AuditService) *BillService {
+func NewBillService(repo BillRepo, pay BillPaymentRepo, audit *AuditService) *BillService {
 	return &BillService{repo: repo, pay: pay, audit: audit}
 }
 

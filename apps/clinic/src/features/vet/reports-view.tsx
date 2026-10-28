@@ -195,7 +195,7 @@ const buildReport = (data: ClinicState, range: ReportRange) => {
   const vat = totals.reduce((sum, total) => sum + total.tax, 0)
   const avgVisit = encounters.length ? Math.round(billed / encounters.length) : 0
 
-  const openInvoices = data.invoices.filter((invoice) => invoice.status !== 'paid')
+  const openInvoices = data.invoices.filter((invoice) => invoice.status !== 'paid' && invoice.status !== 'void')
   const outstanding = openInvoices.reduce(
     (sum, invoice) => sum + invoiceTotals(invoice, data.clinic.vatRate, data.payments).balance,
     0,

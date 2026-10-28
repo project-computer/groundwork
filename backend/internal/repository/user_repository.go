@@ -17,24 +17,24 @@ func NewUserRepository(db *pgxpool.Pool) *UserRepository {
 
 func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 	query := `
-		INSERT INTO users (email, password_hash, name, role, phone, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO users (clinic_id, email, password_hash, name, role, phone, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query,
-		user.Email, user.PasswordHash, user.Name, user.Role, user.Phone, user.IsActive,
+		user.ClinicID, user.Email, user.PasswordHash, user.Name, user.Role, user.Phone, user.IsActive,
 	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 }
 
 func (r *UserRepository) GetByID(ctx context.Context, id int) (*models.User, error) {
 	user := &models.User{}
 	query := `
-		SELECT id, email, password_hash, name, role, phone, avatar_url, is_active, created_at, updated_at
+		SELECT id, clinic_id, email, password_hash, name, role, phone, avatar_url, is_active, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.Role,
+		&user.ID, &user.ClinicID, &user.Email, &user.PasswordHash, &user.Name, &user.Role,
 		&user.Phone, &user.AvatarURL, &user.IsActive, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
@@ -46,12 +46,12 @@ func (r *UserRepository) GetByID(ctx context.Context, id int) (*models.User, err
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	user := &models.User{}
 	query := `
-		SELECT id, email, password_hash, name, role, phone, avatar_url, is_active, created_at, updated_at
+		SELECT id, clinic_id, email, password_hash, name, role, phone, avatar_url, is_active, created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`
 	err := r.db.QueryRow(ctx, query, email).Scan(
-		&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.Role,
+		&user.ID, &user.ClinicID, &user.Email, &user.PasswordHash, &user.Name, &user.Role,
 		&user.Phone, &user.AvatarURL, &user.IsActive, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
@@ -62,7 +62,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 
 func (r *UserRepository) List(ctx context.Context) ([]*models.User, error) {
 	query := `
-		SELECT id, email, name, role, phone, avatar_url, is_active, created_at, updated_at
+		SELECT id, clinic_id, email, name, role, phone, avatar_url, is_active, created_at, updated_at
 		FROM users
 		WHERE is_active = true
 		ORDER BY created_at DESC
@@ -77,7 +77,7 @@ func (r *UserRepository) List(ctx context.Context) ([]*models.User, error) {
 	for rows.Next() {
 		user := &models.User{}
 		err := rows.Scan(
-			&user.ID, &user.Email, &user.Name, &user.Role,
+			&user.ID, &user.ClinicID, &user.Email, &user.Name, &user.Role,
 			&user.Phone, &user.AvatarURL, &user.IsActive, &user.CreatedAt, &user.UpdatedAt,
 		)
 		if err != nil {

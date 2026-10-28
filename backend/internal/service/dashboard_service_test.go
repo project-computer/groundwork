@@ -14,7 +14,7 @@ import (
 // test is to lock the service's contract — payload shape, month clamping, error
 // propagation — so the handler's contract doesn't drift.
 type fakeDashboardRepo struct {
-	countToday int
+	countToday    int
 	countTodayErr error
 
 	pending int
@@ -31,14 +31,14 @@ type fakeDashboardRepo struct {
 	series    []models.DashboardRevenueEntry
 	seriesErr error
 
-	upcoming      []models.DashboardVaccinationItem
-	overdue       []models.DashboardVaccinationItem
-	upcomingErr   error
-	overdueErr    error
+	upcoming    []models.DashboardVaccinationItem
+	overdue     []models.DashboardVaccinationItem
+	upcomingErr error
+	overdueErr  error
 
-	lowStock  []models.DashboardLowStockItem
-	expiring  []models.DashboardExpiringLot
-	mostUsed  []models.DashboardMostUsedItem
+	lowStock []models.DashboardLowStockItem
+	expiring []models.DashboardExpiringLot
+	mostUsed []models.DashboardMostUsedItem
 }
 
 func (f *fakeDashboardRepo) CountTodayAppointments(_ context.Context, _ int, _ string) (int, error) {
@@ -98,12 +98,12 @@ func TestDashboardServiceGetStatsPayloadShape(t *testing.T) {
 	got, err := svc.GetStats(context.Background(), 1)
 	assert.NoError(t, err)
 	assert.Equal(t, models.DashboardStats{
-		TodayAppointments: 7,
-		PendingVisits:     3,
-		TodayRevenue:      1500.50,
-		WeekRevenue:       9200.25,
-		MonthRevenue:      35000.00,
-		ActivePatients:    42,
+		TodayAppointments:    7,
+		PendingVisits:        3,
+		TodayRevenue:         1500.50,
+		WeekRevenue:          9200.25,
+		MonthRevenue:         35000.00,
+		ActivePatients:       42,
 		UpcomingVaccinations: []models.DashboardVaccinationItem{},
 		OverdueVaccinations:  []models.DashboardVaccinationItem{},
 		LowStockItems:        []models.DashboardLowStockItem{},

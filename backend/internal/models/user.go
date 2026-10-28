@@ -6,6 +6,7 @@ import (
 
 type User struct {
 	ID           int        `json:"id"`
+	ClinicID     int        `json:"clinicId"`
 	Email        string     `json:"email"`
 	PasswordHash string     `json:"-"`
 	Name         string     `json:"name"`

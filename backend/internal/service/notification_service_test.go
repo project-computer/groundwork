@@ -21,8 +21,8 @@ func (f *fakeOwnerLookup) GetByID(_ context.Context, _, _ int) (*models.Owner, e
 }
 
 type fakeNotificationLogRepo struct {
-	rows  map[int]*models.NotificationLog
-	next  int
+	rows        map[int]*models.NotificationLog
+	next        int
 	markSentErr error
 }
 
@@ -77,14 +77,14 @@ func (fakePrefsRepo) UpdateOwnerNotificationPrefs(_ context.Context, _, _ int, r
 }
 
 type stubNotifier struct {
-	channel string
-	ok      bool
-	sendErr error
+	channel    string
+	ok         bool
+	sendErr    error
 	gotContact string
 	gotMessage string
 }
 
-func (s *stubNotifier) Channel() string { return s.channel }
+func (s *stubNotifier) Channel() string  { return s.channel }
 func (s *stubNotifier) Configured() bool { return s.ok }
 func (s *stubNotifier) Send(_ context.Context, recipient, message string) (string, error) {
 	s.gotContact = recipient

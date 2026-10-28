@@ -3,15 +3,18 @@ package middleware
 import (
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
+	"github.com/vet-clinic/api/internal/utils"
 )
 
 // GetClinicID is the single resolver through which every tenant-scoped query flows.
-// Per ADR-0004, the present implementation returns 1 (defer-but-ready multi-tenancy).
-// Activation = swap the body to read from a JWT claim. Behavior is verified here so the
-// resolver's contract is locked in: 1 today, never panics.
+// It reads the JWT clinicId claim (users.clinic_id at issuance); tokens without
+// the claim fall back to clinic 1 (ADR-0004 single-tenant default). Behavior is
+// verified here so the resolver's contract is locked in: never panics, always
+// returns the tenant of the authenticated user.
 
 func TestGetClinicIDReturnsOneForDefaultCtx(t *testing.T) {
 	app := fiber.New()
@@ -76,4 +79,34 @@ func TestGetUserIDReturnsZeroWhenUnset(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 	assert.Equal(t, 0, got)
+}
+
+func TestProtectedPropagatesClinicClaim(t *testing.T) {
+	secret := "testsecret"
+	token, err := utils.GenerateToken(3, 7, "vet@clinic.co", "veterinarian", secret, time.Minute)
+	if err != nil {
+		t.Fatalf("token generation failed: %v", err)
+	}
+
+	m := NewAuthMiddleware(secret)
+	app := fiber.New()
+	app.Get("/probe", m.Protected(), func(c fiber.Ctx) error {
+		if got := GetClinicID(c); got != 7 {
+			t.Errorf("clinicID = %d, want 7", got)
+		}
+		if got := GetUserID(c); got != 3 {
+			t.Errorf("userID = %d, want 3", got)
+		}
+		return c.SendStatus(fiber.StatusOK)
+	})
+
+	req := httptest.NewRequest(fiber.MethodGet, "/probe", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
 }
