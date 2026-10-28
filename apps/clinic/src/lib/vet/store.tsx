@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { invoke } from '@tauri-apps/api/core'
 import { isTauri } from '@/platform'
 import { fetchState, pushState, runSync } from './backend'
-import { can, roleLabel } from './format'
+import { can, invoiceTotals, roleLabel } from './format'
 import { seedState } from './seed'
 import type {
   Appointment,
@@ -92,6 +92,7 @@ type Action =
   | { type: 'addInvoiceItem'; invoiceId: string; item: Omit<InvoiceItem, 'id'> }
   | { type: 'postInvoice'; invoiceId: string }
   | { type: 'recordPayment'; payment: Omit<Payment, 'id' | 'receivedAt'>; settles: boolean }
+  | { type: 'refundPayment'; invoiceId: string; paymentId: string; amount: number; note: string }
   | { type: 'voidInvoice'; invoiceId: string }
   | { type: 'receiveStock'; productId: string; quantity: number }
   | { type: 'addSupplier'; supplier: Omit<Supplier, 'id'> }
@@ -663,13 +664,55 @@ const reducer = (store: Store, action: Action): Store => {
         { action: 'payment.record', entityType: 'payment', entityId: payment.id, summary: `Payment on ${inv.number} (${payment.method})`, operation: 'append' },
       )
     }
+    case 'refundPayment': {
+      const inv = data.invoices.find((i) => i.id === action.invoiceId)
+      const original = data.payments.find((p) => p.id === action.paymentId)
+      if (!inv || inv.status === 'draft' || inv.status === 'void') return store
+      if (!original || original.invoiceId !== inv.id) return store
+      if ((original.kind ?? 'payment') !== 'payment') return store
+      const alreadyRefunded = data.payments
+        .filter((p) => p.refundOf === original.id)
+        .reduce((sum, p) => sum + Math.abs(p.amount), 0)
+      const amount = Math.round(action.amount)
+      if (!Number.isFinite(amount) || amount <= 0 || amount > original.amount - alreadyRefunded) return store
+      if (!action.note.trim()) return store
+      const refund: Payment = {
+        id: uid(),
+        invoiceId: inv.id,
+        amount: -amount,
+        method: original.method,
+        receivedAt: now(),
+        kind: 'refund',
+        refundOf: original.id,
+        note: action.note.trim(),
+      }
+      const paid = data.payments.filter((p) => p.invoiceId === inv.id).reduce((sum, p) => sum + p.amount, 0) + refund.amount
+      const total = invoiceTotals(inv, data.clinic.vatRate, data.payments).total
+      const reopened = inv.status === 'paid' && paid < total
+      return commit(
+        store,
+        {
+          ...data,
+          payments: [...data.payments, refund],
+          invoices: reopened ? data.invoices.map((i) => (i.id === inv.id ? { ...i, status: 'posted' as const, version: i.version + 1 } : i)) : data.invoices,
+        },
+        {
+          action: 'payment.refund',
+          entityType: 'payment',
+          entityId: refund.id,
+          summary: `Refunded ${(amount / 100).toFixed(2)} on ${inv.number} — ${refund.note}`,
+          operation: 'append',
+        },
+      )
+    }
     case 'voidInvoice': {
       const inv = data.invoices.find((i) => i.id === action.invoiceId)
       if (!inv || inv.status === 'draft' || inv.status === 'void') return store
-      // Parity with the cloud API's void rule: invoices with recorded payments
-      // cannot be voided — refunds must be handled explicitly first.
-      const hasPayments = data.payments.some((p) => p.invoiceId === inv.id)
-      if (hasPayments) return store
+      // Parity with the cloud API's void rule: money that is still held cannot
+      // be voided. Refunds net against payments, so a fully refunded invoice
+      // becomes voidable again.
+      const netPaid = data.payments.filter((p) => p.invoiceId === inv.id).reduce((sum, p) => sum + p.amount, 0)
+      if (netPaid > 0) return store
       return commit(
         store,
         { ...data, invoices: data.invoices.map((i) => (i.id === inv.id ? { ...i, status: 'void' as const, version: i.version + 1 } : i)) },

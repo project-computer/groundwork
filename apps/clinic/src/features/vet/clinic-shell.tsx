@@ -1594,6 +1594,9 @@ const Billing = () => {
   const [payAmount, setPayAmount] = useState('')
   const [payMethod, setPayMethod] = useState<'cash' | 'card' | 'promptpay' | 'transfer'>('cash')
   const [receiptInvoiceId, setReceiptInvoiceId] = useState<string | null>(null)
+  const [refundPaymentId, setRefundPaymentId] = useState<string | null>(null)
+  const [refundAmount, setRefundAmount] = useState('')
+  const [refundNote, setRefundNote] = useState('')
 
   // Billable catalog: legacy products (services & medications) plus live inventory items.
   const catalog = useMemo(
@@ -1628,6 +1631,11 @@ const Billing = () => {
   const sortedInvoices = [...data.invoices].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const paymentInvoice = data.invoices.find((i) => i.id === paymentInvoiceId)
   const paymentBalance = paymentInvoice ? invoiceTotals(paymentInvoice, data.clinic.vatRate, data.payments).balance : 0
+  const refundPayment = data.payments.find((p) => p.id === refundPaymentId)
+  const refundedSoFar = refundPayment
+    ? data.payments.filter((p) => p.refundOf === refundPayment.id).reduce((sum, p) => sum + Math.abs(p.amount), 0)
+    : 0
+  const refundable = refundPayment ? refundPayment.amount - refundedSoFar : 0
 
   const submitPayment = () => {
     const amount = Math.round(Number(payAmount) * 100)
@@ -1639,6 +1647,21 @@ const Billing = () => {
     })
     setPaymentInvoiceId(null)
     setPayAmount('')
+  }
+
+  const submitRefund = () => {
+    const amount = Math.round(Number(refundAmount) * 100)
+    if (!refundPayment || !Number.isFinite(amount) || amount <= 0 || amount > refundable || !refundNote.trim()) return
+    dispatch({
+      type: 'refundPayment',
+      invoiceId: refundPayment.invoiceId,
+      paymentId: refundPayment.id,
+      amount,
+      note: refundNote,
+    })
+    setRefundPaymentId(null)
+    setRefundAmount('')
+    setRefundNote('')
   }
 
   return (
@@ -1852,6 +1875,15 @@ const Billing = () => {
             .slice(0, 10)
             .map((payment) => {
               const invoice = data.invoices.find((i) => i.id === payment.invoiceId)
+              const isRefund = payment.kind === 'refund'
+              const refunded = data.payments.filter((p) => p.refundOf === payment.id).reduce((sum, p) => sum + Math.abs(p.amount), 0)
+              const canRefund =
+                billing.allowed &&
+                !isRefund &&
+                !!invoice &&
+                invoice.status !== 'draft' &&
+                invoice.status !== 'void' &&
+                payment.amount - refunded > 0
               return (
                 <div className="activity-row" key={payment.id}>
                   <div className="activity-mark">
@@ -1862,10 +1894,23 @@ const Billing = () => {
                       {formatCurrency(payment.amount)} · {invoice?.number ?? 'Unassigned'}
                     </strong>
                     <span>
-                      {payment.method} · {formatDate(payment.receivedAt)} · {formatTime(payment.receivedAt)}
+                      {isRefund ? `Refund — ${payment.note ?? 'no reason'}` : payment.method} · {formatDate(payment.receivedAt)} ·{' '}
+                      {formatTime(payment.receivedAt)}
                     </span>
                   </div>
-                  <Pill tone="muted">{payment.method}</Pill>
+                  {canRefund && (
+                    <button
+                      className="small-button"
+                      onClick={() => {
+                        setRefundPaymentId(payment.id)
+                        setRefundAmount(((payment.amount - refunded) / 100).toFixed(2))
+                        setRefundNote('')
+                      }}
+                    >
+                      Refund
+                    </button>
+                  )}
+                  <Pill tone={isRefund ? 'bad' : 'muted'}>{isRefund ? 'refund' : payment.method}</Pill>
                 </div>
               )
             })}
@@ -1923,6 +1968,69 @@ const Billing = () => {
       {receiptInvoiceId && (
         <ReceiptDialog invoiceId={receiptInvoiceId} onClose={() => setReceiptInvoiceId(null)} />
       )}
+      {refundPayment && (
+        <div
+          className="modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setRefundPaymentId(null)
+          }}
+        >
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Refund payment on ${data.invoices.find((i) => i.id === refundPayment.invoiceId)?.number ?? 'invoice'}`}
+          >
+            <div className="form-heading">
+              <div>
+                <strong>Refund payment</strong>
+                <span>
+                  {formatCurrency(refundPayment.amount)} recorded on {formatDate(refundPayment.receivedAt)} · up to{' '}
+                  {formatCurrency(refundable)} refundable
+                </span>
+              </div>
+              <button className="icon-button" onClick={() => setRefundPaymentId(null)} aria-label="Close dialog">
+                <X size={17} />
+              </button>
+            </div>
+            <div className="form-grid">
+              <Field label="Refund amount (THB)" htmlFor="refund-amount">
+                <input
+                  id="refund-amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={refundAmount}
+                  onChange={(e) => setRefundAmount(e.target.value)}
+                />
+              </Field>
+              <Field label="Reason (recorded on the receipt)" htmlFor="refund-note">
+                <input
+                  id="refund-note"
+                  value={refundNote}
+                  onChange={(e) => setRefundNote(e.target.value)}
+                  placeholder="e.g. Dispensed the wrong strength…"
+                />
+              </Field>
+            </div>
+            <p className="form-hint">
+              Refunds are appended to the payment ledger; the original payment and the receipt stay unchanged.
+            </p>
+            <div className="panel-footer">
+              <button className="button secondary" onClick={() => setRefundPaymentId(null)}>
+                Cancel
+              </button>
+              <button
+                className="button primary"
+                onClick={submitRefund}
+                disabled={!(Number(refundAmount) > 0) || Math.round(Number(refundAmount) * 100) > refundable || !refundNote.trim()}
+              >
+                Record refund
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
@@ -1975,7 +2083,13 @@ const ReceiptDialog = ({ invoiceId, onClose }: { invoiceId: string; onClose: () 
             {invoicePayments.length > 0 && (
               <>
                 {invoicePayments.map((p) => (
-                  <div key={p.id}><span>Paid — {p.method}</span><strong>{formatCurrency(p.amount)}</strong></div>
+                  <div key={p.id}>
+                    <span>
+                      {p.kind === 'refund' ? 'Refund' : 'Paid'} — {p.method}
+                      {p.note ? ` · ${p.note}` : ''}
+                    </span>
+                    <strong>{formatCurrency(p.amount)}</strong>
+                  </div>
                 ))}
                 <div className="receipt-grand"><span>Balance due</span><strong>{formatCurrency(totals.balance)}</strong></div>
               </>

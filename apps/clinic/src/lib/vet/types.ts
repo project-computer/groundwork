@@ -221,9 +221,19 @@ export const PAYMENT_METHODS: PaymentMethod[] = ['cash', 'card', 'promptpay', 't
 export interface Payment {
   id: string
   invoiceId: string
+  /**
+   * Positive for money received, negative for a refund. Keeping refunds as
+   * negative ledger entries means every total is a plain sum over the ledger.
+   */
   amount: number
   method: PaymentMethod
   receivedAt: string
+  /** Absent on legacy rows, which are treated as payments. */
+  kind?: 'payment' | 'refund'
+  /** The payment a refund reverses. */
+  refundOf?: string
+  /** Free-text reason, required by the UI for refunds. */
+  note?: string
 }
 
 /** Vaccination is a discrete clinical event where a vaccine was administered
