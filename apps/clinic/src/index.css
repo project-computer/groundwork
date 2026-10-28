@@ -2788,6 +2788,10 @@ button,
   color: var(--ink-muted);
   font-size: 12px;
 }
+.form-hint.is-bad {
+  color: var(--danger, #b91c1c);
+  font-weight: 600;
+}
 .patients-table .table-row {
   transition: background 0.12s;
   font-variant-numeric: tabular-nums;

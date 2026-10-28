@@ -1136,6 +1136,14 @@ const Consultations = () => {
     [data.inventoryItems, data.products],
   )
   const selectedRx = catalog.find((c) => c.id === rxItemId)
+  /** Units left for an inventory item after what this visit already prescribed. */
+  const stockLeft = (itemId: string) => {
+    const already = open ? open.prescriptions.filter((rx) => rx.productId === itemId).reduce((sum, rx) => sum + rx.quantity, 0) : 0
+    return itemOnHand(itemId, data.inventoryLots) - already
+  }
+  const selectedStock = selectedRx && data.inventoryItems.some((i) => i.id === selectedRx.id) ? stockLeft(selectedRx.id) : undefined
+  const requestedQty = Math.max(1, Number(rxQuantity) || 1)
+  const stockShortage = selectedStock !== undefined && requestedQty > selectedStock
   const allergyHit = patient && selectedRx ? patient.allergies.find((a) => a && selectedRx.name.toLowerCase().includes(a.toLowerCase())) : undefined
   if (!open || !patient)
     return (
@@ -1393,9 +1401,15 @@ const Consultations = () => {
                 <Field label="Medication" htmlFor="rx-item">
                   <NativeSelect id="rx-item" value={rxItemId} onChange={(e) => setRxItemId(e.target.value)}>
                     <option value="">— select medication —</option>
-                    {catalog.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                    {catalog.map((c) => {
+                      const stock = data.inventoryItems.some((i) => i.id === c.id) ? stockLeft(c.id) : undefined
+                      return (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                          {stock !== undefined ? ` — ${stock} ${c.unit} in stock` : ''}
+                        </option>
+                      )
+                    })}
                   </NativeSelect>
                 </Field>
                 <Field label="Dose" htmlFor="rx-dose">
@@ -1420,7 +1434,14 @@ const Consultations = () => {
                   {patient.name} is allergic to “{allergyHit}” — check this prescription before dispensing.
                 </p>
               )}
-              <button className="button secondary" onClick={addRx} disabled={!selectedRx || !rxDose.trim()}>
+              {selectedRx && selectedStock !== undefined && (
+                <p className={stockShortage ? 'form-hint is-bad' : 'form-hint'} role={stockShortage ? 'alert' : undefined}>
+                  {stockShortage
+                    ? `Only ${Math.max(0, selectedStock)} ${selectedRx.unit} left in stock — reduce the quantity or receive a delivery first.`
+                    : `${selectedStock} ${selectedRx.unit} available in stock.`}
+                </p>
+              )}
+              <button className="button secondary" onClick={addRx} disabled={!selectedRx || !rxDose.trim() || stockShortage}>
                 Add prescription
               </button>
             </div>
