@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { Activity, Database, ShieldCheck, Stethoscope, X } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Activity, Database, RotateCcw, ShieldCheck, Stethoscope, X } from 'lucide-react'
 import { Field, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission, useSyncState } from '@/lib/vet/store'
 import { hasPin } from '@/lib/vet/auth'
+import { buildBackup, downloadBackup, parseBackup, summarizeBackup, type BackupSummary, type ClinicBackup } from '@/lib/vet/backup'
 import { isCaseBundle, type CaseBundle } from '@/lib/vet/types'
 import { formatDate, permissionsFor, roleLabel, ROLES, statusTone, todayKey } from '@/lib/vet/format'
 import type { StaffUser } from '@/lib/vet/types'
@@ -450,9 +451,15 @@ export const StaffView = () => {
 export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }) => {
   const { data, session, dispatch } = useClinic()
   const sync = useSyncState()
+  const dataExport = usePermission('data.export')
+  const restoreInput = useRef<HTMLInputElement>(null)
+  const [restorePreview, setRestorePreview] = useState<{ backup: ClinicBackup; summary: BackupSummary } | null>(null)
+  const [restoreError, setRestoreError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const exportData = () => {
-    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), clinic: data.clinic, data }, null, 2)], {
+    const exportedAt = new Date().toISOString()
+    const blob = new Blob([JSON.stringify({ exportedAt, clinic: data.clinic, data }, null, 2)], {
       type: 'application/json',
     })
     const url = URL.createObjectURL(blob)
@@ -461,6 +468,48 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
     anchor.download = `clinicbook-export-${todayKey()}.json`
     anchor.click()
     URL.revokeObjectURL(url)
+    dispatch({
+      type: 'recordAudit',
+      action: 'data.export',
+      entityType: 'clinic',
+      entityId: data.clinic.id,
+      summary: `Exported the clinic archive — ${data.patients.length} patients, ${data.invoices.length} invoices`,
+    })
+    setNotice(`Clinic archive exported (${data.patients.length} patients, ${data.invoices.length} invoices).`)
+  }
+
+  const createBackup = () => {
+    const backup = buildBackup(data, new Date().toISOString())
+    downloadBackup(backup)
+    dispatch({
+      type: 'recordAudit',
+      action: 'backup.create',
+      entityType: 'clinic',
+      entityId: data.clinic.id,
+      summary: `Created a clinic backup — ${data.patients.length} patients, ${data.encounters.length} encounters`,
+    })
+    setNotice('Backup downloaded. Keep it somewhere outside this computer.')
+  }
+
+  const chooseBackup = async (file: File | undefined) => {
+    setRestoreError(null)
+    setNotice(null)
+    if (!file) return
+    const result = parseBackup(await file.text())
+    if (!result.ok) {
+      setRestoreError(result.error)
+      return
+    }
+    setRestorePreview({ backup: result.backup, summary: summarizeBackup(result.backup) })
+  }
+
+  const restoreBackup = () => {
+    if (!restorePreview) return
+    const summary = summarizeBackup(restorePreview.backup)
+    dispatch({ type: 'restoreBackup', backup: restorePreview.backup })
+    setRestorePreview(null)
+    if (restoreInput.current) restoreInput.current.value = ''
+    setNotice(`Restored ${summary.patients} patients and ${summary.encounters} encounters from the backup.`)
   }
 
   return (
@@ -534,15 +583,20 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
           </div>
         </Panel>
         <Panel title="Portability & recovery" description="Export and manual backup are included in the free Local plan.">
+          {notice && (
+            <p className="form-hint" role="status">
+              {notice}
+            </p>
+          )}
           <div className="export-card">
             <div className="export-icon">
               <Database size={20} />
             </div>
             <div>
               <strong>Clinic export archive</strong>
-              <span>Versioned JSON snapshot of every clinic record.</span>
+              <span>Versioned JSON snapshot of every clinic record, for reporting and hand-off.</span>
             </div>
-            <button className="button primary" onClick={exportData}>
+            <button className="button primary" onClick={exportData} disabled={!dataExport.allowed} title={dataExport.reason || undefined}>
               Export data
             </button>
           </div>
@@ -551,13 +605,110 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
               <ShieldCheck size={20} />
             </div>
             <div>
-              <strong>Native backup</strong>
-              <span>Consistent database snapshot for fast restore.</span>
+              <strong>Clinic backup file</strong>
+              <span>A restorable copy of this installation — patients, visits, billing and settings.</span>
             </div>
-            <button className="button secondary">Create backup</button>
+            <button className="button secondary" onClick={createBackup} disabled={!dataExport.allowed} title={dataExport.reason || undefined}>
+              Create backup
+            </button>
           </div>
+          <div className="export-card">
+            <div className="export-icon">
+              <RotateCcw size={20} />
+            </div>
+            <div>
+              <strong>Restore from backup</strong>
+              <span>Replaces this installation's records with the backup after a preview.</span>
+            </div>
+            <input
+              ref={restoreInput}
+              type="file"
+              accept="application/json,.json"
+              className="sr-only"
+              aria-label="Choose a backup file"
+              onChange={(e) => void chooseBackup(e.target.files?.[0])}
+            />
+            <button
+              className="button secondary"
+              onClick={() => restoreInput.current?.click()}
+              disabled={!dataExport.allowed}
+              title={dataExport.reason || undefined}
+            >
+              Choose backup…
+            </button>
+          </div>
+          {restoreError && (
+            <p className="form-hint is-bad" role="alert">
+              {restoreError}
+            </p>
+          )}
+          {!dataExport.allowed && <p className="form-hint">{dataExport.reason}</p>}
         </Panel>
       </div>
+      {restorePreview && (
+        <div
+          className="modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setRestorePreview(null)
+          }}
+        >
+          <div className="modal" role="dialog" aria-modal="true" aria-label="Restore clinic backup">
+            <div className="form-heading">
+              <div>
+                <strong>Restore clinic backup</strong>
+                <span>
+                  {restorePreview.summary.clinicName} · created {formatDate(restorePreview.backup.createdAt)}
+                </span>
+              </div>
+              <button className="icon-button" onClick={() => setRestorePreview(null)} aria-label="Close dialog">
+                <X size={17} />
+              </button>
+            </div>
+            <div className="status-stack">
+              <div className="status-line">
+                <span className="status-icon">
+                  <Database size={17} />
+                </span>
+                <div>
+                  <strong>
+                    {restorePreview.summary.patients} patients · {restorePreview.summary.owners} owners
+                  </strong>
+                  <span>
+                    {restorePreview.summary.encounters} encounters · {restorePreview.summary.appointments} appointments ·{' '}
+                    {restorePreview.summary.invoices} invoices
+                  </span>
+                </div>
+              </div>
+              <div className="status-line">
+                <span className="status-icon">
+                  <ShieldCheck size={17} />
+                </span>
+                <div>
+                  <strong>{restorePreview.summary.staff} staff accounts</strong>
+                  <span>Includes roles and PIN credentials as they were when the backup was taken.</span>
+                </div>
+              </div>
+            </div>
+            {restorePreview.backup.state.clinic.id !== data.clinic.id && (
+              <p className="form-hint is-bad">
+                This backup belongs to a different clinic ({restorePreview.backup.state.clinic.name}). Restoring it will replace
+                this clinic's records.
+              </p>
+            )}
+            <p className="form-hint">
+              Everything currently on this computer will be replaced. Export a fresh archive first if you are unsure.
+            </p>
+            <div className="panel-footer">
+              <button className="button secondary" onClick={() => setRestorePreview(null)}>
+                Cancel
+              </button>
+              <button className="button primary" onClick={restoreBackup}>
+                Restore backup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

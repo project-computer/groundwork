@@ -28,6 +28,7 @@ import type {
   Vaccination,
   Vitals,
 } from './types'
+import type { ClinicBackup } from './backup'
 
 export type Plan = 'local' | 'cloud'
 export type View =
@@ -108,6 +109,8 @@ type Action =
   | { type: 'syncComplete'; changeIds: string[] }
   | { type: 'syncResult'; data: ClinicState }
   | { type: 'restore'; data: ClinicState }
+  | { type: 'restoreBackup'; backup: ClinicBackup }
+  | { type: 'recordAudit'; action: string; entityType: string; entityId: string; summary: string }
 
 /**
  * Every business mutation passes through here so the record change, its audit
@@ -199,6 +202,72 @@ const reducer = (store: Store, action: Action): Store => {
 
   // Writes require a reachable clinic server; cached data stays readable.
   if (!session.lanOnline) return store
+
+  // Exporting and restoring are audited like any other write, but they do not
+  // create an outbox entry: the audit trail is local and must not be replayed
+  // to the cloud as a business change.
+  if (action.type === 'recordAudit') {
+    return {
+      ...store,
+      data: {
+        ...data,
+        audit: [
+          {
+            id: uid(),
+            actorId: session.currentUserId,
+            action: action.action,
+            entityType: action.entityType,
+            entityId: action.entityId,
+            summary: action.summary,
+            occurredAt: now(),
+          },
+          ...data.audit,
+        ],
+      },
+    }
+  }
+
+  // Restoring a backup replaces the whole document, so it is a destructive
+  // admin-level write. The session survives: if the signed-in member is absent
+  // from the backup, the first active admin takes over, and the lock screen
+  // applies when that account holds a PIN.
+  if (action.type === 'restoreBackup') {
+    const actor = data.users.find((u) => u.id === session.currentUserId)
+    if (!actor || !can(actor.role, 'data.export')) return store
+    const restored = action.backup.state
+    if (!isClinicState(restored)) return store
+    const nextUser =
+      restored.users.find((u) => u.id === actor.id) ??
+      restored.users.find((u) => u.role === 'admin' && u.active) ??
+      restored.users.find((u) => u.active)
+    if (!nextUser) return store
+    const summary = `Restored backup from ${action.backup.createdAt} — ${restored.patients.length} patients, ${restored.encounters.length} encounters`
+    return {
+      data: {
+        ...restored,
+        audit: [
+          {
+            id: uid(),
+            actorId: actor.id,
+            action: 'backup.restore',
+            entityType: 'clinic',
+            entityId: restored.clinic.id,
+            summary,
+            occurredAt: now(),
+          },
+          ...restored.audit,
+        ],
+      },
+      session: {
+        ...session,
+        currentUserId: nextUser.id,
+        locked: !!nextUser.pinHash,
+        activeEncounterId: undefined,
+        syncing: false,
+        lastSyncError: undefined,
+      },
+    }
+  }
 
   // Staff administration is reserved for clinic admins and blocked offline
   // like every other write. The signed-in admin cannot lock themselves out.
