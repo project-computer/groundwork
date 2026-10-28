@@ -135,7 +135,7 @@ const rolePermissions: Record<Role, Permission[]> = {
   reception: ['records.write', 'appointments.write', 'billing.write'],
   veterinarian: ['records.write', 'appointments.write', 'clinical.write', 'inventory.write'],
   pharmacist: ['records.write', 'billing.write', 'inventory.write'],
-  admin: ['records.write', 'appointments.write', 'billing.write', 'inventory.write', 'staff.manage', 'data.export'],
+  admin: ['records.write', 'appointments.write', 'billing.write', 'inventory.write', 'staff.manage', 'clinic.manage', 'data.export'],
 }
 
 export const can = (role: Role, permission: Permission) => rolePermissions[role].includes(permission)
@@ -144,9 +144,42 @@ export const permissionsFor = (role: Role): Permission[] => {
   return rolePermissions[role]
 }
 
+/** Roles in display order — shared by the staff view and workspace dialog. */
+export const ROLES: Role[] = ['reception', 'veterinarian', 'pharmacist', 'admin']
+
+/** Every permission in display order — drives the role/permission matrix. */
+export const PERMISSIONS: Permission[] = [
+  'records.write',
+  'appointments.write',
+  'clinical.write',
+  'billing.write',
+  'inventory.write',
+  'staff.manage',
+  'clinic.manage',
+  'data.export',
+]
+
+export const permissionLabel: Record<Permission, string> = {
+  'records.write': 'Patients & records',
+  'appointments.write': 'Appointments & queue',
+  'clinical.write': 'Clinical records',
+  'billing.write': 'Billing & payments',
+  'inventory.write': 'Pharmacy & inventory',
+  'staff.manage': 'Staff management',
+  'clinic.manage': 'Clinic identity',
+  'data.export': 'Data export',
+}
+
 export const roleLabel: Record<Role, string> = {
   reception: 'Reception',
   veterinarian: 'Veterinarian',
   pharmacist: 'Pharmacist',
   admin: 'Clinic admin',
+}
+
+export const roleDescription: Record<Role, string> = {
+  reception: 'Front desk — registers patients, books appointments and takes payments.',
+  veterinarian: 'Clinical care — records visits, diagnoses and prescriptions.',
+  pharmacist: 'Dispensing — manages stock, lots and pharmacy billing.',
+  admin: 'Full workspace control, including staff and clinic identity.',
 }

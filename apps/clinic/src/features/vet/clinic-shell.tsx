@@ -241,7 +241,7 @@ export const ClinicApp = () => {
           {activeView === 'billing' && <Billing />}
           {activeView === 'reports' && <ReportsView />}
           {activeView === 'staff' && <StaffView />}
-          {activeView === 'settings' && <SettingsView />}
+          {activeView === 'settings' && <SettingsView onManageClinic={() => setWorkspace('clinic')} />}
         </div>
       </main>
       {workspace && (

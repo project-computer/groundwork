@@ -1,4 +1,4 @@
-import { useMemo, useState, type DragEvent } from 'react'
+import { useMemo, useRef, useState, type DragEvent, type PointerEvent } from 'react'
 import { CalendarPlus, ChevronLeft, ChevronRight, DoorOpen, Stethoscope, UserX, X } from 'lucide-react'
 import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
@@ -33,6 +33,21 @@ const shortDayLabel = (iso: string) =>
 const HOUR_START = 8
 const HOUR_END = 18
 const HOURS = Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => HOUR_START + i)
+
+/** Drag-to-create resolution and the duration used for a plain click on an empty slot. */
+const SLOT_SNAP_MIN = 15
+const DEFAULT_SLOT_MIN = 30
+/** Latest a slot may start inside an hour, so a single snapped step still fits. */
+const SLOT_LATEST_START_MIN = 60 - SLOT_SNAP_MIN
+
+const snapMinute = (minute: number): number =>
+  Math.min(60, Math.max(0, Math.round(minute / SLOT_SNAP_MIN) * SLOT_SNAP_MIN))
+
+/** Minutes past the hour (0–60) for a pointer position inside an hour row. */
+const minuteAtPointer = (row: HTMLElement, clientY: number): number => {
+  const rect = row.getBoundingClientRect()
+  return snapMinute(((clientY - rect.top) / (rect.height || 1)) * 60)
+}
 
 const WEEKDAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -71,6 +86,8 @@ export const ScheduleView = () => {
   const [walkInOpen, setWalkInOpen] = useState(false)
   const [dragId, setDragId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
+  const [slotDraft, setSlotDraft] = useState<{ hour: number; startMin: number; endMin: number } | null>(null)
+  const slotAnchorRef = useRef<{ hour: number; min: number } | null>(null)
 
   /** Only appointments the reducer allows rescheduling are draggable. */
   const canDrag = (a: { id: string; status: string }) =>
@@ -147,18 +164,55 @@ export const ScheduleView = () => {
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
     .slice(0, 6)
 
-  const openBooking = () => {
+  const openBookingAt = (time: string, durationMin: number) => {
     setDialog({
       mode: 'book',
       draft: {
         patientId: data.patients[0]?.id ?? '',
         date: dayIso,
-        time: '10:00',
-        durationMin: 30,
+        time,
+        durationMin,
         reason: '',
         vetId: vets[0]?.id ?? '',
       },
     })
+  }
+
+  const openBooking = () => openBookingAt('10:00', DEFAULT_SLOT_MIN)
+
+  /** Press on empty grid space and drag vertically to choose a start time and duration. */
+  const startSlot = (e: PointerEvent<HTMLDivElement>, hour: number) => {
+    if (!permission.allowed || e.button !== 0 || e.pointerType === 'touch') return
+    if ((e.target as HTMLElement).closest('.cal-appt, button, a, input, select, textarea')) return
+    e.preventDefault()
+    const min = Math.min(SLOT_LATEST_START_MIN, minuteAtPointer(e.currentTarget, e.clientY))
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    slotAnchorRef.current = { hour, min }
+    setSlotDraft({ hour, startMin: min, endMin: min })
+  }
+
+  const moveSlot = (e: PointerEvent<HTMLDivElement>) => {
+    const anchor = slotAnchorRef.current
+    if (!anchor) return
+    const min = minuteAtPointer(e.currentTarget, e.clientY)
+    setSlotDraft({ hour: anchor.hour, startMin: Math.min(anchor.min, min), endMin: Math.max(anchor.min, min) })
+  }
+
+  const finishSlot = (e: PointerEvent<HTMLDivElement>) => {
+    const anchor = slotAnchorRef.current
+    if (!anchor) return
+    const min = minuteAtPointer(e.currentTarget, e.clientY)
+    const endMin = Math.max(anchor.min, min)
+    const startMin = Math.min(anchor.min, min)
+    slotAnchorRef.current = null
+    setSlotDraft(null)
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+    openBookingAt(`${pad(anchor.hour)}:${pad(startMin)}`, endMin === startMin ? DEFAULT_SLOT_MIN : endMin - startMin)
+  }
+
+  const cancelSlot = () => {
+    slotAnchorRef.current = null
+    setSlotDraft(null)
   }
 
   const openReschedule = (appointmentId: string) => {
@@ -254,6 +308,8 @@ export const ScheduleView = () => {
               {HOURS.map((hour) => {
                 const slot = `${pad(hour)}:00`
                 const inSlot = dayAppointments.filter((a) => a.startsAt.slice(11, 13) === slot.slice(0, 2))
+                const ghost = slotDraft?.hour === hour ? slotDraft : null
+                const ghostEnd = ghost ? (ghost.endMin === ghost.startMin ? Math.min(60, ghost.startMin + DEFAULT_SLOT_MIN) : ghost.endMin) : 0
                 return (
                   <div className="cal-row" key={hour}>
                     <time>{slot}</time>
@@ -262,7 +318,22 @@ export const ScheduleView = () => {
                       onDragOver={(e) => dragOver(e, `${dayIso}-${hour}`)}
                       onDragLeave={() => dragLeave(`${dayIso}-${hour}`)}
                       onDrop={(e) => dropOnHour(e, hour)}
+                      onPointerDown={(e) => startSlot(e, hour)}
+                      onPointerMove={moveSlot}
+                      onPointerUp={finishSlot}
+                      onPointerCancel={cancelSlot}
                     >
+                      {ghost && (
+                        <div
+                          className="cal-slot-ghost"
+                          aria-hidden="true"
+                          style={{ top: `${(ghost.startMin / 60) * 100}%`, height: `${((ghostEnd - ghost.startMin) / 60) * 100}%` }}
+                        >
+                          <span>
+                            {pad(hour)}:{pad(ghost.startMin)}–{ghostEnd === 60 ? `${pad(hour + 1)}:00` : `${pad(hour)}:${pad(ghostEnd)}`}
+                          </span>
+                        </div>
+                      )}
                       {inSlot.map((a) => {
                         const patient = data.patients.find((p) => p.id === a.patientId)
                         const vet = data.users.find((u) => u.id === a.vetId)

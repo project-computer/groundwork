@@ -447,7 +447,7 @@ export const StaffView = () => {
 
 /* ---------- Settings (local data, sync & plan) ---------- */
 
-export const SettingsView = () => {
+export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }) => {
   const { data, session, dispatch } = useClinic()
   const sync = useSyncState()
 
@@ -519,6 +519,9 @@ export const SettingsView = () => {
             </div>
           </div>
           <div className="data-actions">
+            <button className="button primary" onClick={onManageClinic} disabled={!onManageClinic}>
+              Manage clinic &amp; account
+            </button>
             <button className="button secondary" onClick={() => dispatch({ type: 'session', patch: { lanOnline: !session.lanOnline } })}>
               {session.lanOnline ? 'Simulate server offline' : 'Reconnect server'}
             </button>

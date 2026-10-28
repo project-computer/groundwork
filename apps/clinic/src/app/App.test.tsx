@@ -115,6 +115,29 @@ describe("App", () => {
     expect(document.body.textContent).toContain("Consultation · Dr. Pim Chaiyasit");
   });
 
+  it("opens a prefilled booking dialog when an empty hour slot is clicked", async () => {
+    renderApp();
+    await flush();
+    click(findButton("Appointments & Queue"));
+    await flush();
+
+    const row = [...document.querySelectorAll(".cal-row")].find((r) => r.querySelector("time")?.textContent === "08:00");
+    const cells = row?.querySelector(".cal-cells");
+    expect(cells).toBeTruthy();
+
+    act(() => {
+      cells!.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, clientY: 0 }));
+    });
+    act(() => {
+      cells!.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientY: 0 }));
+    });
+
+    const dialog = document.querySelector(".modal");
+    expect(dialog).toBeTruthy();
+    expect((document.getElementById("bk-time") as HTMLInputElement).value).toBe("08:00");
+    expect((document.getElementById("bk-duration") as HTMLSelectElement).value).toBe("30");
+  });
+
   it("shows staff roles and the audit trail", async () => {
     renderApp();
     await flush();
@@ -123,6 +146,17 @@ describe("App", () => {
     expect(document.body.textContent).toContain("Veterinarian");
     expect(document.body.textContent).toContain("Audit trail");
     expect(document.body.textContent).toContain("Closed consultation for Tiger");
+  });
+
+  it("opens patient registration directly from the dashboard", async () => {
+    renderApp();
+    await flush();
+
+    click(findButton("Register patient"));
+    await flush();
+
+    expect(document.getElementById("owner")).toBeTruthy();
+    expect(document.getElementById("pet")).toBeTruthy();
   });
 
   it("registers a patient with a microchip and edits the clinical profile", async () => {
@@ -137,6 +171,8 @@ describe("App", () => {
     setValue(document.getElementById("microchip") as HTMLInputElement, "988100011122333");
     click(findButton("Save Records"));
     await flush();
+
+    expect(document.body.textContent).toContain("Milo registered.");
 
     // MRN assigned and microchip searchable
     expect(document.body.textContent).toContain("PT-2026-0006");
