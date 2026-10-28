@@ -2719,6 +2719,50 @@ button,
   font-size: 12px;
   font-weight: 600;
 }
+.form-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0 0 15px;
+  padding: 11px 13px;
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--ink);
+  font-size: 12px;
+}
+.form-warning > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--warning);
+}
+.form-warning strong {
+  display: block;
+  font-size: 12px;
+}
+.form-warning span {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-muted);
+}
+.form-warning-override {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.form-warning-override input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--teal);
+}
+.form-hint {
+  margin: 0 0 15px;
+  color: var(--ink-muted);
+  font-size: 12px;
+}
 .patients-table .table-row {
   transition: background 0.12s;
   font-variant-numeric: tabular-nums;

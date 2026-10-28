@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState, type DragEvent, type PointerEvent } from 'react'
-import { CalendarPlus, ChevronLeft, ChevronRight, DoorOpen, Stethoscope, UserX, X } from 'lucide-react'
+import { AlertTriangle, CalendarPlus, ChevronLeft, ChevronRight, DoorOpen, Stethoscope, UserX, X } from 'lucide-react'
 import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
 import { formatDate, formatTime, statusTone, todayKey } from '@/lib/vet/format'
+import { findAppointmentConflict, isPastSlot, type AppointmentSlot } from '@/lib/vet/schedule'
 
 const CLINIC_TZ_SUFFIX = '+07:00'
 
@@ -82,7 +83,7 @@ export const ScheduleView = () => {
   const permission = usePermission('appointments.write')
   const [dayIso, setDayIso] = useState(todayKey())
   const [mode, setMode] = useState<'day' | 'week' | 'month'>('day')
-  const [dialog, setDialog] = useState<{ mode: 'book' | 'reschedule'; appointmentId?: string; draft: BookingDraft } | null>(null)
+  const [dialog, setDialog] = useState<{ mode: 'book' | 'reschedule'; appointmentId?: string; draft: BookingDraft; override: boolean } | null>(null)
   const [walkInOpen, setWalkInOpen] = useState(false)
   const [dragId, setDragId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
@@ -122,7 +123,11 @@ export const ScheduleView = () => {
     const appt = data.appointments.find((a) => a.id === id)
     if (appt) {
       const minutes = appt.startsAt.slice(14, 16)
-      dispatch({ type: 'rescheduleAppointment', id: appt.id, startsAt: `${dayIso}T${pad(hour)}:${minutes}:00${CLINIC_TZ_SUFFIX}` })
+      attemptReschedule(appt.id, {
+        vetId: appt.vetId,
+        startsAt: `${dayIso}T${pad(hour)}:${minutes}:00${CLINIC_TZ_SUFFIX}`,
+        durationMin: appt.durationMin,
+      })
     }
     endDrag()
   }
@@ -134,7 +139,11 @@ export const ScheduleView = () => {
     const appt = data.appointments.find((a) => a.id === id)
     if (appt) {
       const time = appt.startsAt.slice(11, 16)
-      dispatch({ type: 'rescheduleAppointment', id: appt.id, startsAt: `${iso}T${time}:00${CLINIC_TZ_SUFFIX}` })
+      attemptReschedule(appt.id, {
+        vetId: appt.vetId,
+        startsAt: `${iso}T${time}:00${CLINIC_TZ_SUFFIX}`,
+        durationMin: appt.durationMin,
+      })
     }
     endDrag()
   }
@@ -164,9 +173,25 @@ export const ScheduleView = () => {
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
     .slice(0, 6)
 
+  // Live clash check for the open dialog: the user must acknowledge a
+  // double-booking before the save button unlocks.
+  const draftSlot: AppointmentSlot | null =
+    dialog && dialog.draft.date && dialog.draft.time
+      ? {
+          vetId: dialog.draft.vetId,
+          startsAt: `${dialog.draft.date}T${dialog.draft.time}:00${CLINIC_TZ_SUFFIX}`,
+          durationMin: dialog.draft.durationMin,
+        }
+      : null
+  const dialogConflict = draftSlot ? findAppointmentConflict(data.appointments, draftSlot, dialog?.appointmentId) : undefined
+  const conflictPatient = dialogConflict ? data.patients.find((p) => p.id === dialogConflict.patientId) : undefined
+  const conflictVet = dialogConflict ? data.users.find((u) => u.id === dialogConflict.vetId) : undefined
+  const dialogInPast = draftSlot ? isPastSlot(draftSlot) : false
+
   const openBookingAt = (time: string, durationMin: number) => {
     setDialog({
       mode: 'book',
+      override: false,
       draft: {
         patientId: data.patients[0]?.id ?? '',
         date: dayIso,
@@ -215,12 +240,13 @@ export const ScheduleView = () => {
     setSlotDraft(null)
   }
 
-  const openReschedule = (appointmentId: string) => {
+  const openReschedule = (appointmentId: string, overrides: Partial<BookingDraft> = {}) => {
     const appt = data.appointments.find((a) => a.id === appointmentId)
     if (!appt) return
     setDialog({
       mode: 'reschedule',
       appointmentId,
+      override: false,
       draft: {
         patientId: appt.patientId,
         date: apptDay(appt.startsAt),
@@ -228,14 +254,40 @@ export const ScheduleView = () => {
         durationMin: appt.durationMin,
         reason: appt.reason,
         vetId: appt.vetId,
+        ...overrides,
       },
     })
+  }
+
+  /** A drag that lands on an occupied slot reopens the dialog so the clash is visible. */
+  const attemptReschedule = (appointmentId: string, slot: AppointmentSlot) => {
+    const clash = findAppointmentConflict(data.appointments, slot, appointmentId)
+    if (clash) {
+      const appt = data.appointments.find((a) => a.id === appointmentId)
+      setDialog({
+        mode: 'reschedule',
+        appointmentId,
+        override: false,
+        draft: {
+          patientId: appt?.patientId ?? '',
+          date: apptDay(slot.startsAt),
+          time: slot.startsAt.slice(11, 16),
+          durationMin: slot.durationMin,
+          reason: appt?.reason ?? '',
+          vetId: slot.vetId,
+        },
+      })
+      return
+    }
+    dispatch({ type: 'rescheduleAppointment', id: appointmentId, startsAt: slot.startsAt, durationMin: slot.durationMin })
   }
 
   const submitDialog = () => {
     if (!dialog) return
     const { mode: dialogMode, appointmentId, draft } = dialog
     if (!draft.patientId || !draft.date || !draft.time) return
+    // A clash is only saved once the user has explicitly acknowledged it.
+    if (dialogConflict && !dialog.override) return
     const startsAt = `${draft.date}T${draft.time}:00${CLINIC_TZ_SUFFIX}`
     if (dialogMode === 'book') {
       dispatch({
@@ -574,11 +626,41 @@ export const ScheduleView = () => {
                 <input id="bk-reason" value={dialog.draft.reason} placeholder="e.g. Annual vaccination…" onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, reason: e.target.value } })} />
               </Field>
             </div>
+            {dialogConflict && (
+              <div className="form-warning" role="alert">
+                <AlertTriangle size={15} />
+                <div>
+                  <strong>
+                    {conflictVet?.name ?? 'This vet'} is already booked at {formatTime(dialogConflict.startsAt)}
+                  </strong>
+                  <span>
+                    {conflictPatient?.name ?? 'Another patient'} · {dialogConflict.reason} · {dialogConflict.durationMin} min
+                  </span>
+                  <label className="form-warning-override">
+                    <input
+                      type="checkbox"
+                      checked={dialog.override}
+                      onChange={(e) => setDialog({ ...dialog, override: e.target.checked })}
+                    />
+                    Book anyway — double-book this veterinarian
+                  </label>
+                </div>
+              </div>
+            )}
+            {dialogInPast && !dialogConflict && (
+              <p className="form-hint">
+                This appointment starts in the past. Saving is allowed for record-keeping.
+              </p>
+            )}
             <div className="panel-footer">
               <button className="button secondary" onClick={() => setDialog(null)}>
                 Cancel
               </button>
-              <button className="button primary" onClick={submitDialog} disabled={!dialog.draft.patientId || !dialog.draft.date || !dialog.draft.time}>
+              <button
+                className="button primary"
+                onClick={submitDialog}
+                disabled={!dialog.draft.patientId || !dialog.draft.date || !dialog.draft.time || (!!dialogConflict && !dialog.override)}
+              >
                 {dialog.mode === 'book' ? 'Book appointment' : 'Save new time'}
               </button>
             </div>
