@@ -43,6 +43,7 @@ export type View =
   | 'staff'
   | 'settings'
 
+/** Ephemeral UI/session state; never persisted as part of the document. */
 export interface Session {
   currentUserId: string
   /** True while the clinic is gated behind the staff PIN lock screen. */
@@ -54,9 +55,12 @@ export interface Session {
   view: View
   activeEncounterId?: string
   lastSyncError?: string
+  /** Set when the last attempt to persist the document failed. */
+  saveError?: string
 }
 
-interface Store {
+/** One reducer step: the clinic document plus its session. */
+export interface Store {
   data: ClinicState
   session: Session
 }
@@ -171,10 +175,17 @@ const backfillPatient = (patient: Patient, index: number): Patient => {
   }
 }
 
-const reducer = (store: Store, action: Action): Store => {
+/** Exposed for tests: drive business mutations and assert on the resulting document. */
+export const reducer = (store: Store, action: Action): Store => {
   const { data, session } = store
 
-  if (action.type === 'session') return { ...store, session: { ...session, ...action.patch } }
+  if (action.type === 'session') {
+    // Patching with the current values must not mark the store dirty — the
+    // save effect and sync worker key off state changes.
+    const keys = Object.keys(action.patch) as (keyof Session)[]
+    if (keys.every((key) => session[key] === action.patch[key])) return store
+    return { ...store, session: { ...session, ...action.patch } }
+  }
   if (action.type === 'syncComplete') {
     const done = new Set(action.changeIds)
     return {
@@ -1024,7 +1035,14 @@ export const loadState = async (): Promise<ClinicState | null> => {
   }
 }
 
-export const saveState = (data: ClinicState) => {
+/** Reports why a save failed so the UI can tell the clinic something is wrong. */
+type SaveResult = (error: string | null) => void
+
+export const saveState = (data: ClinicState, onResult?: SaveResult) => {
+  const fail = (error: unknown, scope: string) => {
+    console.error(scope, error)
+    onResult?.(error instanceof Error ? error.message : String(error))
+  }
   if (isTauri()) {
     void (async () => {
       // The SQLite document is the source of truth for every collection
@@ -1033,27 +1051,30 @@ export const saveState = (data: ClinicState) => {
       try {
         await invoke('state_save_command', { state: data })
       } catch (error) {
-        console.error('failed to persist clinic state', error)
+        return fail(error, 'failed to persist clinic state')
       }
       // Keep the sidecar's extracted copy current for cloud sync.
       try {
         await pushState(data)
       } catch (error) {
-        console.error('failed to persist clinic state via sidecar', error)
+        return fail(error, 'failed to persist clinic state via sidecar')
       }
+      onResult?.(null)
     })()
     return
   }
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+    onResult?.(null)
   } catch (error) {
-    console.error('failed to persist clinic state', error)
+    fail(error, 'failed to persist clinic state')
   }
 }
 
 /* ---------- provider ---------- */
 
-const initialSession: Session = {
+/** Exposed for tests and hydration callers. */
+export const initialSession: Session = {
   currentUserId: 'u-pim',
   locked: false,
   plan: 'local',
@@ -1108,7 +1129,9 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
       return
     }
     firstPersist.current = false
-    saveState(store.data)
+    saveState(store.data, (error) => {
+      dispatch({ type: 'session', patch: { saveError: error ?? undefined } })
+    })
   }, [hydrated, store.data])
 
   // Keep the plan choice in localStorage on the web backend.

@@ -32,6 +32,7 @@ import { ScheduleView } from './schedule-view'
 import { RecordsView, SettingsView, StaffView } from './views'
 
 import { LockScreen } from './lock-screen'
+import { SaveErrorBanner } from './save-error-banner'
 import { WorkspaceDialog, type WorkspaceTab } from './workspace-dialog'
 
 const nav = [
@@ -216,6 +217,7 @@ export const ClinicApp = () => {
             </button>
           </div>
         </header>
+        <SaveErrorBanner />
         <div className="page-wrap">
           {activeView === 'dashboard' && (
             <Dashboard

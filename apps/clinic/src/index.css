@@ -3204,3 +3204,60 @@ button,
   color: var(--ok, #15803d);
   font-size: 13px;
 }
+
+/* Saving failure warning */
+.save-error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 12px 24px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--danger, #dc2626);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--danger, #dc2626) 8%, var(--surface, #fff));
+  color: var(--danger, #b91c1c);
+}
+.save-error-banner strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+}
+.save-error-banner span:not(.save-error-icon) {
+  font-size: 12px;
+  color: var(--ink, #334155);
+}
+.save-error-icon {
+  display: inline-flex;
+  margin-top: 2px;
+  color: var(--danger, #dc2626);
+}
+.save-error-banner .icon-button {
+  margin-left: auto;
+}
+
+/* Render-crash recovery screen */
+.crash-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 60vh;
+  padding: 32px;
+  text-align: center;
+}
+.crash-screen strong {
+  font-size: 17px;
+}
+.crash-screen span {
+  color: var(--muted, #64748b);
+  font-size: 13px;
+}
+.crash-message {
+  font-family: ui-monospace, monospace;
+}
+.crash-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}

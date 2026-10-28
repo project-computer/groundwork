@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Activity, Database, RotateCcw, ShieldCheck, Stethoscope, X } from 'lucide-react'
+import { Activity, AlertTriangle, Database, RotateCcw, ShieldCheck, Stethoscope, X } from 'lucide-react'
 import { Field, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission, useSyncState } from '@/lib/vet/store'
 import { hasPin } from '@/lib/vet/auth'
@@ -566,6 +566,18 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
                 {session.plan === 'local' ? 'Local only' : sync.state}
               </Pill>
             </div>
+            {session.lastSyncError && (
+              <div className="status-line">
+                <span className="status-icon">
+                  <AlertTriangle size={17} />
+                </span>
+                <div>
+                  <strong>Last sync attempt failed</strong>
+                  <span>{session.lastSyncError}</span>
+                </div>
+                <Pill tone="bad">Sync error</Pill>
+              </div>
+            )}
           </div>
           <div className="data-actions">
             <button className="button primary" onClick={onManageClinic} disabled={!onManageClinic}>
