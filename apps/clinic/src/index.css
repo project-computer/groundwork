@@ -1159,6 +1159,31 @@ button:disabled {
   padding-left: 10px;
   margin-bottom: 12px;
 }
+.note-history .note-entry.amended {
+  border-left-color: var(--warning);
+}
+.note-history .note-amend-meta {
+  display: block;
+  margin-top: 4px;
+  font-style: italic;
+}
+.note-history .note-amend-form {
+  border-left: 0;
+  padding-left: 0;
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.note-history .note-amend-form .note-box {
+  min-height: 84px;
+}
+.note-history .note-amend-form .panel-footer {
+  padding: 0;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
 .note-history span {
   color: var(--ink-muted);
   font-size: 10px;

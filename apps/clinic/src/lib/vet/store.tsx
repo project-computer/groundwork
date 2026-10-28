@@ -81,6 +81,7 @@ type Action =
   | { type: 'addNote'; encounterId: string; body: string }
   | { type: 'amendNote'; encounterId: string; noteId: string; body: string; reason: string }
   | { type: 'addDiagnosis'; encounterId: string; diagnosis: Omit<Diagnosis, 'id'> }
+  | { type: 'confirmDiagnosis'; encounterId: string; diagnosisId: string }
   | { type: 'addPrescription'; encounterId: string; prescription: Omit<Prescription, 'id' | 'prescriberId'> }
   | { type: 'removePrescription'; encounterId: string; prescriptionId: string }
   | { type: 'recordVaccination'; patientId: string; vaccination: Omit<Vaccination, 'id' | 'patientId' | 'vetId' | 'version'> }
@@ -403,19 +404,23 @@ const reducer = (store: Store, action: Action): Store => {
       })
     }
     case 'amendNote': {
+      const enc = data.encounters.find((e) => e.id === action.encounterId)
+      if (!enc || enc.status !== 'open') return store
+      if (!enc.notes.some((n) => n.id === action.noteId)) return store
+      if (!action.body.trim() || !action.reason.trim()) return store
       const note = {
         id: uid(),
         authorId: session.currentUserId,
-        body: action.body,
+        body: action.body.trim(),
         createdAt: now(),
         amends: action.noteId,
-        amendReason: action.reason,
+        amendReason: action.reason.trim(),
       }
       return commit(store, updateEncounter(data, action.encounterId, (e) => ({ ...e, notes: [...e.notes, note] })), {
         action: 'note.amend',
         entityType: 'clinical_note',
         entityId: note.id,
-        summary: `Amended note — ${action.reason}`,
+        summary: `Amended note — ${note.amendReason}`,
         operation: 'append',
       })
     }
@@ -427,6 +432,19 @@ const reducer = (store: Store, action: Action): Store => {
         entityId: dx.id,
         summary: `Diagnosis: ${dx.description}`,
       })
+    }
+    case 'confirmDiagnosis': {
+      const enc = data.encounters.find((e) => e.id === action.encounterId)
+      const dx = enc?.diagnoses.find((d) => d.id === action.diagnosisId)
+      if (!enc || enc.status !== 'open' || !dx || dx.status === 'confirmed') return store
+      return commit(
+        store,
+        updateEncounter(data, action.encounterId, (e) => ({
+          ...e,
+          diagnoses: e.diagnoses.map((d) => (d.id === action.diagnosisId ? { ...d, status: 'confirmed' } : d)),
+        })),
+        { action: 'diagnosis.confirm', entityType: 'diagnosis', entityId: dx.id, summary: `Confirmed diagnosis: ${dx.description}` },
+      )
     }
     case 'addPrescription': {
       const rx = { ...action.prescription, id: uid(), prescriberId: session.currentUserId }

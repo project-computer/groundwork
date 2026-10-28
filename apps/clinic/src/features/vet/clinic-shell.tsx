@@ -1118,6 +1118,9 @@ const Consultations = () => {
   const [vacNextDue, setVacNextDue] = useState('')
   const [followUpDate, setFollowUpDate] = useState('')
   const [followUpTime, setFollowUpTime] = useState('10:00')
+  const [amendNoteId, setAmendNoteId] = useState<string | null>(null)
+  const [amendBody, setAmendBody] = useState('')
+  const [amendReason, setAmendReason] = useState('')
   useEffect(() => {
     if (open) setVitals(open.vitals)
   }, [open?.id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -1168,6 +1171,21 @@ const Consultations = () => {
     )
   }
   const patientVaccinations = data.vaccinations.filter((v) => v.patientId === patient.id)
+  const startAmend = (noteId: string, body: string) => {
+    setAmendNoteId(noteId)
+    setAmendBody(body)
+    setAmendReason('')
+  }
+  const cancelAmend = () => {
+    setAmendNoteId(null)
+    setAmendBody('')
+    setAmendReason('')
+  }
+  const saveAmend = () => {
+    if (!amendNoteId || !amendBody.trim() || !amendReason.trim()) return
+    dispatch({ type: 'amendNote', encounterId: open.id, noteId: amendNoteId, body: amendBody, reason: amendReason })
+    cancelAmend()
+  }
   const addRx = () => {
     if (!selectedRx || !rxDose.trim()) return
     dispatch({
@@ -1354,7 +1372,17 @@ const Consultations = () => {
                     <strong>{d.description}</strong>
                     <span>{d.status}</span>
                   </div>
-                  <Pill tone={d.status === 'confirmed' ? 'ok' : 'info'} dot>{d.status}</Pill>
+                  {d.status === 'provisional' ? (
+                    <button
+                      className="small-button"
+                      onClick={() => dispatch({ type: 'confirmDiagnosis', encounterId: open.id, diagnosisId: d.id })}
+                      aria-label={`Confirm diagnosis ${d.description}`}
+                    >
+                      Confirm
+                    </button>
+                  ) : (
+                    <Pill tone="ok" dot>{d.status}</Pill>
+                  )}
                 </div>
               ))}
             </div>
@@ -1449,12 +1477,63 @@ const Consultations = () => {
             </div>
             {open.notes.length > 0 && (
               <div className="note-history">
-                {open.notes.map((n) => (
-                  <div key={n.id}>
-                    <span>{formatDate(n.createdAt)}</span>
-                    <p>{n.body}</p>
-                  </div>
-                ))}
+                {open.notes.map((n) => {
+                  const author = data.users.find((u) => u.id === n.authorId)
+                  const amends = n.amends ? open.notes.find((x) => x.id === n.amends) : undefined
+                  return (
+                    <div key={n.id} className={n.amends ? 'note-entry amended' : 'note-entry'}>
+                      <span>
+                        {formatDate(n.createdAt)}
+                        {author ? ` · ${author.name}` : ''}
+                        {n.amends && (
+                          <>
+                            {' · '}
+                            <Pill tone="warn" dot>
+                              Amendment
+                            </Pill>
+                          </>
+                        )}
+                      </span>
+                      <p>{n.body}</p>
+                      {n.amends && (
+                        <span className="note-amend-meta">
+                          Reason: {n.amendReason || 'not recorded'}
+                          {amends ? ' · supersedes an earlier note' : ' · original note no longer on file'}
+                        </span>
+                      )}
+                      {amendNoteId === n.id ? (
+                        <div className="note-amend-form">
+                          <Field label="Reason for amendment" htmlFor="note-amend-reason">
+                            <input
+                              id="note-amend-reason"
+                              value={amendReason}
+                              onChange={(e) => setAmendReason(e.target.value)}
+                              placeholder="e.g. Corrected the recorded dose…"
+                            />
+                          </Field>
+                          <textarea
+                            className="note-box"
+                            aria-label="Amended note"
+                            value={amendBody}
+                            onChange={(e) => setAmendBody(e.target.value)}
+                          />
+                          <div className="panel-footer">
+                            <button className="small-button" onClick={cancelAmend}>
+                              Cancel
+                            </button>
+                            <button className="button primary" onClick={saveAmend} disabled={!amendBody.trim() || !amendReason.trim()}>
+                              Save amendment
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button className="text-button" onClick={() => startAmend(n.id, n.body)}>
+                          Amend
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </Panel>
