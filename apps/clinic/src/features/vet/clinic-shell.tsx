@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   BarChart3,
   CalendarDays,
   ClipboardList,
   CreditCard,
   LayoutDashboard,
+  Lock,
   Menu,
   Monitor,
   Moon,
@@ -22,12 +23,16 @@ import {
 } from 'lucide-react'
 import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission, type View } from '@/lib/vet/store'
+import { buildCaseBundle, downloadCaseBundle, newShareToken } from '@/lib/vet/case-transfer'
 import { formatMoney as formatCurrency, formatDate, formatTime, initials, invoiceTotals, itemOnHand, lotsExpiringWithin, mostUsedItems, roleLabel, statusTone, todayKey, vaccinationsDue } from '@/lib/vet/format'
 import { SPECIES, SEXES, type InventoryCategory, type Patient, type Vitals } from '@/lib/vet/types'
 import { getTheme, setTheme, THEME_CHOICES, watchSystemTheme, type ThemeChoice } from '@/lib/theme'
 import { ReportsView } from './reports-view'
 import { ScheduleView } from './schedule-view'
 import { RecordsView, SettingsView, StaffView } from './views'
+
+import { LockScreen } from './lock-screen'
+import { WorkspaceDialog, type WorkspaceTab } from './workspace-dialog'
 
 const nav = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -84,11 +89,17 @@ export const ClinicApp = () => {
   const [mobileNav, setMobileNav] = useState(false)
   const [query, setQuery] = useState('')
   const [showOwnerForm, setShowOwnerForm] = useState(false)
+  const [workspace, setWorkspace] = useState<WorkspaceTab | null>(null)
   const canWrite = usePermission('records.write').allowed
   const activeView = session.view
   const setView: SetView = (view) => {
     dispatch({ type: 'session', patch: { view } })
+    setShowOwnerForm(false)
     setMobileNav(false)
+  }
+  const openRegistration = () => {
+    setView('owners')
+    if (canWrite) setShowOwnerForm(true)
   }
   const openConsult = (encounterId: string) => {
     dispatch({ type: 'session', patch: { view: 'consult', activeEncounterId: encounterId } })
@@ -102,6 +113,9 @@ export const ClinicApp = () => {
     }),
     [data, today],
   )
+
+  // A locked session never renders clinic data — the gate is the only screen.
+  if (session.locked) return <LockScreen />
 
   return (
     <div className="app-shell">
@@ -118,14 +132,21 @@ export const ClinicApp = () => {
             <X size={18} />
           </button>
         </div>
-        <div className="clinic-switch">
+        <button
+          type="button"
+          className="clinic-switch"
+          onClick={() => setWorkspace('clinic')}
+          aria-haspopup="dialog"
+          aria-label={`Manage ${data.clinic.name} and account`}
+          title="Clinic & account"
+        >
           <div className="clinic-avatar">{initials(data.clinic.name)}</div>
           <div>
             <strong>{data.clinic.name}</strong>
             <span>Local clinic</span>
           </div>
           <span className="chevron" aria-hidden="true">⌄</span>
-        </div>
+        </button>
         <nav className="main-nav" aria-label="Main navigation">
           {nav.map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setView(id)} className={activeView === id ? 'nav-item active' : 'nav-item'}>
@@ -137,14 +158,21 @@ export const ClinicApp = () => {
           ))}
         </nav>
         <div className="sidebar-foot">
-          <div className="profile">
+          <button
+            type="button"
+            className="profile profile-button"
+            onClick={() => setWorkspace('account')}
+            aria-haspopup="dialog"
+            aria-label={`Open my account (${user.name})`}
+            title="My account"
+          >
             <div className="avatar">{initials(user.name)}</div>
             <div>
               <strong>{user.name}</strong>
               <span>{roleLabel[user.role]}</span>
             </div>
             <span className="more" aria-hidden="true">•••</span>
-          </div>
+          </button>
         </div>
       </aside>
       {mobileNav && (
@@ -166,10 +194,26 @@ export const ClinicApp = () => {
           </div>
           <div className="top-actions">
             <ThemeToggle />
+            <button
+              className="icon-button"
+              onClick={() => dispatch({ type: 'session', patch: { locked: true } })}
+              aria-label="Lock screen"
+              title="Lock screen"
+            >
+              <Lock size={18} />
+            </button>
             <div className="connection">
               <span className="pulse" /> <span>{session.lanOnline ? 'Local server' : 'Server offline'}</span>
             </div>
-            <button className="avatar top-avatar" aria-label={`Account settings for ${user.name}`}>{initials(user.name)}</button>
+            <button
+              className="avatar top-avatar"
+              onClick={() => setWorkspace('account')}
+              aria-haspopup="dialog"
+              aria-label={`Account settings for ${user.name}`}
+              title="My account"
+            >
+              {initials(user.name)}
+            </button>
           </div>
         </header>
         <div className="page-wrap">
@@ -177,6 +221,8 @@ export const ClinicApp = () => {
             <Dashboard
               onNavigate={setView}
               onStart={(id) => dispatch({ type: 'startEncounter', appointmentId: id })}
+              onRegisterPatient={openRegistration}
+              canRegister={canWrite}
             />
           )}
           {activeView === 'schedule' && <ScheduleView />}
@@ -198,11 +244,31 @@ export const ClinicApp = () => {
           {activeView === 'settings' && <SettingsView />}
         </div>
       </main>
+      {workspace && (
+        <WorkspaceDialog
+          initialTab={workspace}
+          onClose={() => setWorkspace(null)}
+          onNavigate={(view) => {
+            setWorkspace(null)
+            setView(view)
+          }}
+        />
+      )}
     </div>
   )
 }
 
-const Dashboard = ({ onNavigate, onStart }: { onNavigate: SetView; onStart: (id: string) => void }) => {
+const Dashboard = ({
+  onNavigate,
+  onStart,
+  onRegisterPatient,
+  canRegister,
+}: {
+  onNavigate: SetView
+  onStart: (id: string) => void
+  onRegisterPatient: () => void
+  canRegister: boolean
+}) => {
   const { data, user } = useClinic()
   const today = todayKey()
   const firstName = user.name.replace(/^Dr\.\s*/, '').split(' ')[0]
@@ -217,7 +283,7 @@ const Dashboard = ({ onNavigate, onStart }: { onNavigate: SetView; onStart: (id:
         title={`${greeting()}, ${firstName}`}
         description={`${longDate()} · Here’s what’s happening at the clinic today.`}
         action={
-          <button className="button primary" onClick={() => onNavigate('owners')}>
+          <button className="button primary" onClick={onRegisterPatient} disabled={!canRegister}>
             <Plus size={16} /> Register patient
           </button>
         }
@@ -459,6 +525,14 @@ const Owners = ({
   const [birthDate, setBirthDate] = useState('')
   const [microchip, setMicrochip] = useState('')
   const [detailId, setDetailId] = useState<string | null>(null)
+  const [notice, setNotice] = useState('')
+  const ownerInputRef = useRef<HTMLInputElement>(null)
+  const patientInputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (!showForm) return
+    const target = formMode === 'new-owner' ? ownerInputRef.current : patientInputRef.current
+    target?.focus()
+  }, [showForm, formMode])
   const filtered = data.patients.filter((p) => {
     const owner = data.owners.find((o) => o.id === p.ownerId)
     return `${p.name} ${owner?.name ?? ''} ${owner?.phone ?? ''} ${p.mrn} ${p.microchip ?? ''}`
@@ -473,7 +547,8 @@ const Owners = ({
     setSex('Unknown')
   }
   const save = () => {
-    if (!petName.trim()) return
+    const patientName = petName.trim()
+    if (!patientName) return
     if (formMode === 'new-owner') {
       if (!ownerName.trim()) return
       dispatch({
@@ -515,6 +590,8 @@ const Owners = ({
       })
     }
     resetForm()
+    setQuery('')
+    setNotice(`${patientName} registered.`)
     setShowForm(false)
   }
   return (
@@ -523,7 +600,7 @@ const Owners = ({
         title="Owners & pets"
         description="Find a record quickly or register a new patient."
         action={
-          <button className="button primary" onClick={() => setShowForm(true)} disabled={!canWrite}>
+          <button className="button primary" onClick={() => { setNotice(''); setShowForm(true) }} disabled={!canWrite}>
             <Plus size={16} /> Register Patient
           </button>
         }
@@ -542,6 +619,11 @@ const Owners = ({
           All patients <span aria-hidden="true">⌄</span>
         </button>
       </div>
+      {notice && (
+        <p className="form-notice" role="status">
+          {notice}
+        </p>
+      )}
       {showForm && (
         <div className="inline-form">
           <div className="form-heading">
@@ -569,6 +651,7 @@ const Owners = ({
                     id="owner"
                     name="owner-name"
                     autoComplete="off"
+                    ref={ownerInputRef}
                     value={ownerName}
                     onChange={(e) => setOwnerName(e.target.value)}
                     placeholder="e.g. Anong Srisuk…"
@@ -602,6 +685,7 @@ const Owners = ({
                 id="pet"
                 name="patient-name"
                 autoComplete="off"
+                ref={patientInputRef}
                 value={petName}
                 onChange={(e) => setPetName(e.target.value)}
                 placeholder="e.g. Milo…"
@@ -672,6 +756,11 @@ const Owners = ({
                     <span>
                       {patient.mrn} · {patient.breed} · {patient.sex}
                     </span>
+                    {patient.originClinicName && (
+                      <span className="patient-flags">
+                        <Pill tone="info">Received from {patient.originClinicName}</Pill>
+                      </span>
+                    )}
                     {flags.length > 0 && (
                       <span className="patient-flags">
                         {patient.allergies.map((a) => (
@@ -695,9 +784,24 @@ const Owners = ({
                 <span data-label="Last visit">
                   {patient.lastVisit ? formatDate(patient.lastVisit) : 'New patient'}
                 </span>
-                <button className="row-action" onClick={() => setDetailId(patient.id)}>
-                  View
-                </button>
+                <div className="row-actions">
+                  <button className="row-action" onClick={() => setDetailId(patient.id)}>
+                    View
+                  </button>
+                  {canWrite && (
+                    <button
+                      className="row-action"
+                      title="Export this patient's case bundle for another clinic"
+                      onClick={() => {
+                        const bundle = buildCaseBundle(data, patient, newShareToken(), new Date().toISOString())
+                        downloadCaseBundle(bundle)
+                        dispatch({ type: 'exportCaseBundle', bundle })
+                      }}
+                    >
+                      Share
+                    </button>
+                  )}
+                </div>
               </div>
             )
           })}

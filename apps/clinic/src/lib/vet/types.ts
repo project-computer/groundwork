@@ -7,13 +7,33 @@ export type Permission =
   | 'billing.write'
   | 'inventory.write'
   | 'staff.manage'
+  | 'clinic.manage'
   | 'data.export'
 
+/** A clinic staff account (see CONTEXT.md: User). */
 export interface StaffUser {
   id: string
   name: string
   role: Role
   active: boolean
+  email?: string
+  phone?: string
+  /** PBKDF2-SHA-256 hash of the member's PIN; absent until one is set. */
+  pinHash?: string
+  /** Per-member random salt used to derive pinHash. */
+  pinSalt?: string
+}
+
+/** Clinic identity — the tenant record shown across the workspace. */
+export interface Clinic {
+  id: string
+  name: string
+  timezone: string
+  currency: string
+  vatRate: number
+  address?: string
+  phone?: string
+  email?: string
 }
 
 export interface Owner {
@@ -277,7 +297,7 @@ export interface SyncChange {
 }
 
 export interface ClinicState {
-  clinic: { id: string; name: string; timezone: string; currency: string; vatRate: number }
+  clinic: Clinic
   users: StaffUser[]
   owners: Owner[]
   patients: Patient[]

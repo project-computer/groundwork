@@ -1,15 +1,19 @@
 import { useState } from 'react'
-import { Activity, Database, ShieldCheck, Stethoscope } from 'lucide-react'
+import { Activity, Database, ShieldCheck, Stethoscope, X } from 'lucide-react'
 import { Field, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission, useSyncState } from '@/lib/vet/store'
-import { formatDate, permissionsFor, roleLabel, statusTone, todayKey } from '@/lib/vet/format'
+import { hasPin } from '@/lib/vet/auth'
+import { isCaseBundle, type CaseBundle } from '@/lib/vet/types'
+import { formatDate, permissionsFor, roleLabel, ROLES, statusTone, todayKey } from '@/lib/vet/format'
 import type { StaffUser } from '@/lib/vet/types'
+import { PinDialog } from './pin-dialog'
 
 /* ---------- Medical records ---------- */
 
 export const RecordsView = ({ onOpenConsult }: { onOpenConsult: (encounterId: string) => void }) => {
   const { data } = useClinic()
   const [query, setQuery] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
   const encounters = data.encounters
     .filter((e) => {
       const patient = data.patients.find((p) => p.id === e.patientId)
@@ -22,15 +26,21 @@ export const RecordsView = ({ onOpenConsult }: { onOpenConsult: (encounterId: st
         title="Medical records"
         description="Every consultation is an immutable encounter with a full note history."
         action={
-          <input
-            className="search-input"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by patient or diagnosis…"
-            aria-label="Search medical records"
-          />
+          <div className="flex items-center gap-3">
+            <input
+              className="search-input"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by patient or diagnosis…"
+              aria-label="Search medical records"
+            />
+            <button className="button secondary" onClick={() => setImportOpen(true)}>
+              Import case
+            </button>
+          </div>
         }
       />
+      {importOpen && <ImportCaseDialog onClose={() => setImportOpen(false)} />}
       <Panel title={`${encounters.length} encounters`} description="Newest first">
         <div className="records-table encounters-table">
           <div className="table-head">
@@ -71,6 +81,99 @@ export const RecordsView = ({ onOpenConsult }: { onOpenConsult: (encounterId: st
       </Panel>
       <Vaccinations />
     </>
+  )
+}
+
+/* ---------- Case import (case transfer, see CONTEXT.md) ---------- */
+
+type ImportOutcome =
+  | { state: 'error'; message: string }
+  | { state: 'done'; message: string }
+
+const ImportCaseDialog = ({ onClose }: { onClose: () => void }) => {
+  const { data, dispatch } = useClinic()
+  const [paste, setPaste] = useState('')
+  const [outcome, setOutcome] = useState<ImportOutcome | null>(null)
+
+  const receive = (raw: string) => {
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      setOutcome({ state: 'error', message: 'That is not valid JSON — paste the case bundle file contents or choose a .json file.' })
+      return
+    }
+    if (!isCaseBundle(parsed)) {
+      setOutcome({ state: 'error', message: 'This file is not a VetCare case bundle.' })
+      return
+    }
+    const bundle = parsed as CaseBundle
+    if (data.caseTransfers.some((t) => t.token === bundle.token)) {
+      setOutcome({ state: 'error', message: `This case was already received (token ${bundle.token.slice(0, 8)}…). Import skipped to avoid duplicates.` })
+      return
+    }
+    dispatch({ type: 'importCaseBundle', bundle })
+    const received = data.patients.length // captured before; summary uses bundle content
+    void received
+    setOutcome({
+      state: 'done',
+      message: `Received ${bundle.patient.name} from ${bundle.fromClinic.name}: ${bundle.encounters.length} visit${bundle.encounters.length === 1 ? '' : 's'} and ${bundle.vaccinations.length} vaccination${bundle.vaccinations.length === 1 ? '' : 's'} copied into this clinic with a new MRN.`,
+    })
+  }
+
+  return (
+    <div
+      className="modal-backdrop"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div className="modal" role="dialog" aria-modal="true" aria-label="Import a case bundle">
+        <div className="form-heading">
+          <div>
+            <strong>Import case bundle</strong>
+            <span>Receives a shared case from another clinic. Copies are stamped with the source clinic — nothing is shared in place.</span>
+          </div>
+          <button className="icon-button" onClick={onClose} aria-label="Close dialog">
+            <X size={17} />
+          </button>
+        </div>
+        <Field label="Bundle file (.json)" htmlFor="import-file">
+          <input
+            id="import-file"
+            type="file"
+            accept="application/json,.json"
+            onChange={async (e) => {
+              const file = e.target.files?.[0]
+              if (file) receive(await file.text())
+            }}
+          />
+        </Field>
+        <Field label="…or paste bundle JSON" htmlFor="import-paste">
+          <textarea
+            id="import-paste"
+            rows={6}
+            value={paste}
+            onChange={(e) => setPaste(e.target.value)}
+            placeholder='{"format":"vetcare-case-bundle","version":1,…}'
+            spellCheck={false}
+          />
+        </Field>
+        {outcome && (
+          <p className={outcome.state === 'error' ? 'import-error' : 'import-ok'} role="status">
+            {outcome.message}
+          </p>
+        )}
+        <div className="form-actions">
+          <button className="button secondary" onClick={() => receive(paste)} disabled={!paste.trim()}>
+            Import pasted bundle
+          </button>
+          <button className="button primary" onClick={onClose}>
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -176,20 +279,29 @@ const Vaccinations = () => {
 
 /* ---------- Staff & permissions ---------- */
 
-const roleOptions: StaffUser['role'][] = ['reception', 'veterinarian', 'pharmacist', 'admin']
-
 export const StaffView = () => {
   const { data, session, dispatch } = useClinic()
   const manage = usePermission('staff.manage')
   const [name, setName] = useState('')
   const [role, setRole] = useState<StaffUser['role']>('reception')
   const [showAllAudit, setShowAllAudit] = useState(false)
+  const [pinFor, setPinFor] = useState<StaffUser | null>(null)
 
   const addStaff = () => {
     if (!name.trim()) return
     dispatch({ type: 'addStaff', name, role })
     setName('')
     setRole('reception')
+  }
+
+  // Switching accounts is instant until a member sets a PIN; after that the
+  // app locks on that member so the PIN is verified on the lock screen.
+  const signInAs = (member: StaffUser) => {
+    if (!hasPin(member)) {
+      dispatch({ type: 'signIn', userId: member.id })
+      return
+    }
+    dispatch({ type: 'session', patch: { locked: true, currentUserId: member.id } })
   }
 
   return (
@@ -209,7 +321,7 @@ export const StaffView = () => {
             </Field>
             <Field label="Role" htmlFor="staff-role">
               <select id="staff-role" value={role} onChange={(e) => setRole(e.target.value as StaffUser['role'])}>
-                {roleOptions.map((r) => (
+                {ROLES.map((r) => (
                   <option key={r} value={r}>
                     {roleLabel[r]}
                   </option>
@@ -239,7 +351,11 @@ export const StaffView = () => {
                   <div className="pet-avatar">{user.name.slice(0, 1)}</div>
                   <div>
                     <strong>{user.name}</strong>
-                    <span>{isSelf ? 'Signed in on this device' : user.active ? 'Team member' : 'Deactivated'}</span>
+                    <span>
+                      {isSelf ? 'Signed in on this device' : user.active ? 'Team member' : 'Deactivated'}
+                      {' · '}
+                      {hasPin(user) ? 'PIN set' : 'no PIN'}
+                    </span>
                   </div>
                 </div>
                 <span>
@@ -249,7 +365,7 @@ export const StaffView = () => {
                       value={user.role}
                       onChange={(e) => dispatch({ type: 'updateStaff', id: user.id, role: e.target.value as StaffUser['role'] })}
                     >
-                      {roleOptions.map((r) => (
+                      {ROLES.map((r) => (
                         <option key={r} value={r}>
                           {roleLabel[r]}
                         </option>
@@ -268,12 +384,17 @@ export const StaffView = () => {
                 </span>
                 <span>
                   {!isSelf && user.active && (
-                    <button className="small-button" onClick={() => dispatch({ type: 'switchUser', userId: user.id })}>
+                    <button className="small-button" onClick={() => signInAs(user)}>
                       Sign in as
                     </button>
                   )}
                 </span>
-                <span>
+                <span style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                  {(manage.allowed || isSelf) && user.active && (
+                    <button className="small-button" onClick={() => setPinFor(user)} aria-label={`${hasPin(user) ? 'Change' : 'Set'} PIN for ${user.name}`}>
+                      {hasPin(user) ? 'Change PIN' : 'Set PIN'}
+                    </button>
+                  )}
                   {manage.allowed &&
                     !isSelf &&
                     (user.active ? (
@@ -319,6 +440,7 @@ export const StaffView = () => {
           {data.audit.length === 0 && <p className="empty-state">No activity recorded yet.</p>}
         </div>
       </Panel>
+      {pinFor && <PinDialog member={pinFor} onClose={() => setPinFor(null)} />}
     </>
   )
 }

@@ -414,6 +414,25 @@ button:disabled {
   background: var(--chip-bg);
   border-radius: 12px;
   margin-bottom: 24px;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.clinic-switch:hover {
+  border-color: color-mix(in srgb, var(--teal) 45%, var(--sidebar-border));
+  background: color-mix(in srgb, var(--teal) 8%, var(--chip-bg));
+}
+.clinic-switch > div:nth-child(2) {
+  min-width: 0;
+}
+.clinic-switch strong,
+.clinic-switch span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .clinic-avatar,
 .avatar {
@@ -503,6 +522,31 @@ button:disabled {
 .more {
   margin-left: auto !important;
   font-size: 13px !important;
+}
+.profile-button {
+  width: 100%;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.profile-button:hover {
+  background: var(--chip-bg);
+}
+.profile-button > div:nth-child(2) {
+  min-width: 0;
+}
+.profile-button strong,
+.profile-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .main-content {
   min-width: 0;
@@ -1362,10 +1406,28 @@ button:disabled {
   text-align: right;
 }
 .cal-cells {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 6px 0;
+  cursor: crosshair;
+}
+.cal-slot-ghost {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  border: 1px dashed var(--teal);
+  border-radius: 8px;
+  background: var(--teal-soft);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--teal-dark);
+  pointer-events: none;
+  overflow: hidden;
+  min-height: 4px;
 }
 .cal-appt[draggable='true'] {
   cursor: grab;
@@ -1398,6 +1460,7 @@ button:disabled {
   min-width: 0;
   text-align: left;
   flex-wrap: wrap;
+  cursor: default;
 }
 .cal-appt.status-checked_in {
   border-left-color: var(--amber);
@@ -1527,6 +1590,359 @@ button:disabled {
 .modal .panel-footer {
   padding: 14px 0 0;
   justify-content: flex-end;
+}
+
+/* Clinic & account management */
+.workspace-dialog {
+  width: min(780px, 100%);
+}
+.workspace-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.workspace-tabs button {
+  flex: 1 1 auto;
+}
+.workspace-body {
+  margin-top: 14px;
+}
+.workspace-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+.workspace-grid .workspace-wide {
+  grid-column: 1 / -1;
+}
+.workspace-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.workspace-hint {
+  margin-right: auto;
+  color: var(--ink-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.workspace-lede {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.workspace-account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--chip-bg);
+}
+.workspace-account > div:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+}
+.workspace-account strong,
+.workspace-account span {
+  display: block;
+}
+.workspace-account strong {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace-account span {
+  color: var(--ink-muted);
+  font-size: 11px;
+  margin-top: 2px;
+}
+.workspace-account-avatar {
+  width: 44px;
+  height: 44px;
+  font-size: 14px;
+  border-radius: 12px;
+}
+.workspace-section {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.workspace-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--ink-muted);
+}
+.workspace-section-head strong,
+.workspace-section-head span {
+  display: block;
+}
+.workspace-section-head strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+.workspace-section-head span {
+  font-size: 11px;
+  margin-top: 2px;
+  line-height: 1.5;
+}
+.workspace-add {
+  background: var(--teal-wash);
+  border: 1px solid var(--teal-wash-border);
+  border-radius: 12px;
+  padding: 14px;
+}
+.workspace-members {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.workspace-member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.workspace-member.is-inactive {
+  opacity: 0.55;
+}
+.workspace-member-main {
+  flex: 1;
+  min-width: 0;
+}
+.workspace-member-main strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.workspace-member-main > span {
+  display: block;
+  color: var(--ink-muted);
+  font-size: 10px;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace-self {
+  display: inline-flex;
+}
+.workspace-role-select {
+  width: auto;
+  min-width: 120px;
+}
+.workspace-member-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.workspace-perms {
+  gap: 6px 12px;
+}
+.workspace-matrix-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.role-matrix {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.role-matrix th,
+.role-matrix td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.role-matrix thead th {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.role-matrix tbody th {
+  font-weight: 600;
+}
+.role-matrix code {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--ink-muted);
+}
+.role-matrix td {
+  text-align: center;
+}
+.role-matrix .is-current {
+  background: var(--teal-wash);
+}
+.role-matrix tr:last-child th,
+.role-matrix tr:last-child td {
+  border-bottom: 0;
+}
+.matrix-yes {
+  display: inline-flex;
+  color: var(--teal-dark);
+}
+.matrix-no {
+  color: var(--ink-muted);
+}
+.workspace-role-notes {
+  display: grid;
+  gap: 8px;
+}
+.workspace-role-notes p {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+.workspace-role-notes strong {
+  font-size: 12px;
+}
+.workspace-role-notes span {
+  color: var(--ink-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+@media (max-width: 700px) {
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+  .workspace-member {
+    flex-wrap: wrap;
+  }
+  .workspace-member-main {
+    order: 2;
+    flex: 1 1 100%;
+  }
+  .workspace-role-select {
+    order: 3;
+  }
+  .workspace-member-actions {
+    order: 4;
+    margin-left: auto;
+  }
+}
+
+/* Staff PIN lock screen */
+.lock-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--paper);
+}
+.lock-card {
+  width: min(520px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 22px;
+  display: grid;
+  gap: 18px;
+}
+.lock-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.lock-brand strong {
+  display: block;
+}
+.lock-brand span {
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+.lock-members {
+  display: grid;
+  gap: 8px;
+  max-height: 280px;
+  overflow: auto;
+}
+.lock-member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+}
+.lock-member.active {
+  border-color: var(--accent, var(--line));
+  box-shadow: 0 0 0 2px var(--accent, transparent);
+}
+.lock-member strong {
+  display: block;
+  font-size: 14px;
+}
+.lock-member em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.lock-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  font-weight: 600;
+}
+.lock-pin {
+  display: grid;
+  gap: 8px;
+}
+.lock-pin label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.lock-pin input {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 18px;
+  letter-spacing: 0.3em;
+}
+.lock-error {
+  color: var(--danger, #b91c1c);
+  font-size: 13px;
+}
+.lock-hint {
+  color: var(--ink-muted);
+  font-size: 13px;
 }
 .search-input {
   border: 1px solid var(--line);
@@ -2267,6 +2683,16 @@ button,
   gap: 8px;
   flex-wrap: wrap;
 }
+.form-notice {
+  margin: 0 0 17px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--teal) 35%, transparent);
+  border-radius: 9px;
+  background: var(--teal-wash);
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 600;
+}
 .patients-table .table-row {
   transition: background 0.12s;
   font-variant-numeric: tabular-nums;
@@ -2669,4 +3095,13 @@ button,
   .no-print {
     display: none !important;
   }
+}
+
+.import-error {
+  color: var(--danger, #b91c1c);
+  font-size: 13px;
+}
+.import-ok {
+  color: var(--ok, #15803d);
+  font-size: 13px;
 }

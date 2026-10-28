@@ -7,6 +7,7 @@ import { seedState } from './seed'
 import type {
   Appointment,
   AppointmentStatus,
+  Clinic,
   ClinicState,
   Diagnosis,
   Encounter,
@@ -43,6 +44,8 @@ export type View =
 
 export interface Session {
   currentUserId: string
+  /** True while the clinic is gated behind the staff PIN lock screen. */
+  locked: boolean
   plan: Plan
   lanOnline: boolean
   internetOnline: boolean
@@ -93,10 +96,12 @@ type Action =
   | { type: 'addInventoryItem'; item: Omit<InventoryItem, 'id'> }
   | { type: 'receiveLot'; lot: Omit<InventoryLot, 'id' | 'quantity'>; quantity: number }
   | { type: 'recordStockMovement'; lotId: string; delta: number; reason: StockReason; notes?: string }
-  | { type: 'addStaff'; name: string; role: Role }
-  | { type: 'updateStaff'; id: string; name?: string; role?: Role }
+  | { type: 'addStaff'; name: string; role: Role; email?: string; phone?: string }
+  | { type: 'updateStaff'; id: string; name?: string; role?: Role; email?: string; phone?: string }
   | { type: 'setStaffActive'; id: string; active: boolean }
-  | { type: 'switchUser'; userId: string }
+  | { type: 'setStaffPin'; id: string; credential: { pinHash: string; pinSalt: string } | null }
+  | { type: 'updateClinic'; patch: Partial<Omit<Clinic, 'id'>> }
+  | { type: 'signIn'; userId: string }
   | { type: 'syncComplete'; changeIds: string[] }
   | { type: 'syncResult'; data: ClinicState }
   | { type: 'restore'; data: ClinicState }
@@ -180,12 +185,13 @@ const reducer = (store: Store, action: Action): Store => {
     return { data: action.data, session: { ...session, view: 'dashboard', activeEncounterId: undefined } }
   }
 
-  // Switching the signed-in account is a session change, not a write — it
-  // stays available in read-only mode but never onto a deactivated member.
-  if (action.type === 'switchUser') {
+  // Signing in is a session change, not a write — it stays available while
+  // read-only, but never onto a deactivated member. The lock screen verifies
+  // the PIN before dispatching.
+  if (action.type === 'signIn') {
     const target = data.users.find((u) => u.id === action.userId)
     if (!target || !target.active) return store
-    return { ...store, session: { ...session, currentUserId: target.id } }
+    return { ...store, session: { ...session, currentUserId: target.id, locked: false } }
   }
 
   // Writes require a reachable clinic server; cached data stays readable.
@@ -193,11 +199,40 @@ const reducer = (store: Store, action: Action): Store => {
 
   // Staff administration is reserved for clinic admins and blocked offline
   // like every other write. The signed-in admin cannot lock themselves out.
-  if (action.type === 'addStaff' || action.type === 'updateStaff' || action.type === 'setStaffActive') {
+  if (action.type === 'addStaff' || action.type === 'setStaffActive') {
     const actor = data.users.find((u) => u.id === session.currentUserId)
-    if (!actor || actor.role !== 'admin') return store
+    if (!actor || !can(actor.role, 'staff.manage')) return store
     if (action.type === 'setStaffActive' && !action.active && action.id === session.currentUserId) return store
     if (action.type === 'addStaff' && !action.name.trim()) return store
+  }
+
+  // Members may edit their own profile; only admins may change anyone else's
+  // account or grant a role.
+  if (action.type === 'updateStaff') {
+    const actor = data.users.find((u) => u.id === session.currentUserId)
+    if (!actor || !data.users.some((u) => u.id === action.id)) return store
+    const isSelf = actor.id === action.id
+    const managesStaff = can(actor.role, 'staff.manage')
+    if (!managesStaff && !isSelf) return store
+    if (!managesStaff && action.role !== undefined && action.role !== actor.role) return store
+    if (action.name !== undefined && !action.name.trim()) return store
+  }
+
+  // Clinic identity is tenant configuration, reserved for clinic admins.
+  if (action.type === 'updateClinic') {
+    const actor = data.users.find((u) => u.id === session.currentUserId)
+    if (!actor || !can(actor.role, 'clinic.manage')) return store
+    if (action.patch.name !== undefined && !action.patch.name.trim()) return store
+    if (action.patch.vatRate !== undefined && (!Number.isFinite(action.patch.vatRate) || action.patch.vatRate < 0 || action.patch.vatRate > 1)) {
+      return store
+    }
+  }
+
+  // PINs are a credential change: admins manage anyone's, members their own.
+  if (action.type === 'setStaffPin') {
+    const actor = data.users.find((u) => u.id === session.currentUserId)
+    if (!actor || !data.users.some((u) => u.id === action.id)) return store
+    if (actor.role !== 'admin' && actor.id !== action.id) return store
   }
 
   // Inventory writes follow the slice 0007/0008 RBAC matrix: admin and
@@ -422,10 +457,9 @@ const reducer = (store: Store, action: Action): Store => {
     case 'importCaseBundle': {
       const bundle = action.bundle
       if (bundle.format !== 'vetcare-case-bundle') return store
-      // Guard: the same share token can only be received once.
+      // Guard: the same share token can only be received once. (The copy gets
+      // a fresh local MRN, so a source-MRN clash needs no guard.)
       if (data.caseTransfers.some((t) => t.token === bundle.token)) return store
-      // Guard: a locally-registered patient with the same MRN would fork identity.
-      if (data.patients.some((p) => p.mrn === bundle.patient.mrn && !p.originClinicId)) return store
 
       // Owner is matched by phone (joint records stay linked); created if new.
       let owner = data.owners.find((o) => o.phone === bundle.owner.phone)
@@ -684,7 +718,14 @@ const reducer = (store: Store, action: Action): Store => {
       )
     }
     case 'addStaff': {
-      const member: StaffUser = { id: uid(), name: action.name.trim(), role: action.role, active: true }
+      const member: StaffUser = {
+        id: uid(),
+        name: action.name.trim(),
+        role: action.role,
+        active: true,
+        email: action.email?.trim() || undefined,
+        phone: action.phone?.trim() || undefined,
+      }
       return commit(store, { ...data, users: [...data.users, member] }, {
         action: 'staff.create',
         entityType: 'staff_user',
@@ -699,16 +740,27 @@ const reducer = (store: Store, action: Action): Store => {
         ...member,
         name: action.name?.trim() || member.name,
         role: action.role ?? member.role,
+        email: action.email !== undefined ? action.email.trim() || undefined : member.email,
+        phone: action.phone !== undefined ? action.phone.trim() || undefined : member.phone,
       }
-      if (next.name === member.name && next.role === member.role) return store
+      if (
+        next.name === member.name &&
+        next.role === member.role &&
+        next.email === member.email &&
+        next.phone === member.phone
+      )
+        return store
+      const summary =
+        next.role !== member.role
+          ? `Changed ${next.name}'s role to ${roleLabel[next.role].toLowerCase()}`
+          : next.name !== member.name
+            ? `Renamed ${member.name} to ${next.name}`
+            : `Updated ${next.name}'s profile`
       return commit(store, { ...data, users: data.users.map((u) => (u.id === next.id ? next : u)) }, {
         action: 'staff.update',
         entityType: 'staff_user',
         entityId: next.id,
-        summary:
-          next.role !== member.role
-            ? `Changed ${next.name}'s role to ${roleLabel[next.role].toLowerCase()}`
-            : `Renamed ${member.name} to ${next.name}`,
+        summary,
       })
     }
     case 'setStaffActive': {
@@ -719,6 +771,50 @@ const reducer = (store: Store, action: Action): Store => {
         entityType: 'staff_user',
         entityId: member.id,
         summary: `${action.active ? 'Reactivated' : 'Deactivated'} ${member.name}`,
+      })
+    }
+    case 'setStaffPin': {
+      const member = data.users.find((u) => u.id === action.id)
+      if (!member) return store
+      const next: StaffUser = {
+        ...member,
+        pinHash: action.credential?.pinHash,
+        pinSalt: action.credential?.pinSalt,
+      }
+      return commit(store, { ...data, users: data.users.map((u) => (u.id === next.id ? next : u)) }, {
+        action: action.credential ? 'staff.pin_set' : 'staff.pin_clear',
+        entityType: 'staff_user',
+        entityId: next.id,
+        summary: action.credential ? `Set a PIN for ${member.name}` : `Cleared the PIN for ${member.name}`,
+      })
+    }
+    case 'updateClinic': {
+      const current = data.clinic
+      const next: Clinic = {
+        ...current,
+        ...action.patch,
+        name: action.patch.name?.trim() || current.name,
+        timezone: action.patch.timezone?.trim() || current.timezone,
+        currency: action.patch.currency?.trim() || current.currency,
+        address: action.patch.address !== undefined ? action.patch.address.trim() || undefined : current.address,
+        phone: action.patch.phone !== undefined ? action.patch.phone.trim() || undefined : current.phone,
+        email: action.patch.email !== undefined ? action.patch.email.trim() || undefined : current.email,
+      }
+      if (
+        next.name === current.name &&
+        next.timezone === current.timezone &&
+        next.currency === current.currency &&
+        next.vatRate === current.vatRate &&
+        next.address === current.address &&
+        next.phone === current.phone &&
+        next.email === current.email
+      )
+        return store
+      return commit(store, { ...data, clinic: next }, {
+        action: 'clinic.update',
+        entityType: 'clinic',
+        entityId: next.id,
+        summary: next.name !== current.name ? `Renamed clinic to ${next.name}` : 'Updated clinic identity',
       })
     }
   }
@@ -804,6 +900,7 @@ export const saveState = (data: ClinicState) => {
 
 const initialSession: Session = {
   currentUserId: 'u-pim',
+  locked: false,
   plan: 'local',
   lanOnline: true,
   internetOnline: true,
@@ -833,7 +930,13 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
     let alive = true
     void loadState().then((persisted) => {
       if (!alive) return
-      if (persisted) dispatch({ type: 'restore', data: persisted })
+      if (persisted) {
+        dispatch({ type: 'restore', data: persisted })
+        // A document whose signed-in member holds a PIN starts locked, so
+        // reopening the app on a shared terminal always asks for the PIN.
+        const current = persisted.users.find((u) => u.id === initialSession.currentUserId)
+        if (current?.pinHash) dispatch({ type: 'session', patch: { locked: true } })
+      }
       setHydrated(true)
     })
     return () => {
