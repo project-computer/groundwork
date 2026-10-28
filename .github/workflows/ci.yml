@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    name: lint + tests
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: TS tests
+        run: pnpm test:ts
+
+      - name: Go vet
+        run: go vet ./...
+        working-directory: backend
+
+      - name: Go tests
+        run: go test ./...
+        working-directory: backend
