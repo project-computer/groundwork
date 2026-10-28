@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"log"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/vet-clinic/api/internal/config"
@@ -46,6 +48,9 @@ func main() {
 	inventoryItemRepo := repository.NewInventoryItemRepository(db)
 	inventoryLotRepo := repository.NewInventoryLotRepository(db)
 	notificationRepo := repository.NewNotificationRepository(db)
+	caseTransferRepo := repository.NewCaseTransferRepository(db)
+	clinicRepo := repository.NewClinicRepository(db)
+	visitImageRepo := repository.NewVisitImageRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, cfg.JWT.Secret, cfg.JWT.AccessExpiry, cfg.JWT.RefreshExpiry)
@@ -62,6 +67,9 @@ func main() {
 	supplierService := service.NewSupplierService(supplierRepo)
 	itemService := service.NewItemService(inventoryItemRepo, inventoryLotRepo, auditService)
 	historyService := service.NewHistoryService(patientRepo, visitRepo, prescriptionRepo, billRepo, vaccinationRepo)
+	caseTransferService := service.NewCaseTransferService(caseTransferRepo, ownerRepo, auditService)
+	clinicSettingsService := service.NewClinicSettingsService(clinicRepo)
+	visitImageService := service.NewVisitImageService(visitImageRepo, visitRepo, auditService, cfg.FileStorage.UploadPath, cfg.FileStorage.MaxSize)
 	notificationService := service.NewNotificationService(notificationRepo, ownerRepo, notificationRepo, nil)
 	reminderService := service.NewReminderService(notificationRepo, notificationService)
 
@@ -82,6 +90,9 @@ func main() {
 	notificationHandler := handlers.NewNotificationHandler(notificationService)
 	reminderHandler := handlers.NewReminderHandler(reminderService)
 	historyHandler := handlers.NewHistoryHandler(historyService)
+	caseTransferHandler := handlers.NewCaseTransferHandler(caseTransferService)
+	clinicSettingsHandler := handlers.NewClinicSettingsHandler(clinicSettingsService)
+	visitImageHandler := handlers.NewVisitImageHandler(visitImageService)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(cfg.JWT.Secret)
@@ -103,11 +114,26 @@ func main() {
 	app.Use(middleware.Logger())
 	app.Use(middleware.CORS(cfg.CORS.Origins))
 
-	// Health check
+	// Health check — reports DB connectivity; 503 when the database is
+	// unreachable so uptime monitors treat it as an outage.
 	app.Get("/health", func(c fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"status": "ok",
-			"env":    cfg.Env,
+		ctx, cancel := context.WithTimeout(c.Context(), 2*time.Second)
+		defer cancel()
+
+		dbStatus := "up"
+		if err := db.Ping(ctx); err != nil {
+			dbStatus = "down"
+		}
+
+		status, code := "ok", fiber.StatusOK
+		if dbStatus == "down" {
+			status, code = "degraded", fiber.StatusServiceUnavailable
+		}
+
+		return c.Status(code).JSON(fiber.Map{
+			"status":   status,
+			"env":      cfg.Env,
+			"database": dbStatus,
 		})
 	})
 
@@ -117,6 +143,13 @@ func main() {
 	// Public routes
 	api.Post("/auth/login", authHandler.Login)
 	api.Post("/auth/refresh", authHandler.RefreshToken)
+	// Case-transfer preview is token-authorized (the unguessable token in the
+	// share link is the credential), so it is mounted outside the JWT group.
+	api.Get("/case-transfers/preview/:token", caseTransferHandler.Preview)
+	// Uploaded files are addressed by an unguessable 128-bit key, which is the
+	// authorizer. Must stay registered BEFORE the protected group: Fiber v3
+	// group middleware on an empty prefix matches everything registered after it.
+	api.Get("/files/*", visitImageHandler.Serve)
 
 	// Protected routes
 	protected := api.Group("", authMiddleware.Protected())
@@ -201,6 +234,21 @@ func main() {
 	prescriptions.Get("/", prescriptionHandler.List)
 	prescriptions.Post("/", prescriptionHandler.Create)
 	prescriptions.Get("/:id", prescriptionHandler.Get)
+
+	// Visit images: attachments (photos, documents, test results)
+	visits.Post("/:id/images", visitImageHandler.Upload)
+	visits.Get("/:id/images", visitImageHandler.List)
+
+	// Clinic settings: read for all staff, update admin-only
+	protected.Get("/settings", clinicSettingsHandler.Get)
+	protected.Put("/settings", authMiddleware.RequireRole("admin"), clinicSettingsHandler.Update)
+
+	// Case transfers: share a patient's visit bundle with another clinic
+	caseTransfers := protected.Group("/case-transfers")
+	caseTransfers.Get("/", caseTransferHandler.List)
+	caseTransfers.Post("/", caseTransferHandler.Create)
+	caseTransfers.Post("/accept/:token", caseTransferHandler.Accept)
+	caseTransfers.Post("/:id/revoke", caseTransferHandler.Revoke)
 
 	// Dashboard routes
 	dashboard := protected.Group("/dashboard")
