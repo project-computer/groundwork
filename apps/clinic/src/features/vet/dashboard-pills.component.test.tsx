@@ -18,7 +18,7 @@ const widths = [320, 360, 390, 414, 480, 600, 640, 768, 900, 1100, 1240, 1280, 1
 it("keeps dashboard pills inside their panel at every viewport width", async () => {
   await render(<App />)
 
-  const strongs = [...document.querySelectorAll<HTMLElement>(".activity-row strong")]
+  const strongs = document.querySelectorAll<HTMLElement>(".activity-row strong")
   strongs.forEach((s, i) => {
     s.textContent = UNBREAKABLE_NAMES[i % UNBREAKABLE_NAMES.length]
   })
@@ -28,7 +28,7 @@ it("keeps dashboard pills inside their panel at every viewport width", async () 
     await page.viewport(width, 900)
     await new Promise((r) => setTimeout(r, 60))
 
-    for (const pill of [...document.querySelectorAll<HTMLElement>(".pill")]) {
+    for (const pill of document.querySelectorAll<HTMLElement>(".pill")) {
       if (pill.offsetParent === null) continue
       const card = pill.closest<HTMLElement>("section")
       if (!card) continue
