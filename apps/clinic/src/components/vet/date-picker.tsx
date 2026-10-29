@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { msg } from '@lingui/core/macro'
 import { useLingui } from '@lingui/react/macro'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
@@ -132,49 +133,57 @@ export const DatePicker = ({ id, value, onChange, disabled, label, className }: 
         <Calendar size={14} aria-hidden />
         <span>{value ? clinicDate(value) : '—'}</span>
       </button>
-      {open && (
-        <div className="date-picker-pop" role="dialog" aria-label={`${i18n._(CHOOSE_DATE)} — ${monthLabel(viewIso)}`}>
-          <div className="date-picker-head">
-            <button type="button" className="icon-button" aria-label={i18n._(PREVIOUS_MONTH)} onClick={() => setViewIso(shiftMonth(viewIso, -1))}>
-              <ChevronLeft size={15} />
-            </button>
-            <strong>{monthLabel(viewIso)}</strong>
-            <button type="button" className="icon-button" aria-label={i18n._(NEXT_MONTH)} onClick={() => setViewIso(shiftMonth(viewIso, 1))}>
-              <ChevronRight size={15} />
-            </button>
-          </div>
-          <div className="date-picker-weekdays" aria-hidden="true">
-            {WEEKDAY_HEADERS.map((day) => (
-              <span key={day.id}>{i18n._(day)}</span>
-            ))}
-          </div>
-          <div className="date-picker-grid" role="grid" ref={gridRef} onKeyDown={onGridKeyDown}>
-            {days.map((iso) => (
-              <button
-                type="button"
-                role="gridcell"
-                key={iso}
-                tabIndex={iso === value ? 0 : -1}
-                data-iso={iso}
-                data-selected={iso === value || undefined}
-                data-today={iso === today || undefined}
-                data-outside={iso.slice(0, 7) === viewIso.slice(0, 7) ? undefined : ''}
-                aria-selected={iso === value}
-                aria-current={iso === today ? 'date' : undefined}
-                aria-label={clinicDate(iso)}
-                onClick={() => choose(iso)}
-              >
-                {Number(iso.slice(8))}
+      {open &&
+        createPortal(
+          <div
+            className="date-picker-pop"
+            role="dialog"
+            ref={popRef}
+            style={popStyle ?? undefined}
+            aria-label={`${i18n._(CHOOSE_DATE)} — ${monthLabel(viewIso)}`}
+          >
+            <div className="date-picker-head">
+              <button type="button" className="icon-button" aria-label={i18n._(PREVIOUS_MONTH)} onClick={() => setViewIso(shiftMonth(viewIso, -1))}>
+                <ChevronLeft size={15} />
               </button>
-            ))}
-          </div>
-          <div className="date-picker-foot">
-            <button type="button" className="text-button" onClick={() => choose(today)}>
-              {i18n._(TODAY)}
-            </button>
-          </div>
-        </div>
-      )}
+              <strong>{monthLabel(viewIso)}</strong>
+              <button type="button" className="icon-button" aria-label={i18n._(NEXT_MONTH)} onClick={() => setViewIso(shiftMonth(viewIso, 1))}>
+                <ChevronRight size={15} />
+              </button>
+            </div>
+            <div className="date-picker-weekdays" aria-hidden="true">
+              {WEEKDAY_HEADERS.map((day) => (
+                <span key={day.id}>{i18n._(day)}</span>
+              ))}
+            </div>
+            <div className="date-picker-grid" role="grid" ref={gridRef} onKeyDown={onGridKeyDown}>
+              {days.map((iso) => (
+                <button
+                  type="button"
+                  role="gridcell"
+                  key={iso}
+                  tabIndex={iso === value ? 0 : -1}
+                  data-iso={iso}
+                  data-selected={iso === value || undefined}
+                  data-today={iso === today || undefined}
+                  data-outside={iso.slice(0, 7) === viewIso.slice(0, 7) ? undefined : ''}
+                  aria-selected={iso === value}
+                  aria-current={iso === today ? 'date' : undefined}
+                  aria-label={clinicDate(iso)}
+                  onClick={() => choose(iso)}
+                >
+                  {Number(iso.slice(8))}
+                </button>
+              ))}
+            </div>
+            <div className="date-picker-foot">
+              <button type="button" className="text-button" onClick={() => choose(today)}>
+                {i18n._(TODAY)}
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }
