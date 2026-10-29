@@ -17,22 +17,25 @@ src/features/** · src/components/** · src/app/**     (UI)
         │  @/lib/vet/format, @/lib/i18n, ui primitives
         ▼
 src/lib/vet/store.tsx                                 (domain + orchestration)
-        │
-        ├── src/lib/vet/backend.ts        sidecar HTTP adapter
-        ├── invoke() Rust fallback        (inside store today)
-        └── localStorage web fallback     (inside store today)
+        │  document I/O only through ↓
+        ▼
+src/lib/vet/persistence.ts                            (the persistence seam)
+        │  interface: loadState · saveState · loadPlanPref · savePlanPref
+        │  owns: isClinicState · parseClinicState · ADR-0012 adapter order
+        ├── sidecar HTTP        (via backend.ts)
+        ├── Rust invoke()       fallback
+        └── localStorage        (web)
 ```
 
 - **UI never imports** `@tauri-apps/*`, `@/lib/vet/backend`,
   `@/lib/vet/persistence`, `@/lib/vet/seed`, or `@/platform`.
-  Enforced by `no-restricted-imports` overrides in `.oxlintrc.json`.
+  **store.tsx never imports** `@tauri-apps/*` or `@/platform` either —
+  both enforced by `no-restricted-imports` overrides in `.oxlintrc.json`;
+  only `backend.ts` and `persistence.ts` may touch transports.
 - **All mutations go through the store reducer.** No component writes state,
   SQL, or HTTP directly.
 - `commit` writes the record, its audit event, and its outbox entry in one
   state transition — never split those writes.
-- `src/lib/vet/store.tsx` is still the persistence orchestrator; when the
-  persistence module is extracted, move the adapter allowances with it and
-  tighten the store rules in `.oxlintrc.json`.
 
 ## The clinic document
 

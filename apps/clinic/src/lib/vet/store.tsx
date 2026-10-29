@@ -1,12 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
 import { i18n } from '@lingui/core'
 import { msg } from '@lingui/core/macro'
-import { invoke } from '@tauri-apps/api/core'
-import { isTauri } from '@/platform'
-import { fetchState, pushState, runSync } from './backend'
-import { can, invoiceTotals, roleLabel } from './format'
+import { runSync } from './backend'
+import { isClinicState, loadPlanPref, loadState, parseClinicState, savePlanPref, saveState } from './persistence'
+import { can, formatMrn, invoiceTotals, roleLabel } from './format'
 import { seedState } from './seed'
-import { CLINIC_STATE_COLLECTIONS } from './types'
 import type {
   Appointment,
   AppointmentStatus,
@@ -68,8 +66,6 @@ export interface Store {
   session: Session
 }
 
-const STORAGE_KEY = 'clinicbook:state:v1'
-const PLAN_KEY = 'clinicbook:plan'
 
 const uid = () => crypto.randomUUID()
 const now = () => new Date().toISOString()
@@ -163,21 +159,6 @@ const updateEncounter = (data: ClinicState, id: string, fn: (e: Encounter) => En
 const patientName = (data: ClinicState, id: string) => data.patients.find((p) => p.id === id)?.name ?? 'patient'
 
 /** Human-readable Medical Record Number, e.g. PT-2026-0042 (see CONTEXT.md). */
-const formatMrn = (sequence: number, year = new Date().getFullYear()) => {
-  return `PT-${year}-${String(sequence).padStart(4, '0')}`
-}
-
-/** Clinical profile fields arrive after the first release — documents saved
- * before them are backfilled so the reducer never sees undefined arrays. */
-const backfillPatient = (patient: Patient, index: number): Patient => {
-  return {
-    ...patient,
-    mrn: patient.mrn ?? formatMrn(index + 1),
-    allergies: patient.allergies ?? [],
-    medicalAlerts: patient.medicalAlerts ?? [],
-  }
-}
-
 /** Exposed for tests: drive business mutations and assert on the resulting document. */
 export const reducer = (store: Store, action: Action): Store => {
   const { data, session } = store
@@ -987,100 +968,8 @@ export const reducer = (store: Store, action: Action): Store => {
 
 /* ---------- persistence ---------- */
 
-/**
- * Structural guard so a corrupt or foreign payload never reaches the reducer.
- * The required-collection list is `CLINIC_STATE_COLLECTIONS`; the Go sidecar
- * (`store.Validate`) and the Rust fallback (`validate_state`) enforce the same
- * list, and all three are pinned to `fixtures/clinic-document.json` by tests.
- */
-export const isClinicState = (value: unknown): value is ClinicState => {
-  if (!value || typeof value !== 'object') return false
-  const v = value as Record<string, unknown>
-  return !!v.clinic && CLINIC_STATE_COLLECTIONS.every((key) => Array.isArray(v[key]))
-}
-
-/**
- * Validates and normalises a foreign document (storage, backup, sync result):
- * collections added after older persisted documents are backfilled with empty
- * arrays, staff activation defaults on, and patient fields are backfilled.
- * A collection that is present but not an array is corrupt and rejected —
- * never silently dropped. Returns null when the payload is not a clinic
- * document at all.
- */
-export const parseClinicState = (raw: unknown): ClinicState | null => {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
-  const candidate = raw as Record<string, unknown>
-  if (!candidate.clinic) return null
-  const filled: Record<string, unknown> = { ...candidate }
-  for (const key of CLINIC_STATE_COLLECTIONS) {
-    if (filled[key] === undefined) filled[key] = []
-  }
-  if (!isClinicState(filled)) return null
-  const state = filled as ClinicState
-  // Documents persisted before staff activation existed default to active.
-  return {
-    ...state,
-    users: state.users.map((u) => ({ ...u, active: u.active ?? true })),
-    patients: state.patients.map(backfillPatient),
-  }
-}
-
-const loadState = async (): Promise<ClinicState | null> => {
-  if (isTauri()) {
-    try {
-      const fromSidecar = parseClinicState(await fetchState())
-      if (fromSidecar) return fromSidecar
-    } catch (error) {
-      console.error('failed to load clinic state from sidecar', error)
-    }
-    try {
-      return parseClinicState(await invoke<unknown>('state_load_command'))
-    } catch {
-      return null
-    }
-  }
-  try {
-    return parseClinicState(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? 'null'))
-  } catch {
-    return null
-  }
-}
-
-/** Reports why a save failed so the UI can tell the clinic something is wrong. */
-type SaveResult = (error: string | null) => void
-
-export const saveState = (data: ClinicState, onResult?: SaveResult) => {
-  const fail = (error: unknown, scope: string) => {
-    console.error(scope, error)
-    onResult?.(error instanceof Error ? error.message : String(error))
-  }
-  if (isTauri()) {
-    void (async () => {
-      // The SQLite document is the source of truth for every collection
-      // (owners, users, invoices, PIN hashes…). The sidecar's normalized tables
-      // only model a subset, so always persist the full document here.
-      try {
-        await invoke('state_save_command', { state: data })
-      } catch (error) {
-        return fail(error, 'failed to persist clinic state')
-      }
-      // Keep the sidecar's extracted copy current for cloud sync.
-      try {
-        await pushState(data)
-      } catch (error) {
-        return fail(error, 'failed to persist clinic state via sidecar')
-      }
-      onResult?.(null)
-    })()
-    return
-  }
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-    onResult?.(null)
-  } catch (error) {
-    fail(error, 'failed to persist clinic state')
-  }
-}
+// Document I/O lives in ./persistence: loadState/saveState, the adapter
+// order (ADR 0012) and the shape guards isClinicState/parseClinicState.
 
 /* ---------- provider ---------- */
 
@@ -1105,9 +994,8 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
 
   // On the web the plan preference survives reloads; in Tauri it is per-session.
   useEffect(() => {
-    if (isTauri()) return
-    const stored = window.localStorage.getItem(PLAN_KEY)
-    if (stored === 'cloud' || stored === 'local') {
+    const stored = loadPlanPref()
+    if (stored) {
       dispatch({ type: 'session', patch: { plan: stored } })
     }
   }, [])
@@ -1147,8 +1035,8 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
 
   // Keep the plan choice in localStorage on the web backend.
   useEffect(() => {
-    if (isTauri() || !hydrated) return
-    window.localStorage.setItem(PLAN_KEY, plan)
+    if (!hydrated) return
+    savePlanPref(plan)
   }, [plan, hydrated])
 
   // Keep the latest document reachable from the sync worker without making it

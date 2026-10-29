@@ -320,10 +320,8 @@
   padding: 7px 10px;
 }
 .date-picker-pop {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 40;
+  position: fixed;
+  z-index: 60;
   width: 252px;
   padding: 10px;
   background: var(--paper);

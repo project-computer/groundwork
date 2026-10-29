@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { parseClinicState } from './store'
+import { parseClinicState } from './persistence'
 import { CLINIC_STATE_COLLECTIONS } from './types'
 
 // fixtures/clinic-document.json is the single source of truth for the clinic

@@ -260,3 +260,8 @@ export const statusLabel = (status: string): string => {
   const descriptor = statusMessages[status]
   return descriptor ? i18n._(descriptor) : status.replace(/_/g, ' ')
 }
+
+/** Medical record number: `PT-<year>-<sequence>`, zero-padded to 4 digits. */
+export const formatMrn = (sequence: number, year = new Date().getFullYear()) => {
+  return `PT-${year}-${String(sequence).padStart(4, '0')}`
+}

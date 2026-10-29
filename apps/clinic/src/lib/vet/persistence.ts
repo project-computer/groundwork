@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { isTauri } from '@/platform'
 import { fetchState, pushState } from './backend'
+import { formatMrn } from './format'
 import { CLINIC_STATE_COLLECTIONS, type ClinicState, type Patient } from './types'
 
 /**
@@ -11,10 +12,6 @@ import { CLINIC_STATE_COLLECTIONS, type ClinicState, type Patient } from './type
  */
 
 const STORAGE_KEY = 'clinicbook:state:v1'
-
-const formatMrn = (sequence: number, year = new Date().getFullYear()) => {
-  return `PT-${year}-${String(sequence).padStart(4, '0')}`
-}
 
 /** Clinical profile fields arrive after the first release — documents saved
  * before them are backfilled so the reducer never sees undefined arrays. */
@@ -91,6 +88,31 @@ export const loadState = async (): Promise<ClinicState | null> => {
 
 /** Reports why a save failed so the UI can tell the clinic something is wrong. */
 export type SaveResult = (error: string | null) => void
+
+const PLAN_KEY = 'clinicbook:plan'
+
+export type PlanPref = 'cloud' | 'local'
+
+/** The web target remembers the sync-plan choice across reloads; in Tauri it
+ * is per-session. Returns null when nothing usable is stored. */
+export const loadPlanPref = (): PlanPref | null => {
+  if (isTauri()) return null
+  try {
+    const stored = window.localStorage.getItem(PLAN_KEY)
+    return stored === 'cloud' || stored === 'local' ? stored : null
+  } catch {
+    return null
+  }
+}
+
+export const savePlanPref = (plan: PlanPref) => {
+  if (isTauri()) return
+  try {
+    window.localStorage.setItem(PLAN_KEY, plan)
+  } catch {
+    // Choice stays session-only when persistence is unavailable.
+  }
+}
 
 /** Save order per ADR 0012: Rust command first (source of truth), then the
  * sidecar copy for cloud sync. The web target has localStorage only. */

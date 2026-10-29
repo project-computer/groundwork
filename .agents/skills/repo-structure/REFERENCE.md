@@ -78,10 +78,10 @@ migration — new UI should use Tailwind utilities with token classes
   tests pin TS, Go and Rust guards; `parseClinicState` normalises legacy docs.
 - Sync entity registry: **done** — `fixtures/sync-entities.json` pins
   `entities.go` (sidecar) and `sync_service.go` (backend).
-- `src/lib/vet/persistence.ts` — extract `load()`/`save()` + the three
-  adapters (sidecar HTTP, Rust invoke, localStorage) out of store.tsx; the
-  fallback-order policy gets one home. `.oxlintrc.json` already reserves the
-  allowance for it.
+- `src/lib/vet/persistence.ts` — **done**: owns `loadState`/`saveState`, the
+  three adapters (sidecar HTTP, Rust invoke, localStorage), the fallback
+  order, the plan preference, and the shape guards. `store.tsx` has zero
+  transport/platform imports; oxlint enforces it.
 - `features/vet/` — split clinic-shell.tsx (2,600+ lines, 8 components) into
   per-view files; shell keeps only ClinicApp + wiring.
 - One catalog module (`lib/vet/catalog.ts`) for prescribable/billable items;
@@ -92,8 +92,6 @@ migration — new UI should use Tailwind utilities with token classes
 
 ## Known debt (checked, deliberate)
 
-- `store.tsx` still imports `invoke` + `@/platform` — allowed until the
-  persistence extraction; then tighten the override.
 - oxlint warnings (~30: array sort mutation, function scoping, hook deps,
   render purity) are advisory; `pnpm -C apps/clinic lint:strict` blocks on
   them. Burn them down file-by-file; don't let new ones land.

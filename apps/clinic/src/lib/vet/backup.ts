@@ -1,4 +1,4 @@
-import { isClinicState, parseClinicState } from './store'
+import { isClinicState, parseClinicState } from './persistence'
 import type { ClinicState } from './types'
 
 /**
