@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Lock, PawPrint } from 'lucide-react'
+import { Trans, useLingui } from '@lingui/react/macro'
 import { useClinic } from '@/lib/vet/store'
 import { hasPin, isPinFormat, verifyPin } from '@/lib/vet/auth'
 import { initials, roleLabel } from '@/lib/vet/format'
@@ -14,6 +15,7 @@ import type { StaffUser } from '@/lib/vet/types'
  */
 export const LockScreen = () => {
   const { data, session, dispatch } = useClinic()
+  const { t } = useLingui()
   const members = data.users.filter((u) => u.active)
   const [selectedId, setSelectedId] = useState(session.currentUserId)
   const selected = members.find((u) => u.id === selectedId) ?? members[0]
@@ -38,14 +40,14 @@ export const LockScreen = () => {
       return
     }
     if (!isPinFormat(pin)) {
-      setError('Enter your 4–8 digit PIN')
+      setError(t`Enter your 4–8 digit PIN`)
       return
     }
     setBusy(true)
     const ok = await verifyPin(selected, pin)
     setBusy(false)
     if (!ok) {
-      setError('Incorrect PIN — try again')
+      setError(t`Incorrect PIN — try again`)
       setPin('')
       return
     }
@@ -61,15 +63,15 @@ export const LockScreen = () => {
           </div>
           <div>
             <strong>{data.clinic.name}</strong>
-            <span>{members.length === 0 ? 'No staff on file' : 'Clinic locked'}</span>
+            <span>{members.length === 0 ? t`No staff on file` : t`Clinic locked`}</span>
           </div>
         </div>
 
         {members.length === 0 ? (
-          <p className="lock-hint">No active staff members are on file for this clinic.</p>
+          <p className="lock-hint"><Trans>No active staff members are on file for this clinic.</Trans></p>
         ) : (
           <>
-            <div className="lock-members" role="list" aria-label="Staff members">
+            <div className="lock-members" role="list" aria-label={t`Staff members`}>
               {members.map((member) => (
                 <button
                   key={member.id}
@@ -83,7 +85,7 @@ export const LockScreen = () => {
                     <strong>{member.name}</strong>
                     <em>
                       {roleLabel[member.role]}
-                      {hasPin(member) ? '' : ' · no PIN'}
+                      {hasPin(member) ? '' : <> · <Trans>no PIN</Trans></>}
                     </em>
                   </span>
                 </button>
@@ -93,7 +95,7 @@ export const LockScreen = () => {
             {selected && (
               <div className="lock-pin">
                 <label htmlFor="lock-pin-input">
-                  <Lock size={14} /> PIN for {selected.name}
+                  <Lock size={14} /> <Trans>PIN for {selected.name}</Trans>
                 </label>
                 {hasPin(selected) ? (
                   <>
@@ -109,14 +111,14 @@ export const LockScreen = () => {
                       autoFocus
                     />
                     <button className="button primary" type="submit" disabled={busy || pin.length < 4}>
-                      {busy ? 'Checking…' : 'Unlock'}
+                      {busy ? t`Checking…` : t`Unlock`}
                     </button>
                   </>
                 ) : (
                   <>
-                    <p className="lock-hint">This member has no PIN configured yet.</p>
+                    <p className="lock-hint"><Trans>This member has no PIN configured yet.</Trans></p>
                     <button className="button primary" type="submit">
-                      Continue without PIN
+                      <Trans>Continue without PIN</Trans>
                     </button>
                   </>
                 )}
@@ -130,7 +132,7 @@ export const LockScreen = () => {
 
             {!anyPinConfigured && (
               <p className="lock-hint">
-                No staff PINs are set up yet. An admin can add them under Staff &amp; Permissions.
+                <Trans>No staff PINs are set up yet. An admin can add them under Staff &amp; Permissions.</Trans>
               </p>
             )}
           </>

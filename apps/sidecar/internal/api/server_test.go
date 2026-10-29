@@ -29,8 +29,9 @@ func validState() []byte {
 	return []byte(`{
 		"clinic": {"id": "clinic-01", "name": "Baan Sathorn", "timezone": "Asia/Bangkok", "currency": "THB", "vatRate": 0.07},
 		"users": [], "owners": [], "patients": [], "appointments": [],
-		"encounters": [], "products": [], "stockMovements": [], "invoices": [],
-		"payments": [], "audit": [], "outbox": []
+		"encounters": [], "products": [], "stockMovements": [], "suppliers": [],
+		"inventoryItems": [], "inventoryLots": [], "invoices": [],
+		"payments": [], "vaccinations": [], "caseTransfers": [], "audit": [], "outbox": []
 	}`)
 }
 

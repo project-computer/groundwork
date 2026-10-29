@@ -28,12 +28,37 @@ pnpm sidecar                  # build the Go sidecar (also runs before Tauri)
 pnpm dev                      # Vite dev server (browser, localStorage)
 pnpm -C apps/clinic tauri dev # desktop shell (sidecar + SQLite)
 pnpm build                    # web build
-pnpm lint                     # oxlint
+pnpm lint                     # oxlint + knip (unused files, deps, exports)
+pnpm lint:go                  # go vet + golangci-lint (backend)
+pnpm fmt:go                   # gofmt the backend
+pnpm vuln:go                  # govulncheck (known Go CVEs reachable from code)
+pnpm lint:rust                # cargo fmt --check + clippy -D warnings (Tauri shell)
+pnpm fmt:rust                 # rustfmt the Tauri shell
+pnpm knip                     # knip only
 pnpm test                     # TS + Go + Rust tests
 pnpm test:ts                  # TS only
 pnpm test:go                  # sidecar + cloud API
 pnpm test:rust                # Rust only
 ```
+
+## Languages (English / Thai)
+
+The UI ships in English (`en`, source) and Thai (`th`) via
+[Lingui](https://lingui.dev). Strings live in the components as
+`<Trans>…</Trans>` / `t` macros; catalogs are PO files under
+`apps/clinic/src/locales/{en,th}/messages.po`. English renders from the
+source strings; the Thai catalog is lazy-loaded on first use. The language
+toggle is in the top bar and the choice persists per device (`vet.locale`,
+defaults to the OS language).
+
+```bash
+pnpm -C apps/clinic i18n:extract   # sync catalogs with source (new strings appear in both PO files)
+pnpm -C apps/clinic i18n:compile   # validate ICU syntax of the catalogs (strict)
+```
+
+Workflow for new UI strings: write the English source string inside a
+`Trans`/`t` macro, run `i18n:extract`, then fill `msgstr` in
+`src/locales/th/messages.po`. Untranslated Thai entries fall back to English.
 
 ## Cloud sync
 

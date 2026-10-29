@@ -1,0 +1,788 @@
+/* Split from index.css — lines 2297-3083. Order of these files is cascade-significant: see index.css. */
+/* ---------- responsive refinements ---------- */
+.toolbar {
+  flex-wrap: wrap;
+}
+.records-table.table-wide {
+  overflow-x: auto;
+}
+.records-table.table-wide .table-head,
+.records-table.table-wide .table-row {
+  min-width: 640px;
+}
+/* Invoices table carries two extra columns (status/balance) plus actions. */
+.records-table.table-wide.billing-table .table-head,
+.records-table.table-wide.billing-table .table-row {
+  min-width: 780px;
+}
+.billing-table .table-head,
+.billing-table .table-row {
+  grid-template-columns: 1.25fr 1.05fr 0.55fr 0.85fr 0.85fr 0.85fr 1.4fr;
+}
+/* Staff table: permission tags are ~100px each and must wrap several per line.
+   No min-width floor — the minmax tracks protect the layout and the table-wide
+   640px floor would force a sideways scroll on tight viewports. */
+.records-table.table-wide.staff-table .table-head,
+.records-table.table-wide.staff-table .table-row {
+  min-width: 0;
+  grid-template-columns: minmax(110px, 1.2fr) minmax(90px, 0.9fr) minmax(125px, 1.8fr) auto auto;
+}
+@media (max-width: 900px) {
+  .cal-appt {
+    flex-wrap: wrap;
+  }
+  .side-stack {
+    gap: 14px;
+  }
+}
+@media (max-width: 600px) {
+  .sidebar {
+    max-width: 86vw;
+  }
+  .top-actions {
+    gap: 10px;
+  }
+  .stat-card {
+    padding: 14px;
+  }
+  .panel > div:not(.panel-footer) {
+    padding: 14px;
+  }
+  .appointment-list {
+    padding: 4px 0 12px;
+  }
+  .activity-list {
+    padding: 4px 0 10px;
+  }
+  .appointment-bar .pill,
+  .cal-appt .pill {
+    display: none;
+  }
+  .cal-row {
+    grid-template-columns: 40px 1fr;
+    gap: 6px;
+  }
+  .cal-row time {
+    font-size: 10px;
+    padding-top: 8px;
+  }
+  .cal-actions {
+    gap: 4px;
+  }
+  .date-nav {
+    padding: 3px 6px;
+  }
+  .date-nav strong {
+    min-width: 0;
+    font-size: 11px;
+  }
+  .export-card {
+    flex-wrap: wrap;
+  }
+  .export-card .button {
+    flex: 1 1 100%;
+  }
+  .walkin-form select,
+  .walkin-form input {
+    flex: 1 1 100%;
+  }
+  .search-input {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+  .modal {
+    padding: 14px;
+  }
+  .modal-backdrop {
+    padding: 10px;
+  }
+  .records-table.table-wide .table-head {
+    display: grid;
+    background: var(--thead-bg);
+  }
+  .records-table.table-wide .table-row,
+  .records-table.table-wide .table-head {
+    grid-template-columns: 1.4fr 1fr 0.8fr 1fr 0.6fr;
+    gap: 12px;
+    padding: 12px 0;
+  }
+  .records-table.table-wide.billing-table .table-head,
+  .records-table.table-wide.billing-table .table-row {
+    grid-template-columns: 1.25fr 1.05fr 0.55fr 0.85fr 0.85fr 0.85fr 1.4fr;
+  }
+  /* Staff rows stack into cards on phones: permissions stay visible
+     full-width instead of forcing a sideways scroll to reach them. */
+  .records-table.table-wide.staff-table .table-head {
+    display: none;
+  }
+  .records-table.table-wide.staff-table .table-row {
+    min-width: 0;
+    grid-template-columns: 1fr auto;
+  }
+  .records-table.table-wide.staff-table .table-row > .perm-list {
+    grid-column: 1 / -1;
+  }
+  .records-table.table-wide .table-row > span:nth-child(2),
+  .records-table.table-wide .table-row > span:nth-child(3),
+  .records-table.table-wide .table-row > span:nth-child(4) {
+    display: block;
+  }
+  /* Keep permission tags wrapping — the generic override above resets them to block. */
+  .records-table.table-wide .table-row > span.perm-list {
+    display: flex;
+  }
+}
+
+/* ---------- laptop breakpoint (sidebar visible, two-column grids get tight) ---------- */
+@media (max-width: 1240px) {
+  .page-wrap {
+    padding: 30px 26px 50px;
+  }
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .dashboard-grid,
+  .consult-grid,
+  .data-grid {
+    grid-template-columns: 1fr;
+  }
+  .inventory-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .week-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
+
+/* ---------- appointments & queue: mobile agenda layout ---------- */
+@media (max-width: 900px) {
+  .week-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  /* Stack the calendar controls instead of letting them wrap unevenly. */
+  .toolbar:has(.date-nav) {
+    flex-direction: column;
+    align-items: stretch;
+    margin: 18px 0 14px;
+  }
+  .toolbar:has(.date-nav) .date-nav {
+    width: 100%;
+    justify-content: space-between;
+    padding: 4px 6px;
+  }
+  .toolbar:has(.date-nav) .date-nav strong {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+  }
+  .toolbar:has(.date-nav) .seg {
+    width: 100%;
+  }
+  .toolbar:has(.date-nav) .seg button {
+    flex: 1;
+    min-height: 36px;
+  }
+  .toolbar:has(.date-nav) .icon-button {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Day view becomes an agenda: hide hours with nothing booked. */
+  .cal-row:has(> .cal-cells:empty) {
+    display: none;
+  }
+  .cal-row {
+    min-height: 0;
+    padding: 2px 0;
+  }
+  .cal-appt {
+    align-items: flex-start;
+    padding: 10px 12px;
+  }
+  .cal-appt .appointment-main {
+    flex: 1 1 140px;
+  }
+  .cal-appt .pill {
+    display: inline-flex;
+  }
+  .cal-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+  .cal-actions .small-button,
+  .cal-actions .text-button,
+  .appointment-row .small-button {
+    min-height: 34px;
+    padding-block: 6px;
+  }
+
+  /* Week overview: one readable column per day. */
+  .week-grid {
+    grid-template-columns: 1fr;
+  }
+  .week-col > header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  /* Week hours collapse like the day agenda: only booked hours show. */
+  .week-slot:not(:has(.cal-appt)) {
+    display: none;
+  }
+  .week-cells:not(:has(.cal-appt))::after {
+    content: 'No appointments';
+    color: var(--ink-muted);
+    font-size: 11px;
+    padding: 2px 8px 4px;
+  }
+
+  /* Queue rows: keep controls tappable and let them wrap. */
+  .appointment-row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .appointment-row .appointment-main {
+    flex: 1 1 120px;
+  }
+}
+
+/* Inventory (slices 0007–0009): category chips, lot breakdown, row actions */
+.filter-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.filter-chip {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
+  border-radius: 999px;
+  padding: 7px 13px;
+  font-size: 11px;
+}
+.filter-chip.active {
+  background: var(--teal-wash);
+  border-color: var(--teal-wash-border);
+  color: var(--teal-dark);
+  font-weight: 600;
+}
+.row-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+}
+.inline-form.nested {
+  margin: 0;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+}
+.lot-breakdown {
+  border-top: 1px dashed var(--row-border);
+  background: var(--teal-wash);
+  padding: 10px 0 14px;
+}
+.lot-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
+  border-top: 1px solid var(--row-border);
+  font-size: 11px;
+}
+.lot-row:first-child {
+  border-top: 0;
+}
+.lot-main {
+  flex: 1;
+}
+.lot-main strong {
+  display: block;
+}
+.lot-main span {
+  display: block;
+  color: var(--ink-muted);
+  font-size: 10px;
+  margin-top: 2px;
+}
+.lot-ledger {
+  color: var(--ink-muted);
+  font-size: 10px;
+}
+
+/* ---------- reports: mobile ---------- */
+@media (max-width: 600px) {
+  /* The later laptop breakpoint re-declares .stat-grid; keep phones single-column. */
+  .stat-grid.report-stat-grid {
+    grid-template-columns: 1fr;
+  }
+  .report-toolbar .seg {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    overflow: visible;
+  }
+  .report-toolbar .seg button {
+    width: 100%;
+    flex: none;
+    padding: 7px 6px;
+    text-align: center;
+  }
+  .trend-bars {
+    gap: 1px;
+  }
+  .trend-col {
+    min-width: 0;
+  }
+  .trend-fill {
+    width: 52%;
+    max-width: 7px;
+  }
+  .trend-col small {
+    font-size: 8px;
+  }
+  .bar-row {
+    grid-template-areas:
+      'label value'
+      'track track';
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 7px 8px;
+  }
+  .bar-label {
+    grid-area: label;
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+  }
+  .bar-track {
+    grid-area: track;
+  }
+  .bar-value {
+    grid-area: value;
+    min-width: 0;
+  }
+  .report-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+  }
+}
+
+/* ---------- tiny phones: single-column stats beat the laptop rule (source order matters) ---------- */
+@media (max-width: 600px) {
+  .stat-grid,
+  .inventory-grid {
+    grid-template-columns: 1fr;
+  }
+  .page-wrap {
+    padding: 24px 14px 40px;
+  }
+}
+@media (max-width: 360px) {
+  .button,
+  .small-button,
+  .filter-button,
+  .text-button {
+    white-space: normal;
+  }
+  .pill {
+    white-space: normal;
+    height: auto;
+    line-height: 1.2;
+  }
+  .seg {
+    flex-wrap: wrap;
+  }
+  .seg button {
+    flex: 1 1 auto;
+  }
+}
+
+/* ---------- owners & patients ---------- */
+button,
+.button,
+.filter-button,
+.row-action,
+.icon-button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.owners-toolbar {
+  flex-wrap: wrap;
+}
+.owners-toolbar .search-field {
+  max-width: 440px;
+  min-width: min(260px, 100%);
+}
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.form-notice {
+  margin: 0 0 17px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--teal) 35%, transparent);
+  border-radius: 9px;
+  background: var(--teal-wash);
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 600;
+}
+.form-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0 0 15px;
+  padding: 11px 13px;
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--ink);
+  font-size: 12px;
+}
+.form-warning > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--warning);
+}
+.form-warning strong {
+  display: block;
+  font-size: 12px;
+}
+.form-warning span {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-muted);
+}
+.form-warning-override {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.form-warning-override input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--teal);
+}
+.form-hint {
+  margin: 0 0 15px;
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+.form-hint.is-bad {
+  color: var(--danger, #b91c1c);
+  font-weight: 600;
+}
+.patients-table .table-row {
+  transition: background 0.12s;
+  font-variant-numeric: tabular-nums;
+}
+.patients-table .table-row > span[data-label='Owner'],
+.patients-table .table-row > span[data-label='Last visit'] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.patients-table .table-row:hover {
+  background: var(--tile-bg);
+}
+.patients-table .patient-cell .pet-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+@media (max-width: 900px) {
+  .patients-table .table-head,
+  .patients-table .table-row {
+    grid-template-columns: 1.5fr 1fr 0.7fr auto;
+    gap: 10px;
+  }
+  .patients-table .table-head > span:nth-child(4),
+  .patients-table .table-row > span:nth-child(4) {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .owners-toolbar .search-field {
+    max-width: none;
+    min-width: 0;
+    width: 100%;
+    order: -1;
+  }
+  .patients-table .table-head {
+    display: none;
+  }
+  .patients-table .table-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+    padding: 14px 0;
+  }
+  .patients-table .table-row > span:nth-child(2),
+  .patients-table .table-row > span:nth-child(3),
+  .patients-table .table-row > span:nth-child(4) {
+    display: block;
+  }
+  .patients-table .table-row .patient-cell {
+    grid-column: 1 / -1;
+    margin-bottom: 6px;
+  }
+  .patients-table .table-row > span[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+    margin-bottom: 4px;
+  }
+  .patients-table .table-row > span[data-label='Owner'] {
+    grid-column: 1 / -1;
+  }
+  .patients-table .row-action {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    text-align: center;
+    border: 1px solid var(--teal-line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-top: 6px;
+    background: var(--surface);
+  }
+  .patients-table .patient-cell span {
+    white-space: normal;
+  }
+  .modal {
+    width: 100%;
+    padding: 15px;
+  }
+  .modal .form-heading {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .form-actions {
+    justify-content: stretch;
+  }
+  .form-actions .button {
+    flex: 1;
+  }
+}
+
+/* Medical records tables — card layout on small screens.
+   Must stay after the generic max-width:600px table rules above. */
+.vaccination-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+.vaccination-form input,
+.vaccination-form select {
+  flex: 1 1 130px;
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .encounters-table .table-row,
+  .vaccinations-table .table-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+    align-items: start;
+    grid-auto-flow: row dense;
+  }
+  .encounters-table .table-row > span[data-label],
+  .vaccinations-table .table-row > span[data-label] {
+    display: block;
+  }
+  .encounters-table .table-row > span[data-label]::before,
+  .vaccinations-table .table-row > span[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+    margin-bottom: 4px;
+  }
+  .encounters-table .table-row .patient-cell,
+  .vaccinations-table .table-row .patient-cell,
+  .encounters-table .table-row > span[data-label='Diagnoses'],
+  .vaccinations-table .table-row > span[data-label='Vaccine'],
+  .vaccinations-table .table-row > span[data-label='Vet'] {
+    grid-column: 1 / -1;
+  }
+  .encounters-table .table-row > .small-button,
+  .encounters-table .table-row > .pill {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  .vaccination-form input,
+  .vaccination-form select {
+    flex-grow: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ---------- wider modal for clinical profile + timeline ---------- */
+
+.modal.modal-wide {
+  width: min(720px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.timeline {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.timeline h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+.timeline-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.timeline-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.timeline-row strong {
+  font-size: 13px;
+}
+.timeline-row span {
+  font-size: 12px;
+  color: var(--muted-foreground, #64748b);
+}
+
+/* ---------- prescriptions & diagnoses lists ---------- */
+
+.rx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.rx-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.rx-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rx-row strong {
+  font-size: 13px;
+}
+.rx-row span {
+  font-size: 12px;
+  color: var(--muted-foreground, #64748b);
+}
+.allergy-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--destructive, #dc2626);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--destructive, #dc2626) 8%, transparent);
+  font-size: 12.5px;
+  color: var(--destructive, #dc2626);
+  font-weight: 500;
+}
+
+/* ---------- month calendar ---------- */
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.month-head {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground, #64748b);
+  padding-bottom: 4px;
+}
+.month-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 64px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card, transparent);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.month-cell:hover {
+  border-color: var(--primary);
+}
+.month-cell.today {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+.month-cell.outside {
+  opacity: 0.4;
+}
+.month-day {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.month-count {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+}
+
+/* ---------- printable receipt ---------- */
+

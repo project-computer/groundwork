@@ -1,0 +1,31 @@
+# Development dependencies for the vet-clinic backend.
+#
+# Usage:
+#   docker compose up -d
+#   export DATABASE_URL="postgres://vet:vet@localhost:5433/vet_dev?sslmode=disable"
+#   backend/scripts/migrate.sh fresh
+#
+# The API then starts with:
+#   cd backend && DATABASE_URL="$DATABASE_URL" JWT_SECRET=devsecret go run ./cmd/api
+services:
+  postgres:
+    image: postgres:18.6-alpine
+    container_name: vet-dev-postgres
+    environment:
+      POSTGRES_USER: vet
+      POSTGRES_PASSWORD: vet
+      POSTGRES_DB: vet_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      # Postgres 18 images keep PGDATA under /var/lib/postgresql/<major>/docker,
+      # so the volume must cover the parent directory, not .../data.
+      - vet-dev-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vet -d vet_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  vet-dev-pgdata:

@@ -1,7 +1,66 @@
 {
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "import", "unicorn", "oxc"],
   "ignorePatterns": ["dist", "src-tauri/target", "node_modules"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
   "rules": {
     "func-style": ["error", "expression"],
-    "prefer-arrow-callback": "error"
-  }
+    "prefer-arrow-callback": "error",
+    "react/react-in-jsx-scope": "off",
+    "import/no-unassigned-import": "off",
+    "no-underscore-dangle": ["error", { "allow": ["__TAURI_INTERNALS__"] }],
+    "unicorn/no-array-sort": "warn",
+    "unicorn/consistent-function-scoping": "warn",
+    "react/purity": "warn",
+    "react-hooks/exhaustive-deps": "warn",
+    "react/memo-dependencies": "warn",
+    "react/exhaustive-effect-dependencies": "warn",
+    "react/set-state-in-effect": "warn"
+  },
+  "overrides": [
+    {
+      "files": ["src/features/**", "src/components/**", "src/app/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@tauri-apps/api/core",
+                "message": "UI must not call invoke(). Go through @/lib/vet/store."
+              },
+              {
+                "name": "@tauri-apps/api",
+                "message": "UI must not touch Tauri APIs. Go through @/lib/vet/store."
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["@tauri-apps/*"],
+                "message": "UI must not touch Tauri APIs. Go through @/lib/vet/store."
+              },
+              {
+                "group": ["@/lib/vet/backend", "@/lib/vet/persistence"],
+                "message": "UI reads and writes through @/lib/vet/store only."
+              },
+              {
+                "group": ["@/platform"],
+                "message": "UI must not detect the platform. Go through @/lib/vet/store."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/lib/vet/backend.ts", "src/lib/vet/persistence.ts"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ]
 }

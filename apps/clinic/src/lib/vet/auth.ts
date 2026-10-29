@@ -9,7 +9,6 @@ import type { StaffUser } from './types'
  * — the PIN itself cannot be recovered from the document.
  */
 
-export const PIN_MIN_LENGTH = 4
 export const PIN_MAX_LENGTH = 8
 
 /** A PIN is 4–8 digits. Letters are rejected so the keypad stays usable. */

@@ -34,11 +34,33 @@ describe('clinic backup files', () => {
   })
 
   it('rejects a backup whose payload is not a clinic document', () => {
-    const backup = { ...buildBackup(seedState, createdAt), state: { clinic: {} } }
+    const backup = { ...buildBackup(seedState, createdAt), state: { hello: 'world' } }
     expect(parseBackup(JSON.stringify(backup))).toEqual({
       ok: false,
       error: 'The backup is missing clinic records and cannot be restored.',
     })
+  })
+
+  it('parses a legacy backup missing newer collections', () => {
+    const legacy = {
+      format: 'vetcare-clinic-backup',
+      version: 1,
+      createdAt,
+      state: {
+        clinic: seedState.clinic,
+        users: seedState.users,
+        owners: seedState.owners,
+        patients: seedState.patients,
+        appointments: seedState.appointments,
+        encounters: seedState.encounters,
+        invoices: seedState.invoices,
+      },
+    }
+    const parsed = parseBackup(JSON.stringify(legacy))
+    expect(parsed.ok).toBe(true)
+    if (!parsed.ok) return
+    expect(parsed.backup.state.vaccinations).toEqual([])
+    expect(parsed.backup.state.outbox).toEqual([])
   })
 
   it('summarises the contents for the restore preview', () => {

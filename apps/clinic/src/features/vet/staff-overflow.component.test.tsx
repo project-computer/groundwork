@@ -10,6 +10,10 @@ import { App } from "@/app/App"
 // never require horizontal scrolling at any width.
 const widths = [320, 360, 390, 414, 480, 560, 600, 620, 680, 740, 800, 920, 1100, 1280, 1400]
 
+const staffHead = () => document.querySelector<HTMLElement>(".staff-table .table-head")
+const staffRow = () => document.querySelector<HTMLElement>(".staff-table .table-row")
+const staffPerms = () => document.querySelector<HTMLElement>(".staff-table .perm-list")
+
 it("keeps the staff table usable without horizontal scroll at every viewport width", async () => {
   await page.viewport(1280, 900)
   await render(<App />)
@@ -18,7 +22,10 @@ it("keeps the staff table usable without horizontal scroll at every viewport wid
 
   const problems: string[] = []
   for (const width of widths) {
+    // Viewport resizes must be measured one at a time, after a layout settle.
+    // oxlint-disable-next-line no-await-in-loop
     await page.viewport(width, 900)
+    // oxlint-disable-next-line no-await-in-loop
     await new Promise((r) => setTimeout(r, 60))
 
     const table = document.querySelector<HTMLElement>(".staff-table")
@@ -46,18 +53,14 @@ it("stacks staff rows on phones and keeps the grid on desktop", async () => {
   await page.getByRole("button", { name: "Staff & Permissions" }).click()
   await expect.element(page.getByRole("main").getByText("Dr. Pim Chaiyasit")).toBeVisible()
 
-  const head = () => document.querySelector<HTMLElement>(".staff-table .table-head")
-  const row = () => document.querySelector<HTMLElement>(".staff-table .table-row")
-  const perms = () => document.querySelector<HTMLElement>(".staff-table .perm-list")
-
   await page.viewport(380, 900)
   await new Promise((r) => setTimeout(r, 60))
-  expect(head()?.offsetParent).toBeNull()
-  expect(perms()?.offsetParent).not.toBeNull()
-  expect(getComputedStyle(row()!).gridTemplateColumns.split(" ").length).toBe(2)
+  expect(staffHead()?.offsetParent).toBeNull()
+  expect(staffPerms()?.offsetParent).not.toBeNull()
+  expect(getComputedStyle(staffRow()!).gridTemplateColumns.split(" ").length).toBe(2)
 
   await page.viewport(1280, 900)
   await new Promise((r) => setTimeout(r, 60))
-  expect(head()?.offsetParent).not.toBeNull()
-  expect(getComputedStyle(row()!).gridTemplateColumns.split(" ").length).toBe(5)
+  expect(staffHead()?.offsetParent).not.toBeNull()
+  expect(getComputedStyle(staffRow()!).gridTemplateColumns.split(" ").length).toBe(5)
 })

@@ -164,17 +164,17 @@ type PaginatedResponse struct {
 }
 
 type DashboardStats struct {
-	TodayAppointments      int                        `json:"todayAppointments"`
-	PendingVisits          int                        `json:"pendingVisits"`
-	TodayRevenue           float64                    `json:"todayRevenue"`
-	WeekRevenue            float64                    `json:"weekRevenue"`
-	MonthRevenue           float64                    `json:"monthRevenue"`
-	ActivePatients         int                        `json:"activePatients"`
-	UpcomingVaccinations   []DashboardVaccinationItem `json:"upcomingVaccinations,omitempty"`
-	OverdueVaccinations    []DashboardVaccinationItem `json:"overdueVaccinations,omitempty"`
-	LowStockItems          []DashboardLowStockItem    `json:"lowStockItems,omitempty"`
-	ExpiringLots           []DashboardExpiringLot     `json:"expiringLots,omitempty"`
-	MostUsedMedicines      []DashboardMostUsedItem    `json:"mostUsedMedicines,omitempty"`
+	TodayAppointments    int                        `json:"todayAppointments"`
+	PendingVisits        int                        `json:"pendingVisits"`
+	TodayRevenue         float64                    `json:"todayRevenue"`
+	WeekRevenue          float64                    `json:"weekRevenue"`
+	MonthRevenue         float64                    `json:"monthRevenue"`
+	ActivePatients       int                        `json:"activePatients"`
+	UpcomingVaccinations []DashboardVaccinationItem `json:"upcomingVaccinations,omitempty"`
+	OverdueVaccinations  []DashboardVaccinationItem `json:"overdueVaccinations,omitempty"`
+	LowStockItems        []DashboardLowStockItem    `json:"lowStockItems,omitempty"`
+	ExpiringLots         []DashboardExpiringLot     `json:"expiringLots,omitempty"`
+	MostUsedMedicines    []DashboardMostUsedItem    `json:"mostUsedMedicines,omitempty"`
 }
 
 // DashboardLowStockItem is one row of the "Low Stock" widget (slice 0009).
@@ -190,13 +190,13 @@ type DashboardLowStockItem struct {
 
 // DashboardExpiringLot is one row of the "Expiring Soon" widget (slice 0009).
 type DashboardExpiringLot struct {
-	LotID     int    `json:"lotId"`
-	ItemID    int    `json:"itemId"`
-	ItemName  string `json:"itemName"`
-	LotNumber string `json:"lotNumber"`
+	LotID      int    `json:"lotId"`
+	ItemID     int    `json:"itemId"`
+	ItemName   string `json:"itemName"`
+	LotNumber  string `json:"lotNumber"`
 	ExpiryDate string `json:"expiryDate"`
-	Quantity  int    `json:"quantity"`
-	Link      string `json:"link"`
+	Quantity   int    `json:"quantity"`
+	Link       string `json:"link"`
 }
 
 // DashboardMostUsedItem is one row of the "Top Used Medicines" widget (slice 0009).
@@ -211,12 +211,12 @@ type DashboardMostUsedItem struct {
 // DashboardVaccinationItem is one row of the dashboard's "Vaccinations Due" widget.
 // Source of truth for due-date is vaccinations.next_due_date per slice 0006.
 type DashboardVaccinationItem struct {
-	ID            int    `json:"id"`
-	PatientID     int    `json:"patientId"`
-	PatientName   string `json:"patientName"`
-	VaccineName   string `json:"vaccineName"`
-	NextDueDate   string `json:"nextDueDate"`
-	Link          string `json:"link"`
+	ID          int    `json:"id"`
+	PatientID   int    `json:"patientId"`
+	PatientName string `json:"patientName"`
+	VaccineName string `json:"vaccineName"`
+	NextDueDate string `json:"nextDueDate"`
+	Link        string `json:"link"`
 }
 
 // DashboardRevenueEntry is one (Month, Revenue) row in the dashboard's revenue series.

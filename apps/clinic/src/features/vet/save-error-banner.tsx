@@ -1,4 +1,5 @@
 import { AlertTriangle, X } from 'lucide-react'
+import { Trans, useLingui } from '@lingui/react/macro'
 import { useClinic } from '@/lib/vet/store'
 
 /**
@@ -8,6 +9,7 @@ import { useClinic } from '@/lib/vet/store'
  */
 export const SaveErrorBanner = () => {
   const { session, dispatch } = useClinic()
+  const { t } = useLingui()
   if (!session.saveError) return null
   return (
     <div className="save-error-banner" role="alert">
@@ -15,13 +17,15 @@ export const SaveErrorBanner = () => {
         <AlertTriangle size={16} />
       </span>
       <div>
-        <strong>Changes are not being saved to this computer</strong>
-        <span>{session.saveError} — check free disk space or the clinic server before continuing.</span>
+        <strong><Trans>Changes are not being saved to this computer</Trans></strong>
+        <span>
+          {session.saveError} — <Trans>check free disk space or the clinic server before continuing.</Trans>
+        </span>
       </div>
       <button
         className="icon-button"
         onClick={() => dispatch({ type: 'session', patch: { saveError: undefined } })}
-        aria-label="Dismiss saving warning"
+        aria-label={t`Dismiss saving warning`}
       >
         <X size={15} />
       </button>

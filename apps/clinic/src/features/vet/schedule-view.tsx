@@ -1,8 +1,11 @@
 import { useMemo, useRef, useState, type DragEvent, type PointerEvent } from 'react'
+import { msg, plural } from '@lingui/core/macro'
+import { Plural, Trans, useLingui } from '@lingui/react/macro'
 import { AlertTriangle, CalendarPlus, ChevronLeft, ChevronRight, DoorOpen, Stethoscope, UserX, X } from 'lucide-react'
 import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
-import { formatDate, formatTime, statusTone, todayKey } from '@/lib/vet/format'
+import { formatDate, formatTime, monthGrid, shiftDays, shiftMonth, statusLabel, statusTone, todayKey } from '@/lib/vet/format'
+import { DatePicker } from '@/components/vet/date-picker'
 import { findAppointmentConflict, isPastSlot, type AppointmentSlot } from '@/lib/vet/schedule'
 
 const CLINIC_TZ_SUFFIX = '+07:00'
@@ -11,12 +14,6 @@ const pad = (n: number) => String(n).padStart(2, '0')
 
 /** Appointment timestamps share the clinic-offset convention used by seeds and bookings. */
 const apptDay = (iso: string) => iso.slice(0, 10)
-
-const shiftDays = (iso: string, days: number): string => {
-  const d = new Date(`${iso}T12:00:00Z`)
-  d.setUTCDate(d.getUTCDate() + days)
-  return d.toISOString().slice(0, 10)
-}
 
 const weekDays = (iso: string): string[] => {
   const d = new Date(`${iso}T12:00:00Z`)
@@ -44,30 +41,60 @@ const SLOT_LATEST_START_MIN = 60 - SLOT_SNAP_MIN
 const snapMinute = (minute: number): number =>
   Math.min(60, Math.max(0, Math.round(minute / SLOT_SNAP_MIN) * SLOT_SNAP_MIN))
 
-/** Minutes past the hour (0–60) for a pointer position inside an hour row. */
-const minuteAtPointer = (row: HTMLElement, clientY: number): number => {
-  const rect = row.getBoundingClientRect()
+const minutesLabel = (abs: number): string => `${pad(Math.floor(abs / 60) % 24)}:${pad(abs % 60)}`
+
+/** Minutes past the hour (0–60) for a pointer position inside an hour slot. */
+const minuteAtPointer = (slot: HTMLElement, clientY: number): number => {
+  const rect = slot.getBoundingClientRect()
   return snapMinute(((clientY - rect.top) / (rect.height || 1)) * 60)
 }
 
-const WEEKDAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
-/** 6-week Monday-start grid covering the month of `iso`. */
-const monthGrid = (iso: string): string[] => {
-  const first = `${iso.slice(0, 7)}-01`
-  const weekday = new Date(`${first}T12:00:00Z`).getUTCDay()
-  const monday = shiftDays(first, weekday === 0 ? -6 : 1 - weekday)
-  return Array.from({ length: 42 }, (_, i) => shiftDays(monday, i))
+/** Hour slot under `clientY` inside a container, falling back to the nearest edge slot. */
+const locateSlot = (container: HTMLElement, clientY: number): { iso: string; hour: number; min: number } | null => {
+  const slots = [...container.querySelectorAll<HTMLElement>('[data-slot-iso]')]
+  let nearest: { iso: string; hour: number; min: number } | null = null
+  for (const slot of slots) {
+    const rect = slot.getBoundingClientRect()
+    if (rect.height === 0) continue
+    const found = { iso: slot.dataset.slotIso ?? '', hour: Number(slot.dataset.slotHour), min: 0 }
+    if (clientY < rect.top) return { ...found, min: 0 }
+    if (clientY <= rect.bottom) return { ...found, min: minuteAtPointer(slot, clientY) }
+    nearest = { ...found, min: 60 }
+  }
+  return nearest
 }
+
+/** Active drag-to-create selection in minutes from midnight. */
+interface SlotDraft {
+  iso: string
+  startAbs: number
+  endAbs: number
+}
+
+interface SlotSegment {
+  top: number
+  height: number
+  label: string | null
+}
+
+/** Overlap of the active selection with one hour slot, for rendering the ghost. */
+const ghostSegment = (draft: SlotDraft | null, iso: string, hour: number): SlotSegment | null => {
+  if (!draft || draft.iso !== iso) return null
+  const from = Math.max(draft.startAbs, hour * 60)
+  const to = Math.min(draft.endAbs, hour * 60 + 60)
+  if (to <= from) return null
+  const anchored = draft.startAbs >= hour * 60 && draft.startAbs < hour * 60 + 60
+  return {
+    top: ((from - hour * 60) / 60) * 100,
+    height: ((to - from) / 60) * 100,
+    label: anchored ? (draft.endAbs === draft.startAbs ? minutesLabel(draft.startAbs) : `${minutesLabel(draft.startAbs)}–${minutesLabel(draft.endAbs)}`) : null,
+  }
+}
+
+const WEEKDAY_HEADERS = [msg`Mon`, msg`Tue`, msg`Wed`, msg`Thu`, msg`Fri`, msg`Sat`, msg`Sun`]
 
 const monthLabel = (iso: string) =>
   new Date(`${iso.slice(0, 7)}-01T12:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
-
-const shiftMonth = (iso: string, delta: number): string => {
-  const d = new Date(`${iso.slice(0, 7)}-01T12:00:00Z`)
-  d.setUTCMonth(d.getUTCMonth() + delta)
-  return d.toISOString().slice(0, 10)
-}
 
 interface BookingDraft {
   patientId: string
@@ -79,6 +106,7 @@ interface BookingDraft {
 }
 
 export const ScheduleView = () => {
+  const { t, i18n } = useLingui()
   const { data, session, dispatch } = useClinic()
   const permission = usePermission('appointments.write')
   const [dayIso, setDayIso] = useState(todayKey())
@@ -87,8 +115,9 @@ export const ScheduleView = () => {
   const [walkInOpen, setWalkInOpen] = useState(false)
   const [dragId, setDragId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
-  const [slotDraft, setSlotDraft] = useState<{ hour: number; startMin: number; endMin: number } | null>(null)
-  const slotAnchorRef = useRef<{ hour: number; min: number } | null>(null)
+  const [slotDraft, setSlotDraft] = useState<SlotDraft | null>(null)
+  const slotAnchorRef = useRef<{ iso: string; hour: number; min: number } | null>(null)
+  const slotContainerRef = useRef<HTMLElement | null>(null)
 
   /** Only appointments the reducer allows rescheduling are draggable. */
   const canDrag = (a: { id: string; status: string }) =>
@@ -132,16 +161,16 @@ export const ScheduleView = () => {
     endDrag()
   }
 
-  /** Drop on a week-view day column: keep the time, change the day. */
-  const dropOnDay = (e: DragEvent, iso: string) => {
+  /** Drop on a week-view hour slot: keep the minutes, change the day and hour. */
+  const dropOnWeekSlot = (e: DragEvent, iso: string, hour: number) => {
     e.preventDefault()
     const id = dragId ?? e.dataTransfer.getData('text/plain')
     const appt = data.appointments.find((a) => a.id === id)
     if (appt) {
-      const time = appt.startsAt.slice(11, 16)
+      const minutes = appt.startsAt.slice(14, 16)
       attemptReschedule(appt.id, {
         vetId: appt.vetId,
-        startsAt: `${iso}T${time}:00${CLINIC_TZ_SUFFIX}`,
+        startsAt: `${iso}T${pad(hour)}:${minutes}:00${CLINIC_TZ_SUFFIX}`,
         durationMin: appt.durationMin,
       })
     }
@@ -154,7 +183,7 @@ export const ScheduleView = () => {
     () =>
       data.appointments
         .filter((a) => apptDay(a.startsAt) === dayIso)
-        .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
+        .toSorted((a, b) => a.startsAt.localeCompare(b.startsAt)),
     [data.appointments, dayIso],
   )
   const weekAppointments = useMemo(() => {
@@ -170,7 +199,7 @@ export const ScheduleView = () => {
   const waiting = dayAppointments.filter((a) => a.status === 'checked_in')
   const upcoming = data.appointments
     .filter((a) => a.status === 'booked' && apptDay(a.startsAt) > dayIso)
-    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+    .toSorted((a, b) => a.startsAt.localeCompare(b.startsAt))
     .slice(0, 6)
 
   // Live clash check for the open dialog: the user must acknowledge a
@@ -186,15 +215,17 @@ export const ScheduleView = () => {
   const dialogConflict = draftSlot ? findAppointmentConflict(data.appointments, draftSlot, dialog?.appointmentId) : undefined
   const conflictPatient = dialogConflict ? data.patients.find((p) => p.id === dialogConflict.patientId) : undefined
   const conflictVet = dialogConflict ? data.users.find((u) => u.id === dialogConflict.vetId) : undefined
+  const conflictVetName = conflictVet?.name ?? t`This vet`
+  const conflictPatientName = conflictPatient?.name ?? t`Another patient`
   const dialogInPast = draftSlot ? isPastSlot(draftSlot) : false
 
-  const openBookingAt = (time: string, durationMin: number) => {
+  const openBookingAt = (iso: string, time: string, durationMin: number) => {
     setDialog({
       mode: 'book',
       override: false,
       draft: {
         patientId: data.patients[0]?.id ?? '',
-        date: dayIso,
+        date: iso,
         time,
         durationMin,
         reason: '',
@@ -203,40 +234,60 @@ export const ScheduleView = () => {
     })
   }
 
-  const openBooking = () => openBookingAt('10:00', DEFAULT_SLOT_MIN)
+  const openBooking = () => openBookingAt(dayIso, '10:00', DEFAULT_SLOT_MIN)
 
   /** Press on empty grid space and drag vertically to choose a start time and duration. */
-  const startSlot = (e: PointerEvent<HTMLDivElement>, hour: number) => {
+  const startSlot = (e: PointerEvent<HTMLDivElement>, iso: string, hour: number) => {
     if (!permission.allowed || e.button !== 0 || e.pointerType === 'touch') return
     if ((e.target as HTMLElement).closest('.cal-appt, button, a, input, select, textarea')) return
     e.preventDefault()
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      // Synthetic pointers (tests, some devices) have no active pointer to capture.
+    }
     const min = Math.min(SLOT_LATEST_START_MIN, minuteAtPointer(e.currentTarget, e.clientY))
-    e.currentTarget.setPointerCapture?.(e.pointerId)
-    slotAnchorRef.current = { hour, min }
-    setSlotDraft({ hour, startMin: min, endMin: min })
+    slotContainerRef.current = e.currentTarget.closest<HTMLElement>('[data-slot-container]')
+    slotAnchorRef.current = { iso, hour, min }
+    const startAbs = hour * 60 + min
+    setSlotDraft({ iso, startAbs, endAbs: startAbs })
   }
 
   const moveSlot = (e: PointerEvent<HTMLDivElement>) => {
     const anchor = slotAnchorRef.current
-    if (!anchor) return
-    const min = minuteAtPointer(e.currentTarget, e.clientY)
-    setSlotDraft({ hour: anchor.hour, startMin: Math.min(anchor.min, min), endMin: Math.max(anchor.min, min) })
+    const container = slotContainerRef.current
+    if (!anchor || !container) return
+    const located = locateSlot(container, e.clientY)
+    if (!located) return
+    const anchorAbs = anchor.hour * 60 + anchor.min
+    const locatedAbs = located.hour * 60 + located.min
+    setSlotDraft({ iso: anchor.iso, startAbs: Math.min(anchorAbs, locatedAbs), endAbs: Math.max(anchorAbs, locatedAbs) })
   }
 
   const finishSlot = (e: PointerEvent<HTMLDivElement>) => {
     const anchor = slotAnchorRef.current
-    if (!anchor) return
-    const min = minuteAtPointer(e.currentTarget, e.clientY)
-    const endMin = Math.max(anchor.min, min)
-    const startMin = Math.min(anchor.min, min)
+    const container = slotContainerRef.current
+    if (!anchor || !container) return
+    // Without measurable layout (tests) the release counts as a click on the anchor slot.
+    const located = locateSlot(container, e.clientY) ?? anchor
     slotAnchorRef.current = null
+    slotContainerRef.current = null
     setSlotDraft(null)
     if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
-    openBookingAt(`${pad(anchor.hour)}:${pad(startMin)}`, endMin === startMin ? DEFAULT_SLOT_MIN : endMin - startMin)
+    const anchorAbs = anchor.hour * 60 + anchor.min
+    const locatedAbs = located.hour * 60 + located.min
+    const startAbs = Math.min(anchorAbs, locatedAbs)
+    const endAbs = Math.max(anchorAbs, locatedAbs)
+    openBookingAt(
+      anchor.iso,
+      `${pad(Math.floor(startAbs / 60))}:${pad(startAbs % 60)}`,
+      endAbs === startAbs ? DEFAULT_SLOT_MIN : endAbs - startAbs,
+    )
   }
 
   const cancelSlot = () => {
     slotAnchorRef.current = null
+    slotContainerRef.current = null
     setSlotDraft(null)
   }
 
@@ -314,11 +365,11 @@ export const ScheduleView = () => {
   return (
     <>
       <PageHeader
-        title="Appointments & queue"
-        description="Book, check in and run the day. Walk-ins land in the waiting queue."
+        title={t`Appointments & queue`}
+        description={t`Book, check in and run the day. Walk-ins land in the waiting queue.`}
         action={
           <button className="button primary" onClick={openBooking} disabled={!permission.allowed} title={permission.reason || undefined}>
-            <CalendarPlus size={16} /> Book appointment
+            <CalendarPlus size={16} /> <Trans>Book appointment</Trans>
           </button>
         }
       />
@@ -327,26 +378,27 @@ export const ScheduleView = () => {
           <button
             className="icon-button"
             onClick={() => setDayIso(mode === 'week' ? shiftDays(dayIso, -7) : mode === 'month' ? shiftMonth(dayIso, -1) : shiftDays(dayIso, -1))}
-            aria-label="Previous day"
+            aria-label={t`Previous day`}
           >
             <ChevronLeft size={17} />
           </button>
-          <strong>{mode === 'day' ? dayLabel(dayIso) : mode === 'week' ? `Week of ${dayLabel(weekDays(dayIso)[0])}` : monthLabel(dayIso)}</strong>
+          <strong>{mode === 'day' ? dayLabel(dayIso) : mode === 'week' ? <Trans>Week of {dayLabel(weekDays(dayIso)[0])}</Trans> : monthLabel(dayIso)}</strong>
           <button
             className="icon-button"
             onClick={() => setDayIso(mode === 'week' ? shiftDays(dayIso, 7) : mode === 'month' ? shiftMonth(dayIso, 1) : shiftDays(dayIso, 1))}
-            aria-label="Next day"
+            aria-label={t`Next day`}
           >
             <ChevronRight size={17} />
           </button>
           <button className="small-button today-button" onClick={() => setDayIso(todayKey())}>
-            Today
+            <Trans>Today</Trans>
           </button>
+          <DatePicker className="date-picker-inline" label={t`Jump to date`} value={dayIso} onChange={setDayIso} />
         </div>
-        <div className="seg" role="tablist" aria-label="Calendar mode">
+        <div className="seg" role="tablist" aria-label={t`Calendar mode`}>
           {(['day', 'week', 'month'] as const).map((m) => (
             <button key={m} role="tab" aria-selected={mode === m} className={mode === m ? 'active' : ''} onClick={() => setMode(m)}>
-              {m === 'day' ? 'Day' : m === 'week' ? 'Week' : 'Month'}
+              {m === 'day' ? <Trans>Day</Trans> : m === 'week' ? <Trans>Week</Trans> : <Trans>Month</Trans>}
             </button>
           ))}
         </div>
@@ -354,36 +406,31 @@ export const ScheduleView = () => {
 
       {mode === 'day' ? (
         <div className="dashboard-grid">
-          <Panel title={`Schedule — ${dayLabel(dayIso)}`} description={`${dayAppointments.length} appointments`}>
-            <div className="cal-day">
-              {dayAppointments.length === 0 && <p className="empty-state">No appointments scheduled for this day.</p>}
+          <Panel title={t`Schedule — ${dayLabel(dayIso)}`} description={plural(dayAppointments.length, { one: '# appointment', other: '# appointments' })}>
+            <div className="cal-day" data-slot-container>
+              {dayAppointments.length === 0 && <p className="empty-state"><Trans>No appointments scheduled for this day.</Trans></p>}
               {HOURS.map((hour) => {
                 const slot = `${pad(hour)}:00`
                 const inSlot = dayAppointments.filter((a) => a.startsAt.slice(11, 13) === slot.slice(0, 2))
-                const ghost = slotDraft?.hour === hour ? slotDraft : null
-                const ghostEnd = ghost ? (ghost.endMin === ghost.startMin ? Math.min(60, ghost.startMin + DEFAULT_SLOT_MIN) : ghost.endMin) : 0
+                const ghost = ghostSegment(slotDraft, dayIso, hour)
                 return (
                   <div className="cal-row" key={hour}>
                     <time>{slot}</time>
                     <div
                       className={`cal-cells${dropTarget === `${dayIso}-${hour}` && dragId ? ' drop-target' : ''}`}
+                      data-slot-iso={dayIso}
+                      data-slot-hour={hour}
                       onDragOver={(e) => dragOver(e, `${dayIso}-${hour}`)}
                       onDragLeave={() => dragLeave(`${dayIso}-${hour}`)}
                       onDrop={(e) => dropOnHour(e, hour)}
-                      onPointerDown={(e) => startSlot(e, hour)}
+                      onPointerDown={(e) => startSlot(e, dayIso, hour)}
                       onPointerMove={moveSlot}
                       onPointerUp={finishSlot}
                       onPointerCancel={cancelSlot}
                     >
                       {ghost && (
-                        <div
-                          className="cal-slot-ghost"
-                          aria-hidden="true"
-                          style={{ top: `${(ghost.startMin / 60) * 100}%`, height: `${((ghostEnd - ghost.startMin) / 60) * 100}%` }}
-                        >
-                          <span>
-                            {pad(hour)}:{pad(ghost.startMin)}–{ghostEnd === 60 ? `${pad(hour + 1)}:00` : `${pad(hour)}:${pad(ghostEnd)}`}
-                          </span>
+                        <div className="cal-slot-ghost" aria-hidden="true" style={{ top: `${ghost.top}%`, height: `${ghost.height}%` }}>
+                          {ghost.label && <span>{ghost.label}</span>}
                         </div>
                       )}
                       {inSlot.map((a) => {
@@ -397,40 +444,40 @@ export const ScheduleView = () => {
                             draggable={draggable}
                             onDragStart={(e) => startDrag(e, a.id)}
                             onDragEnd={endDrag}
-                            title={draggable ? 'Drag to another hour to reschedule' : undefined}
+                            title={draggable ? t`Drag to another hour to reschedule` : undefined}
                           >
                             <div className="appointment-main">
                               <strong>
-                                {patient?.name ?? 'Unknown'} <span className="cal-time-chip">{formatTime(a.startsAt)} · {a.durationMin}min</span>
+                                {patient?.name ?? <Trans>Unknown</Trans>} <span className="cal-time-chip">{formatTime(a.startsAt)} · <Trans>{a.durationMin}min</Trans></span>
                               </strong>
                               <span>
-                                {a.reason} · {vet?.name ?? 'Unassigned'}
+                                {a.reason} · {vet?.name ?? <Trans>Unassigned</Trans>}
                               </span>
                             </div>
                             <Pill tone={statusTone(a.status)} dot>
-                              {a.status.replace('_', ' ')}
+                              {statusLabel(a.status)}
                             </Pill>
                             <div className="cal-actions">
                               {a.status === 'booked' && (
                                 <button className="small-button" onClick={() => dispatch({ type: 'setAppointmentStatus', id: a.id, status: 'checked_in' })} disabled={!permission.allowed}>
-                                  Check in
+                                  <Trans>Check in</Trans>
                                 </button>
                               )}
                               {(a.status === 'booked' || a.status === 'checked_in') && (
                                 <button className="small-button" onClick={() => dispatch({ type: 'startEncounter', appointmentId: a.id })} disabled={!permission.allowed}>
-                                  <Stethoscope size={13} /> Start
+                                  <Stethoscope size={13} /> <Trans>Start</Trans>
                                 </button>
                               )}
                               {a.status === 'booked' && (
                                 <>
                                   <button className="text-button" onClick={() => openReschedule(a.id)} disabled={!permission.allowed}>
-                                    Reschedule
+                                    <Trans>Reschedule</Trans>
                                   </button>
-                                  <button className="text-button" onClick={() => dispatch({ type: 'setAppointmentStatus', id: a.id, status: 'no_show' })} disabled={!permission.allowed} title="Mark no-show">
-                                    <UserX size={13} /> No-show
+                                  <button className="text-button" onClick={() => dispatch({ type: 'setAppointmentStatus', id: a.id, status: 'no_show' })} disabled={!permission.allowed} title={t`Mark no-show`}>
+                                    <UserX size={13} /> <Trans>No-show</Trans>
                                   </button>
                                   <button className="text-button" onClick={() => dispatch({ type: 'setAppointmentStatus', id: a.id, status: 'cancelled' })} disabled={!permission.allowed}>
-                                    Cancel
+                                    <Trans>Cancel</Trans>
                                   </button>
                                 </>
                               )}
@@ -445,9 +492,9 @@ export const ScheduleView = () => {
             </div>
           </Panel>
           <div className="side-stack">
-            <Panel title="Waiting queue" description="Checked-in patients waiting for the vet">
+            <Panel title={t`Waiting queue`} description={t`Checked-in patients waiting for the vet`}>
               <div className="appointment-list">
-                {waiting.length === 0 && <p className="empty-state">No one waiting right now.</p>}
+                {waiting.length === 0 && <p className="empty-state"><Trans>No one waiting right now.</Trans></p>}
                 {waiting.map((a) => {
                   const patient = data.patients.find((p) => p.id === a.patientId)
                   return (
@@ -455,10 +502,10 @@ export const ScheduleView = () => {
                       <div className="pet-mini">{patient?.name.slice(0, 1)}</div>
                       <div className="appointment-main">
                         <strong>{patient?.name}</strong>
-                        <span>Since {formatTime(a.startsAt)}</span>
+                        <span><Trans>Since {formatTime(a.startsAt)}</Trans></span>
                       </div>
                       <button className="small-button" onClick={() => dispatch({ type: 'startEncounter', appointmentId: a.id })} disabled={!permission.allowed}>
-                        <Stethoscope size={13} /> Start
+                        <Stethoscope size={13} /> <Trans>Start</Trans>
                       </button>
                     </div>
                   )
@@ -469,14 +516,14 @@ export const ScheduleView = () => {
                   <WalkInForm patients={data.patients} onCancel={() => setWalkInOpen(false)} onSubmit={submitWalkIn} disabled={!permission.allowed} />
                 ) : (
                   <button className="button secondary" onClick={() => setWalkInOpen(true)} disabled={!permission.allowed}>
-                    <DoorOpen size={16} /> Add walk-in
+                    <DoorOpen size={16} /> <Trans>Add walk-in</Trans>
                   </button>
                 )}
               </div>
             </Panel>
-            <Panel title="Upcoming" description="Next booked appointments after this day">
+            <Panel title={t`Upcoming`} description={t`Next booked appointments after this day`}>
               <div className="appointment-list">
-                {upcoming.length === 0 && <p className="empty-state">Nothing booked ahead.</p>}
+                {upcoming.length === 0 && <p className="empty-state"><Trans>Nothing booked ahead.</Trans></p>}
                 {upcoming.map((a) => {
                   const patient = data.patients.find((p) => p.id === a.patientId)
                   return (
@@ -488,7 +535,7 @@ export const ScheduleView = () => {
                         </span>
                       </div>
                       <button className="text-button" onClick={() => openReschedule(a.id)} disabled={!permission.allowed}>
-                        Reschedule
+                        <Trans>Reschedule</Trans>
                       </button>
                     </div>
                   )
@@ -498,38 +545,60 @@ export const ScheduleView = () => {
           </div>
         </div>
       ) : mode === 'week' ? (
-        <Panel title="Week overview" description="Appointments across the clinic week">
+        <Panel title={t`Week overview`} description={t`Appointments across the clinic week — click or drag empty space to book`}>
           <div className="week-grid">
             {weekDays(dayIso).map((iso) => {
-              const list = (weekAppointments.get(iso) ?? []).sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+              const list = (weekAppointments.get(iso) ?? []).toSorted((a, b) => a.startsAt.localeCompare(b.startsAt))
               return (
                 <div className="week-col" key={iso}>
                   <header className={iso === todayKey() ? 'today' : ''}>
                     <strong>{shortDayLabel(iso)}</strong>
                     <span>{list.length}</span>
                   </header>
-                  <div
-                    className={`week-cells${dropTarget === `week-${iso}` && dragId ? ' drop-target' : ''}`}
-                    onDragOver={(e) => dragOver(e, `week-${iso}`)}
-                    onDragLeave={() => dragLeave(`week-${iso}`)}
-                    onDrop={(e) => dropOnDay(e, iso)}
-                  >
-                    {list.map((a) => {
-                      const patient = data.patients.find((p) => p.id === a.patientId)
-                      const draggable = canDrag(a)
+                  <div className="week-cells" data-slot-container>
+                    {HOURS.map((hour) => {
+                      const inSlot = list.filter((a) => a.startsAt.slice(11, 13) === pad(hour))
+                      const dropKey = `${iso}-${hour}`
+                      const ghost = ghostSegment(slotDraft, iso, hour)
                       return (
-                        <button
-                          className={`cal-appt compact status-${a.status}${dragId === a.id ? ' dragging' : ''}`}
-                          key={a.id}
-                          draggable={draggable}
-                          onDragStart={(e) => startDrag(e, a.id)}
-                          onDragEnd={endDrag}
-                          onClick={() => { setDayIso(iso); setMode('day') }}
-                          title={`${patient?.name} · ${a.reason}${draggable ? ' · drag to another day to reschedule' : ''}`}
+                        <div
+                          className={`week-slot${dropTarget === dropKey && dragId ? ' drop-target' : ''}`}
+                          key={hour}
+                          data-slot-iso={iso}
+                          data-slot-hour={hour}
+                          data-hour-label={`${pad(hour)}:00`}
+                          onDragOver={(e) => dragOver(e, dropKey)}
+                          onDragLeave={() => dragLeave(dropKey)}
+                          onDrop={(e) => dropOnWeekSlot(e, iso, hour)}
+                          onPointerDown={(e) => startSlot(e, iso, hour)}
+                          onPointerMove={moveSlot}
+                          onPointerUp={finishSlot}
+                          onPointerCancel={cancelSlot}
                         >
-                          <strong>{formatTime(a.startsAt)}</strong>
-                          <span>{patient?.name}</span>
-                        </button>
+                          {ghost && (
+                            <div className="cal-slot-ghost" aria-hidden="true" style={{ top: `${ghost.top}%`, height: `${ghost.height}%` }}>
+                              {ghost.label && <span>{ghost.label}</span>}
+                            </div>
+                          )}
+                          {inSlot.map((a) => {
+                            const patient = data.patients.find((p) => p.id === a.patientId)
+                            const draggable = canDrag(a)
+                            return (
+                              <button
+                                className={`cal-appt compact status-${a.status}${dragId === a.id ? ' dragging' : ''}`}
+                                key={a.id}
+                                draggable={draggable}
+                                onDragStart={(e) => startDrag(e, a.id)}
+                                onDragEnd={endDrag}
+                                onClick={() => { setDayIso(iso); setMode('day') }}
+                                title={draggable ? t`${patient?.name} · ${a.reason} · drag to another slot to reschedule` : t`${patient?.name} · ${a.reason}`}
+                              >
+                                <strong>{formatTime(a.startsAt)}</strong>
+                                <span>{patient?.name}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
                       )
                     })}
                   </div>
@@ -539,10 +608,10 @@ export const ScheduleView = () => {
            </div>
          </Panel>
       ) : (
-        <Panel title={monthLabel(dayIso)} description="Appointments per day — select a day to open it">
-          <div className="month-grid" role="grid" aria-label={`${monthLabel(dayIso)} calendar`}>
+        <Panel title={monthLabel(dayIso)} description={t`Appointments per day — select a day to open it`}>
+          <div className="month-grid" role="grid" aria-label={t`${monthLabel(dayIso)} calendar`}>
             {WEEKDAY_HEADERS.map((label) => (
-              <div className="month-head" key={label}>{label}</div>
+              <div className="month-head" key={label.id}>{i18n._(label)}</div>
             ))}
             {monthGrid(dayIso).map((iso) => {
               const list = weekAppointments.get(iso) ?? []
@@ -555,7 +624,7 @@ export const ScheduleView = () => {
                     setDayIso(iso)
                     setMode('day')
                   }}
-                  aria-label={`${dayLabel(iso)} — ${list.length} appointments`}
+                  aria-label={t`${dayLabel(iso)} — ${plural(list.length, { one: '# appointment', other: '# appointments' })}`}
                 >
                   <span className="month-day">{Number(iso.slice(8))}</span>
                   {list.length > 0 && <span className="month-count">{list.length}</span>}
@@ -573,18 +642,18 @@ export const ScheduleView = () => {
             if (e.target === e.currentTarget) setDialog(null)
           }}
         >
-          <div className="modal" role="dialog" aria-modal="true" aria-label={dialog.mode === 'book' ? 'Book appointment' : 'Reschedule appointment'}>
+          <div className="modal" role="dialog" aria-modal="true" aria-label={dialog.mode === 'book' ? t`Book appointment` : t`Reschedule appointment`}>
             <div className="form-heading">
               <div>
-                <strong>{dialog.mode === 'book' ? 'Book appointment' : 'Reschedule appointment'}</strong>
-                <span>Appointments are saved to the local clinic database.</span>
+                <strong>{dialog.mode === 'book' ? <Trans>Book appointment</Trans> : <Trans>Reschedule appointment</Trans>}</strong>
+                <span><Trans>Appointments are saved to the local clinic database.</Trans></span>
               </div>
-              <button className="icon-button" onClick={() => setDialog(null)} aria-label="Close dialog">
+              <button className="icon-button" onClick={() => setDialog(null)} aria-label={t`Close dialog`}>
                 <X size={17} />
               </button>
             </div>
             <div className="form-grid">
-              <Field label="Patient" htmlFor="bk-patient">
+              <Field label={t`Patient`} htmlFor="bk-patient">
                 <NativeSelect
                   id="bk-patient"
                   value={dialog.draft.patientId}
@@ -598,7 +667,7 @@ export const ScheduleView = () => {
                   ))}
                 </NativeSelect>
               </Field>
-              <Field label="Veterinarian" htmlFor="bk-vet">
+              <Field label={t`Veterinarian`} htmlFor="bk-vet">
                 <NativeSelect id="bk-vet" value={dialog.draft.vetId} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, vetId: e.target.value } })}>
                   {vets.map((v) => (
                     <option key={v.id} value={v.id}>
@@ -607,23 +676,28 @@ export const ScheduleView = () => {
                   ))}
                 </NativeSelect>
               </Field>
-              <Field label="Date" htmlFor="bk-date">
-                <input id="bk-date" type="date" value={dialog.draft.date} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, date: e.target.value } })} />
+              <Field label={t`Date`} htmlFor="bk-date">
+                <DatePicker
+                  id="bk-date"
+                  label={t`Appointment date`}
+                  value={dialog.draft.date}
+                  onChange={(date) => setDialog({ ...dialog, draft: { ...dialog.draft, date } })}
+                />
               </Field>
-              <Field label="Time" htmlFor="bk-time">
+              <Field label={t`Time`} htmlFor="bk-time">
                 <input id="bk-time" type="time" value={dialog.draft.time} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, time: e.target.value } })} />
               </Field>
-              <Field label="Duration" htmlFor="bk-duration">
+              <Field label={t`Duration`} htmlFor="bk-duration">
                 <NativeSelect id="bk-duration" value={dialog.draft.durationMin} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, durationMin: Number(e.target.value) } })}>
-                  {[15, 20, 30, 45, 60].map((m) => (
+                  {[...new Set([15, 20, 30, 45, 60, dialog.draft.durationMin])].toSorted((a, b) => a - b).map((m) => (
                     <option key={m} value={m}>
-                      {m} minutes
+                      <Plural value={m} one="# minute" other="# minutes" />
                     </option>
                   ))}
                 </NativeSelect>
               </Field>
-              <Field label="Reason" htmlFor="bk-reason">
-                <input id="bk-reason" value={dialog.draft.reason} placeholder="e.g. Annual vaccination…" onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, reason: e.target.value } })} />
+              <Field label={t`Reason`} htmlFor="bk-reason">
+                <input id="bk-reason" value={dialog.draft.reason} placeholder={t`e.g. Annual vaccination…`} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, reason: e.target.value } })} />
               </Field>
             </div>
             {dialogConflict && (
@@ -631,10 +705,10 @@ export const ScheduleView = () => {
                 <AlertTriangle size={15} />
                 <div>
                   <strong>
-                    {conflictVet?.name ?? 'This vet'} is already booked at {formatTime(dialogConflict.startsAt)}
+                    {t`${conflictVetName} is already booked at ${formatTime(dialogConflict.startsAt)}`}
                   </strong>
                   <span>
-                    {conflictPatient?.name ?? 'Another patient'} · {dialogConflict.reason} · {dialogConflict.durationMin} min
+                    {conflictPatientName} · {dialogConflict.reason} · <Trans>{dialogConflict.durationMin} min</Trans>
                   </span>
                   <label className="form-warning-override">
                     <input
@@ -642,26 +716,26 @@ export const ScheduleView = () => {
                       checked={dialog.override}
                       onChange={(e) => setDialog({ ...dialog, override: e.target.checked })}
                     />
-                    Book anyway — double-book this veterinarian
+                    <Trans>Book anyway — double-book this veterinarian</Trans>
                   </label>
                 </div>
               </div>
             )}
             {dialogInPast && !dialogConflict && (
               <p className="form-hint">
-                This appointment starts in the past. Saving is allowed for record-keeping.
+                <Trans>This appointment starts in the past. Saving is allowed for record-keeping.</Trans>
               </p>
             )}
             <div className="panel-footer">
               <button className="button secondary" onClick={() => setDialog(null)}>
-                Cancel
+                <Trans>Cancel</Trans>
               </button>
               <button
                 className="button primary"
                 onClick={submitDialog}
                 disabled={!dialog.draft.patientId || !dialog.draft.date || !dialog.draft.time || (!!dialogConflict && !dialog.override)}
               >
-                {dialog.mode === 'book' ? 'Book appointment' : 'Save new time'}
+                {dialog.mode === 'book' ? <Trans>Book appointment</Trans> : <Trans>Save new time</Trans>}
               </button>
             </div>
           </div>
@@ -682,22 +756,23 @@ const WalkInForm = ({
   onCancel: () => void
   disabled: boolean
 }) => {
+  const { t } = useLingui()
   const [patientId, setPatientId] = useState(patients[0]?.id ?? '')
   const [reason, setReason] = useState('')
   return (
     <div className="walkin-form">
-      <NativeSelect value={patientId} onChange={(e) => setPatientId(e.target.value)} aria-label="Walk-in patient">
+      <NativeSelect value={patientId} onChange={(e) => setPatientId(e.target.value)} aria-label={t`Walk-in patient`}>
         {patients.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name}
           </option>
         ))}
       </NativeSelect>
-      <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Nail trim…" aria-label="Walk-in reason" />
+      <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t`e.g. Nail trim…`} aria-label={t`Walk-in reason`} />
       <button className="button primary" disabled={disabled || !patientId} onClick={() => { onSubmit(patientId, reason); onCancel() }}>
-        Add
+        <Trans>Add</Trans>
       </button>
-      <button className="icon-button" onClick={onCancel} aria-label="Cancel walk-in">
+      <button className="icon-button" onClick={onCancel} aria-label={t`Cancel walk-in`}>
         <X size={15} />
       </button>
     </div>

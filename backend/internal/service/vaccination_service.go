@@ -61,8 +61,8 @@ func (s *VaccinationService) Create(ctx context.Context, clinicID int, req model
 	}
 
 	v := &models.Vaccination{
-		PatientID:   req.PatientID,
-		VaccineName: strings.TrimSpace(req.VaccineName),
+		PatientID:        req.PatientID,
+		VaccineName:      strings.TrimSpace(req.VaccineName),
 		AdministeredDate: administered,
 	}
 

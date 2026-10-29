@@ -1,125 +1,125 @@
--- Seed data for development.
--- Run AFTER all migrations (migrations/*.up.sql), e.g.:
---   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/seed.sql
+-- Development seed for the CURRENT schema (post 000011_case_transfers).
+-- Load with: scripts/migrate.sh && psql "$DATABASE_URL" -f scripts/seed.sql
 --
--- All staff accounts use password "admin123" (bcrypt hash below).
--- Idempotent-ish: truncates the seeded tables first, so re-running is safe.
+-- Two clinics so cross-clinic flows (case transfer) can be exercised locally.
+-- Every user's password is "admin123".
+-- Sequences are setval'd at the bottom — never remove that; explicit ids in
+-- this file desynchronize SERIAL sequences otherwise.
 
-TRUNCATE audit_logs, bill_payments, bills, prescriptions, vaccinations, stock_movements,
-         inventory_lots, inventory_items, suppliers, visits, appointments, patients, owners,
-         users, clinics RESTART IDENTITY CASCADE;
+BEGIN;
 
--- Clinic (tenant)
 INSERT INTO clinics (id, name, address, phone, email, settings) VALUES
-(1, 'Happy Paws Veterinary Clinic', '123 Main Street, City, State 12345', '+1-555-0100', 'info@happypaws.vet',
- '{"tax_rate": 0.10, "appointment_duration": 30, "currency": "USD", "openingHours": "09:00-20:00"}');
-SELECT setval('clinics_id_seq', 1);
+(1, 'Baan Sathorn Animal Clinic', '12 Sathorn Soi 1, Bangkok', '02 112 3456', 'hello@baansathorn.vet',
+ '{"tax_rate": 0.07, "currency": "THB", "opening_hours": "09:00-20:00", "invoice_prefix": "INV"}'),
+(2, 'Riverside Veterinary Referral', '88 Charoen Krung 43, Bangkok', '02 887 1100', 'intake@riverside.vet',
+ '{"tax_rate": 0.07, "currency": "THB"}');
 
--- Users (password: admin123 for all)
-INSERT INTO users (id, clinic_id, name, email, password_hash, role, phone, is_active) VALUES
-(1, 1, 'Dr. Sarah Johnson', 'admin@happypaws.vet',   '$2a$10$oA//KhmIfPXsOwuqwI0DBOmo0/frBFwr0z7eegtHK4j8K8NE6QDTa', 'admin',        '+1-555-0101', true),
-(2, 1, 'Dr. Michael Chen',  'mchen@happypaws.vet',   '$2a$10$oA//KhmIfPXsOwuqwI0DBOmo0/frBFwr0z7eegtHK4j8K8NE6QDTa', 'veterinarian', '+1-555-0102', true),
-(3, 1, 'Emily Rodriguez',   'emily@happypaws.vet',   '$2a$10$oA//KhmIfPXsOwuqwI0DBOmo0/frBFwr0z7eegtHK4j8K8NE6QDTa', 'receptionist', '+1-555-0103', true),
-(4, 1, 'James Wilson',      'jwilson@happypaws.vet', '$2a$10$oA//KhmIfPXsOwuqwI0DBOmo0/frBFwr0z7eegtHK4j8K8NE6QDTa', 'pharmacist',   '+1-555-0104', true);
-SELECT setval('users_id_seq', 4);
+-- Password hash for "admin123" (bcrypt)
+INSERT INTO users (id, clinic_id, email, password_hash, name, role, phone) VALUES
+(1, 1, 'admin@baansathorn.vet',   '$2a$10$oA//KhmIfPXsOwuqwI0DBOmo0/frBFwr0z7eegtHK4j8K8NE6QDTa', 'Mai Rattana',       'admin',        '081 111 0001'),
+(2, 1, 'pim@baansathorn.vet',     '$2a$10$oA//KhmIfPXsOwuqwI0DBOmo0/frBFwr0z7eegtHK4j8K8NE6QDTa', 'Dr. Pim Chaiyasit', 'veterinarian', '081 111 0002'),
+(3, 1, 'nok@baansathorn.vet',     '$2a$10$oA//KhmIfPXsOwuqwI0DBOmo0/frBFwr0z7eegtHK4j8K8NE6QDTa', 'Nok Srisuk',        'receptionist', '081 111 0003'),
+(4, 1, 'beer@baansathorn.vet',    '$2a$10$oA//KhmIfPXsOwuqwI0DBOmo0/frBFwr0z7eegtHK4j8K8NE6QDTa', 'Beer Chaiyaphon',   'pharmacist',   '081 111 0004'),
+(5, 2, 'admin@riverside.vet',     '$2a$10$oA//KhmIfPXsOwuqwI0DBOmo0/frBFwr0z7eegtHK4j8K8NE6QDTa', 'Riverside Admin',   'admin',        '082 222 0001'),
+(6, 2, 'vet@riverside.vet',       '$2a$10$oA//KhmIfPXsOwuqwI0DBOmo0/frBFwr0z7eegtHK4j8K8NE6QDTa', 'Dr. Noon Rak',      'veterinarian', '082 222 0002');
 
--- Owners (one per person; patients link via owner_id)
-INSERT INTO owners (id, clinic_id, name, phone, email) VALUES
-(1, 1, 'John Smith',   '+1-555-1001', 'john.smith@email.com'),
-(2, 1, 'Mary Johnson', '+1-555-1002', 'mary.j@email.com'),
-(3, 1, 'Robert Davis', '+1-555-1003', 'robert.d@email.com');
-SELECT setval('owners_id_seq', 3);
+-- Global vaccine protocols are seeded by migration 000006 — don't duplicate them here.
 
--- Patients (MRN format PT-YYYY-NNNN per CONTEXT.md vocabulary)
+INSERT INTO owners (id, clinic_id, name, phone, email, national_id, notes, preferred_channel) VALUES
+(1, 1, 'Kanya Thongdee', '081 234 5678', 'kanya@example.com', NULL, 'Prefers LINE in the morning.', 'line'),
+(2, 1, 'Somchai Prasert', '089 876 5432', 'somchai@example.com', NULL, NULL, 'sms'),
+(3, 1, 'Lisa Mueller', '062 555 0199', 'lisa.m@example.com', NULL, NULL, 'email'),
+(4, 1, 'Anan Kittisak', '095 111 2233', 'anan@example.com', NULL, NULL, 'line');
+
 INSERT INTO patients (id, clinic_id, mrn, name, species, breed, date_of_birth, weight, owner_id, status) VALUES
-(1, 1, 'PT-' || to_char(CURRENT_DATE, 'YYYY') || '-0001', 'Max',     'Dog', 'Golden Retriever', CURRENT_DATE - 1826, 30.5, 1, 'Active'),
-(2, 1, 'PT-' || to_char(CURRENT_DATE, 'YYYY') || '-0002', 'Luna',    'Cat', 'Persian',          CURRENT_DATE - 1096,  4.2, 2, 'Active'),
-(3, 1, 'PT-' || to_char(CURRENT_DATE, 'YYYY') || '-0003', 'Charlie', 'Dog', 'Beagle',           CURRENT_DATE - 913,  12.8, 3, 'Active');
-SELECT setval('patients_id_seq', 3);
+(1, 1, 'PT-2026-0001', 'Moo Daeng', 'Dog', 'Thai Ridgeback', '2021-03-12', 24.5, 1, 'Active'),
+(2, 1, 'PT-2026-0002', 'Khao Niao', 'Cat', 'Khao Manee', '2019-08-02', 4.2, 1, 'Active'),
+(3, 1, 'PT-2026-0003', 'Tiger', 'Dog', 'Golden Retriever', '2017-11-20', 32.0, 2, 'Active'),
+(4, 1, 'PT-2026-0004', 'Mochi', 'Rabbit', 'Holland Lop', '2023-05-14', 1.8, 3, 'Active'),
+(5, 1, 'PT-2026-0005', 'Pla Too', 'Cat', 'Domestic Shorthair', '2022-01-09', 5.1, 4, 'Active');
 
--- Appointments (snapshot columns patient_name/owner_name kept per migration 000004)
-INSERT INTO appointments (clinic_id, custom_id, patient_id, patient_name, owner_name, date, time, type, status, veterinarian_id, veterinarian_name, created_by) VALUES
-(1, 'APT-1', 1, 'Max',     'John Smith', CURRENT_DATE,     '10:00', 'Checkup',     'Completed', 2, 'Dr. Michael Chen', 3),
-(1, 'APT-2', 2, 'Luna',    'Mary Johnson', CURRENT_DATE,   '11:00', 'Vaccination', 'Scheduled', 2, 'Dr. Michael Chen', 3),
-(1, 'APT-3', 3, 'Charlie', 'Robert Davis', CURRENT_DATE + 1, '09:00', 'Checkup',   'Scheduled', 1, 'Dr. Sarah Johnson', 3);
-SELECT setval('appointments_id_seq', 3);
+INSERT INTO appointments (id, clinic_id, custom_id, patient_id, patient_name, owner_name, date, time, type, status, veterinarian_id, veterinarian_name, created_by) VALUES
+(1, 1, 'APT-1', 3, 'Tiger', 'Somchai Prasert', CURRENT_DATE, '09:00', 'Checkup', 'Completed', 2, 'Dr. Pim Chaiyasit', 3),
+(2, 1, 'APT-2', 1, 'Moo Daeng', 'Kanya Thongdee', CURRENT_DATE, '10:00', 'Vaccination', 'Checked In', 2, 'Dr. Pim Chaiyasit', 3),
+(3, 1, 'APT-3', 4, 'Mochi', 'Lisa Mueller', CURRENT_DATE + 1, '11:30', 'Checkup', 'Scheduled', 2, 'Dr. Pim Chaiyasit', 3);
 
--- A completed visit with full clinical content
-INSERT INTO visits (
-    clinic_id, custom_id, patient_id, appointment_id, pet_name, owner_name, type, purpose, status,
-    assigned_vet_id, assigned_vet_name, steps, chief_complaint, vitals, examination, final_diagnosis,
-    treatment, advice, medications, billing_status, created_by
-) VALUES (
-    1, 'V-1', 1, 1, 'Max', 'John Smith', 'OPD', 'Routine Checkup', 'Complete',
-    2, 'Dr. Michael Chen',
-    '{"basicInfo": true, "chiefComplaint": true, "vitals": true, "examination": true, "diagnosis": true, "treatment": true}',
-    'Annual wellness check',
-    '{"temperature": 38.5, "heartRate": 120, "respiratoryRate": 25, "weight": 30.5}',
-    'Patient appears healthy. Coat condition good. Eyes, ears, and teeth normal. No abnormal findings.',
-    'Healthy - Annual checkup complete',
-    'Continue current diet and exercise routine. Annual vaccination recommended.',
-    'Routine care advised. Return for annual checkup next year.',
-    '[{"name": "Multivitamin", "dosage": "1 tablet", "frequency": "Once daily", "duration": "30 days", "instructions": "Give with food"}]',
-    'Sent',
-    2
-);
-SELECT setval('visits_id_seq', 1);
+INSERT INTO visits (id, clinic_id, custom_id, patient_id, pet_name, owner_name, type, purpose, status,
+                    chief_complaint, vitals, examination, differential_diagnosis, final_diagnosis,
+                    treatment, advice, medications, billing_status, assigned_vet_id, assigned_vet_name, created_by) VALUES
+(1, 1, 'VIS-1', 3, 'Tiger', 'Somchai Prasert', 'OPD', 'Limping, right hind leg', 'Closed',
+ 'Limping RH x 3 days, worse after running.',
+ '{"weightKg": "32.4", "tempC": "38.6", "heartRate": "96", "respRate": "22"}',
+ 'Mild lameness RH, grade 2/5. Pain on stifle flexion, no drawer sign.',
+ 'Cranial cruciate ligament sprain', 'Soft tissue strain, right stifle',
+ 'Rest 7 days, NSAID course (Meloxicam).', 'Leash walks only, recheck in 7 days.',
+ '[{"name": "Meloxicam 1.5 mg/ml oral", "dose": "0.1 mg/kg", "route": "PO", "frequency": "SID", "duration": "7 days"}]',
+ 'Sent', 2, 'Dr. Pim Chaiyasit', 2);
 
--- Bill with a recorded partial payment (balance 10.00)
-INSERT INTO bills (id, clinic_id, custom_id, visit_id, patient_id, pet_name, owner_name, date, items, subtotal, tax, discount, total, status, payment_method, created_by) VALUES
-(1, 1, 'BIL-1', 1, 1, 'Max', 'John Smith', CURRENT_DATE,
- '[{"description": "Consultation Fee", "quantity": 1, "price": 50.00}, {"description": "Physical Examination", "quantity": 1, "price": 30.00}, {"description": "Multivitamin (30 days)", "quantity": 1, "price": 20.00}]',
- 100.00, 10.00, 0.00, 110.00, 'Partial', 'Cash', 2);
-INSERT INTO bill_payments (clinic_id, bill_id, amount, method, reference, recorded_by) VALUES
-(1, 1, 100.00, 'Cash', 'receipt-0001', 3);
-SELECT setval('bills_id_seq', 1);
-SELECT setval('bill_payments_id_seq', 1);
+INSERT INTO prescriptions (id, clinic_id, custom_id, visit_id, patient_id, pet_name, owner_name, date,
+                           veterinarian_id, veterinarian_name, diagnosis, medicines, notes) VALUES
+(1, 1, 'RX-1', 1, 3, 'Tiger', 'Somchai Prasert', CURRENT_DATE,
+ 2, 'Dr. Pim Chaiyasit', 'Soft tissue strain, right stifle',
+ '[{"name": "Meloxicam 1.5 mg/ml oral 10ml", "dose": "0.1 mg/kg", "route": "PO", "frequency": "SID", "duration": "7 days", "quantity": 1}]',
+ 'Give with food. Return if vomiting or worsening lameness.');
 
--- Prescription
-INSERT INTO prescriptions (clinic_id, custom_id, visit_id, patient_id, pet_name, owner_name, date, veterinarian_id, veterinarian_name, diagnosis, medicines) VALUES
-(1, 'RX-1', 1, 1, 'Max', 'John Smith', CURRENT_DATE, 2, 'Dr. Michael Chen',
- 'Routine wellness - preventative care',
- '[{"name": "Multivitamin", "dosage": "1 tablet", "frequency": "Once daily", "duration": "30 days", "instructions": "Give with food in the morning"}]');
-SELECT setval('prescriptions_id_seq', 1);
+INSERT INTO bills (id, clinic_id, custom_id, visit_id, patient_id, pet_name, owner_name, date,
+                   items, subtotal, tax, discount, total, status, payment_method, created_by) VALUES
+(1, 1, 'BILL-1', 1, 3, 'Tiger', 'Somchai Prasert', CURRENT_DATE,
+ '[{"description": "Consultation", "quantity": 1, "price": 500.00}, {"description": "Meloxicam 1.5 mg/ml oral 10ml", "quantity": 1, "price": 420.00}]',
+ 920.00, 92.00, 0, 1012.00, 'Pending', NULL, 3);
 
--- Global vaccine protocols are seeded by migration 000006 — not re-seeded here
--- (the table is global and UNIQUE (name, species)).
+INSERT INTO bill_payments (id, clinic_id, bill_id, amount, method, recorded_by) VALUES
+(1, 1, 1, 500.00, 'cash', 3);
 
--- Vaccination history (Rabies due for a booster soon, per reminder windows)
-INSERT INTO vaccinations (clinic_id, patient_id, visit_id, administered_by_vet_id, vaccine_name, lot_number, administered_date, next_due_date) VALUES
-(1, 1, 1, 2, 'Rabies', 'RAB-2510A', CURRENT_DATE - 360, CURRENT_DATE + 5),
-(1, 2, NULL, 2, 'FVRCP', 'FVR-2509B', CURRENT_DATE - 200, CURRENT_DATE + 165);
-SELECT setval('vaccinations_id_seq', 2);
+INSERT INTO vaccinations (id, clinic_id, patient_id, vaccine_name, manufacturer, lot_number, administered_date, next_due_date, administered_by_vet_id, notes) VALUES
+(1, 1, 3, 'Rabies', 'Zoetis', 'RAB-2510C', CURRENT_DATE - 30, CURRENT_DATE + 335, 2, 'Annual booster.'),
+(2, 1, 1, 'DA2PP', 'MSD Animal Health', 'DHP-2608F', CURRENT_DATE - 200, CURRENT_DATE + 165, 2, NULL),
+(3, 1, 5, 'FVRCP', 'Zoetis', 'FVR-2603B', CURRENT_DATE - 100, CURRENT_DATE + 265, 2, NULL);
 
--- Suppliers + inventory
-INSERT INTO suppliers (id, clinic_id, name, phone, email) VALUES
-(1, 1, 'Thai Vet Pharma Co.', '+1-555-0200', 'sales@thaivetpharma.co.th'),
-(2, 1, 'Metro Animal Health', '+1-555-0201', 'orders@metroah.com');
-SELECT setval('suppliers_id_seq', 2);
+INSERT INTO suppliers (id, clinic_id, name, phone, email, address) VALUES
+(1, 1, 'Thai Vet Pharma Co.', '02 712 3456', 'sales@thaivetpharma.co.th', 'Bangna, Bangkok'),
+(2, 1, 'Bangkok Animal Health', '02 998 1122', 'orders@bkkah.com', 'Rama 3, Bangkok');
 
 INSERT INTO inventory_items (id, clinic_id, name, category, unit, reorder_level, selling_price) VALUES
-(1, 1, 'Meloxicam 1.5 mg/ml oral 10ml', 'medicine', 'bottle', 5,  420.00),
-(2, 1, 'Amoxicillin 250 mg tablet',     'medicine', 'tablet', 50,  15.00),
-(3, 1, 'Rabies vaccine',                'vaccine',  'dose',   10, 350.00),
-(4, 1, 'Cohesive bandage 5cm',          'supply',   'roll',   20,  90.00);
-SELECT setval('inventory_items_id_seq', 4);
+(1, 1, 'Meloxicam 1.5 mg/ml oral 10ml', 'medicine', 'bottle', 5, 420.00),
+(2, 1, 'Amoxicillin 250 mg tablet', 'medicine', 'tablet', 50, 15.00),
+(3, 1, 'Rabies vaccine', 'vaccine', 'dose', 10, 350.00),
+(4, 1, 'DHPPi vaccine', 'vaccine', 'dose', 10, 550.00),
+(5, 1, 'Cohesive bandage 5cm', 'supply', 'roll', 20, 90.00);
 
 INSERT INTO inventory_lots (id, clinic_id, item_id, lot_number, quantity, expiry_date, supplier_id, cost_per_unit, received_date) VALUES
-(1, 1, 1, 'MEL-2609A', 60, CURRENT_DATE + 320, 1, 260.00, CURRENT_DATE - 30),
-(2, 1, 2, 'AMX-2611C', 24, CURRENT_DATE + 15,  1,   9.00, CURRENT_DATE - 25),
-(3, 1, 3, 'RAB-2610B', 10, CURRENT_DATE + 10,  2, 210.00, CURRENT_DATE - 20),
-(4, 1, 4, 'BND-2609D',  6, CURRENT_DATE + 400, 1,  52.00, CURRENT_DATE - 40);
-SELECT setval('inventory_lots_id_seq', 4);
+(1, 1, 1, 'MEL-2609A', 60, '2027-09-30', 1, 260.00, '2026-09-20'),
+(2, 1, 2, 'AMX-2611C', 24, '2026-11-10', 1, 9.00, '2026-09-25'),
+(3, 1, 3, 'RAB-2610B', 10, '2026-11-05', 2, 210.00, '2026-10-02'),
+(4, 1, 4, 'DHP-2608F', 2, '2027-08-15', 2, 330.00, '2026-10-05'),
+(5, 1, 5, 'BND-2609D', 6, '2028-01-01', 1, 52.00, '2026-09-12');
 
--- Append-only stock ledger (quantity-on-hand is the projection of these rows)
-INSERT INTO stock_movements (clinic_id, lot_id, delta, reason, user_id, notes) VALUES
-(1, 1, 60, 'stock_in', 4, 'initial receipt'),
-(1, 2, 24, 'stock_in', 4, 'initial receipt'),
-(1, 3, 10, 'stock_in', 4, 'initial receipt'),
-(1, 4,  6, 'stock_in', 4, 'initial receipt'),
-(1, 1, -1, 'stock_out', 2, 'dispensed for V-1');
-SELECT setval('stock_movements_id_seq', 5);
+INSERT INTO stock_movements (id, clinic_id, lot_id, delta, reason, user_id, notes, created_at) VALUES
+(1, 1, 1, 60, 'stock_in', 4, 'initial receipt', '2026-09-20 09:00'),
+(2, 1, 2, 24, 'stock_in', 4, 'initial receipt', '2026-09-25 09:00'),
+(3, 1, 3, 10, 'stock_in', 4, 'initial receipt', '2026-10-02 09:00'),
+(4, 1, 4, 8, 'stock_in', 4, 'initial receipt', '2026-10-05 09:00'),
+(5, 1, 5, 100, 'stock_in', 4, 'initial receipt', '2026-09-12 09:00'),
+(6, 1, 3, -2, 'stock_out', 2, 'Rabies dose — Moo Daeng', CURRENT_DATE);
 
--- Audit sample
-INSERT INTO audit_logs (clinic_id, user_id, action, entity_type, entity_id, new_values) VALUES
-(1, 3, 'bill.payment_recorded', 'bill', 1, '{"amount": 100.00, "method": "cash"}');
+INSERT INTO audit_logs (id, clinic_id, user_id, action, entity_type, entity_id) VALUES
+(1, 1, 3, 'bill.payment_recorded', 'bill', 1);
+
+-- Serial sequences: this seed uses explicit ids, so realign every sequence it touched.
+SELECT setval('clinics_id_seq',          (SELECT MAX(id) FROM clinics));
+SELECT setval('users_id_seq',            (SELECT MAX(id) FROM users));
+SELECT setval('owners_id_seq',           (SELECT MAX(id) FROM owners));
+SELECT setval('patients_id_seq',         (SELECT MAX(id) FROM patients));
+SELECT setval('appointments_id_seq',     (SELECT MAX(id) FROM appointments));
+SELECT setval('visits_id_seq',           (SELECT MAX(id) FROM visits));
+SELECT setval('prescriptions_id_seq',    (SELECT MAX(id) FROM prescriptions));
+SELECT setval('bills_id_seq',            (SELECT MAX(id) FROM bills));
+SELECT setval('bill_payments_id_seq',    (SELECT MAX(id) FROM bill_payments));
+SELECT setval('vaccinations_id_seq',     (SELECT MAX(id) FROM vaccinations));
+SELECT setval('suppliers_id_seq',        (SELECT MAX(id) FROM suppliers));
+SELECT setval('inventory_items_id_seq',  (SELECT MAX(id) FROM inventory_items));
+SELECT setval('inventory_lots_id_seq',   (SELECT MAX(id) FROM inventory_lots));
+SELECT setval('stock_movements_id_seq',  (SELECT MAX(id) FROM stock_movements));
+SELECT setval('audit_logs_id_seq',       (SELECT MAX(id) FROM audit_logs));
+
+COMMIT;

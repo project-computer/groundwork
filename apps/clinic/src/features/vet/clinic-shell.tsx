@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   BarChart3,
+  Bell,
   CalendarDays,
   ClipboardList,
   CreditCard,
@@ -21,10 +22,13 @@ import {
   Wifi,
   X,
 } from 'lucide-react'
+import { msg } from '@lingui/core/macro'
+import type { MessageDescriptor } from '@lingui/core'
+import { Trans, Plural, useLingui } from '@lingui/react/macro'
 import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission, type View } from '@/lib/vet/store'
 import { buildCaseBundle, downloadCaseBundle, newShareToken } from '@/lib/vet/case-transfer'
-import { formatMoney as formatCurrency, formatDate, formatTime, initials, invoiceTotals, itemOnHand, lotsExpiringWithin, mostUsedItems, roleLabel, statusTone, todayKey, vaccinationsDue } from '@/lib/vet/format'
+import { formatMoney as formatCurrency, formatDate, formatTime, initials, invoiceTotals, itemOnHand, lotsExpiringWithin, mostUsedItems, roleLabel, sexLabel, speciesLabel, statusLabel, statusTone, todayKey, vaccinationsDue } from '@/lib/vet/format'
 import { SPECIES, SEXES, type InventoryCategory, type Patient, type Vitals } from '@/lib/vet/types'
 import { getTheme, setTheme, THEME_CHOICES, watchSystemTheme, type ThemeChoice } from '@/lib/theme'
 import { ReportsView } from './reports-view'
@@ -32,30 +36,48 @@ import { ScheduleView } from './schedule-view'
 import { RecordsView, SettingsView, StaffView } from './views'
 
 import { LockScreen } from './lock-screen'
+import { LanguageToggle } from './language-toggle'
 import { SaveErrorBanner } from './save-error-banner'
 import { WorkspaceDialog, type WorkspaceTab } from './workspace-dialog'
 
-const nav = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'schedule', label: 'Appointments & Queue', icon: CalendarDays },
-  { id: 'owners', label: 'Owners & Pets', icon: Users },
-  { id: 'records', label: 'Medical Records', icon: Stethoscope },
-  { id: 'inventory', label: 'Pharmacy & Inventory', icon: Package },
-  { id: 'billing', label: 'Billing & Payments', icon: CreditCard },
-  { id: 'reports', label: 'Reports', icon: BarChart3 },
-  { id: 'staff', label: 'Staff & Permissions', icon: ShieldCheck },
-  { id: 'settings', label: 'Settings', icon: Settings2 },
-] as const
+interface NavEntry {
+  id: View
+  label: MessageDescriptor
+  icon: typeof LayoutDashboard
+  /** Rendered as a sub-item beneath the preceding top-level entry. */
+  nested?: boolean
+}
+
+const nav: readonly NavEntry[] = [
+  { id: 'dashboard', label: msg`Dashboard`, icon: LayoutDashboard },
+  { id: 'schedule', label: msg`Appointments & Queue`, icon: CalendarDays },
+  { id: 'owners', label: msg`Owners & Pets`, icon: Users },
+  { id: 'records', label: msg`Medical Records`, icon: Stethoscope },
+  { id: 'consult', label: msg`Consultation`, icon: ClipboardList, nested: true },
+  { id: 'inventory', label: msg`Pharmacy & Inventory`, icon: Package },
+  { id: 'billing', label: msg`Billing & Payments`, icon: CreditCard },
+  { id: 'reports', label: msg`Reports`, icon: BarChart3 },
+  { id: 'staff', label: msg`Staff & Permissions`, icon: ShieldCheck },
+  { id: 'settings', label: msg`Settings`, icon: Settings2 },
+]
 
 const greeting = (now = new Date()) => {
   const hour = now.getHours()
-  if (hour < 12) return 'Good morning'
-  if (hour < 18) return 'Good afternoon'
-  return 'Good evening'
+  if (hour < 12) return msg`Good morning`
+  if (hour < 18) return msg`Good afternoon`
+  return msg`Good evening`
 }
 
 const longDate = (now = new Date()) =>
   now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+const splitList = (value: string) =>
+  value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+
+const nowIso = () => new Date().toISOString()
 
 type SetView = (view: View) => void
 
@@ -65,7 +87,175 @@ const themeIcon: Record<ThemeChoice, typeof Sun> = {
   system: Monitor,
 }
 
+/** One actionable item in the notification center worklist. */
+interface Reminder {
+  id: string
+  tone: 'bad' | 'warn' | 'info'
+  title: string
+  detail: string
+  view: View
+}
+
+const NotificationCenter = ({ setView }: { setView: SetView }) => {
+  const { data } = useClinic()
+  const { t, i18n } = useLingui()
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  const reminders = useMemo<Reminder[]>(() => {
+    const today = todayKey()
+    const items: Reminder[] = []
+
+    // Overdue vaccinations: a patient's latest next-due date in the past.
+    const latestDue = new Map<string, string>()
+    for (const v of data.vaccinations) {
+      if (!v.nextDueAt) continue
+      const current = latestDue.get(v.patientId)
+      if (!current || v.nextDueAt > current) latestDue.set(v.patientId, v.nextDueAt)
+    }
+    for (const [patientId, due] of latestDue) {
+      const dueKey = due.slice(0, 10)
+      if (dueKey < today) {
+        const patient = data.patients.find((p) => p.id === patientId)
+        items.push({
+          id: `vax-overdue-${patientId}`,
+          tone: 'bad',
+          title: t`Vaccination overdue — ${patient?.name ?? t`Unknown patient`}`,
+          detail: t`Was due ${formatDate(due)}`,
+          view: 'records',
+        })
+      }
+    }
+
+    // Due within 30 days.
+    for (const v of vaccinationsDue(data.vaccinations, 30, today)) {
+      const patient = data.patients.find((p) => p.id === v.patientId)
+      items.push({
+        id: `vax-due-${v.id}`,
+        tone: 'warn',
+        title: t`Vaccination due — ${patient?.name ?? t`Unknown`}`,
+        detail: t`${v.vaccineName} · due ${formatDate(v.nextDueAt!)}`,
+        view: 'records',
+      })
+    }
+
+    // Low stock: on-hand at or below a non-zero reorder level.
+    for (const item of data.inventoryItems) {
+      if (item.reorderLevel <= 0) continue
+      const onHand = itemOnHand(item.id, data.inventoryLots)
+      if (onHand <= item.reorderLevel) {
+        items.push({
+          id: `stock-low-${item.id}`,
+          tone: 'warn',
+          title: t`Low stock — ${item.name}`,
+          detail: t`${onHand} ${item.unit} left (reorder at ${item.reorderLevel})`,
+          view: 'inventory',
+        })
+      }
+    }
+
+    // Lots expiring within 30 days.
+    for (const lot of lotsExpiringWithin(data.inventoryLots, 30, today)) {
+      const item = data.inventoryItems.find((i) => i.id === lot.itemId)
+      items.push({
+        id: `stock-expiry-${lot.id}`,
+        tone: 'info',
+        title: t`Expiring soon — ${item?.name ?? t`Item`} (${lot.lotNumber})`,
+        detail: t`${lot.quantity} ${item?.unit ?? t`units`} expire ${formatDate(lot.expiryDate!)}`,
+        view: 'inventory',
+      })
+    }
+
+    return items.toSorted((a, b) => a.tone.localeCompare(b.tone) || a.title.localeCompare(b.title))
+    // Reminder titles are translated in this memo, so a language switch is
+    // intentionally a rebuild trigger even though `locale` is never read here.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps, react/memo-dependencies
+  }, [data, t, i18n.locale])
+
+  // Close on outside click / Escape.
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const badge = reminders.length > 9 ? '9+' : String(reminders.length)
+
+  return (
+    <div className="notif-root" ref={rootRef}>
+      <button
+        className="icon-button notif-bell"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={reminders.length ? t`Notifications (${reminders.length} pending)` : t`Notifications`}
+        title={t`Notifications`}
+      >
+        <Bell size={18} />
+        {reminders.length > 0 && <span className="notif-badge">{badge}</span>}
+      </button>
+      {open && (
+        <div className="notif-panel" role="dialog" aria-label={t`Notifications`}>
+          <div className="form-heading">
+            <div>
+              <strong><Trans>Notifications</Trans></strong>
+              <span>
+                {reminders.length === 0 ? (
+                  <Trans>Nothing needs attention.</Trans>
+                ) : (
+                  <Plural value={reminders.length} one="# item needs attention" other="# items need attention" />
+                )}
+              </span>
+            </div>
+            <button className="icon-button" onClick={() => setOpen(false)} aria-label={t`Close notifications`}>
+              <X size={16} />
+            </button>
+          </div>
+          <div className="notif-list">
+            {reminders.length === 0 && <p className="empty-state"><Trans>All clear — no overdue work, stock or expiry warnings.</Trans></p>}
+            {reminders.map((r) => (
+              <button
+                key={r.id}
+                className="notif-item"
+                onClick={() => {
+                  setView(r.view)
+                  setOpen(false)
+                }}
+              >
+                <Pill tone={r.tone} dot>
+                  {r.tone === 'bad' ? t`overdue` : r.tone === 'warn' ? t`due soon` : t`expiring`}
+                </Pill>
+                <span className="notif-text">
+                  <strong>{r.title}</strong>
+                  <span>{r.detail}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const themeName = {
+  light: msg`light`,
+  dark: msg`dark`,
+  system: msg`system`,
+} as const
+
 const ThemeToggle = () => {
+  const { t, i18n } = useLingui()
   const [choice, setChoice] = useState<ThemeChoice>(() => getTheme())
   useEffect(() => watchSystemTheme(), [])
   const next = THEME_CHOICES[(THEME_CHOICES.indexOf(choice) + 1) % THEME_CHOICES.length]
@@ -77,8 +267,8 @@ const ThemeToggle = () => {
         setTheme(next)
         setChoice(next)
       }}
-      title={`Theme: ${choice} — switch to ${next}`}
-      aria-label={`Change theme (current: ${choice}, switches to ${next})`}
+      title={t`Theme: ${i18n._(themeName[choice])} — switch to ${i18n._(themeName[next])}`}
+      aria-label={t`Change theme (current: ${i18n._(themeName[choice])}, switches to ${i18n._(themeName[next])})`}
     >
       <Icon size={18} />
     </button>
@@ -87,6 +277,7 @@ const ThemeToggle = () => {
 
 export const ClinicApp = () => {
   const { data, session, user, dispatch } = useClinic()
+  const { t, i18n } = useLingui()
   const [mobileNav, setMobileNav] = useState(false)
   const [query, setQuery] = useState('')
   const [showOwnerForm, setShowOwnerForm] = useState(false)
@@ -94,7 +285,11 @@ export const ClinicApp = () => {
   const canWrite = usePermission('records.write').allowed
   const activeView = session.view
   const setView: SetView = (view) => {
-    dispatch({ type: 'session', patch: { view } })
+    // Entering Consultation from the sidebar starts from the current open visit
+    // (or the picker) rather than reopening whichever encounter was last viewed.
+    const patch: { view: View; activeEncounterId?: string } = { view }
+    if (view === 'consult') patch.activeEncounterId = undefined
+    dispatch({ type: 'session', patch })
     setShowOwnerForm(false)
     setMobileNav(false)
   }
@@ -127,9 +322,9 @@ export const ClinicApp = () => {
           </div>
           <div>
             <strong>Vettera</strong>
-            <span>Clinic workspace</span>
+            <span><Trans>Clinic workspace</Trans></span>
           </div>
-          <button className="icon-button mobile-close" onClick={() => setMobileNav(false)} aria-label="Close menu">
+          <button className="icon-button mobile-close" onClick={() => setMobileNav(false)} aria-label={t`Close menu`}>
             <X size={18} />
           </button>
         </div>
@@ -138,21 +333,25 @@ export const ClinicApp = () => {
           className="clinic-switch"
           onClick={() => setWorkspace('clinic')}
           aria-haspopup="dialog"
-          aria-label={`Manage ${data.clinic.name} and account`}
-          title="Clinic & account"
+          aria-label={t`Manage ${data.clinic.name} and account`}
+          title={t`Clinic & account`}
         >
           <div className="clinic-avatar">{initials(data.clinic.name)}</div>
           <div>
             <strong>{data.clinic.name}</strong>
-            <span>Local clinic</span>
+            <span><Trans>Local clinic</Trans></span>
           </div>
           <span className="chevron" aria-hidden="true">⌄</span>
         </button>
-        <nav className="main-nav" aria-label="Main navigation">
-          {nav.map(({ id, label, icon: Icon }) => (
-            <button key={id} onClick={() => setView(id)} className={activeView === id ? 'nav-item active' : 'nav-item'}>
-              <Icon size={18} />
-              <span>{label}</span>
+        <nav className="main-nav" aria-label={t`Main navigation`}>
+          {nav.map(({ id, label, icon: Icon, nested }) => (
+            <button
+              key={id}
+              onClick={() => setView(id)}
+              className={`nav-item${activeView === id ? ' active' : ''}${nested ? ' nav-item-nested' : ''}`}
+            >
+              <Icon size={nested ? 15 : 18} />
+              <span>{i18n._(label)}</span>
               {id === 'dashboard' && <em>{counts.today}</em>}
               {id === 'settings' && counts.pending > 0 && <em className="nav-dot">{counts.pending}</em>}
             </button>
@@ -164,8 +363,8 @@ export const ClinicApp = () => {
             className="profile profile-button"
             onClick={() => setWorkspace('account')}
             aria-haspopup="dialog"
-            aria-label={`Open my account (${user.name})`}
-            title="My account"
+            aria-label={t`Open my account (${user.name})`}
+            title={t`My account`}
           >
             <div className="avatar">{initials(user.name)}</div>
             <div>
@@ -180,38 +379,40 @@ export const ClinicApp = () => {
         <button
           className="sidebar-backdrop"
           onClick={() => setMobileNav(false)}
-          aria-label="Close navigation"
+          aria-label={t`Close navigation`}
         />
       )}
       <main className="main-content">
         <header className="topbar">
-          <button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu">
+          <button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label={t`Open menu`}>
             <Menu size={20} />
           </button>
           <div className="breadcrumbs">
             <span>{data.clinic.name}</span>
             <span>/</span>
-            <strong>{activeView === 'consult' ? 'Consultation' : nav.find((item) => item.id === activeView)?.label}</strong>
+            <strong>{activeView === 'consult' ? t`Consultation` : i18n._(nav.find((item) => item.id === activeView)?.label ?? msg`Dashboard`)}</strong>
           </div>
           <div className="top-actions">
+            <NotificationCenter setView={setView} />
+            <LanguageToggle />
             <ThemeToggle />
             <button
               className="icon-button"
               onClick={() => dispatch({ type: 'session', patch: { locked: true } })}
-              aria-label="Lock screen"
-              title="Lock screen"
+              aria-label={t`Lock screen`}
+              title={t`Lock screen`}
             >
               <Lock size={18} />
             </button>
             <div className="connection">
-              <span className="pulse" /> <span>{session.lanOnline ? 'Local server' : 'Server offline'}</span>
+              <span className="pulse" /> <span>{session.lanOnline ? t`Local server` : t`Server offline`}</span>
             </div>
             <button
               className="avatar top-avatar"
               onClick={() => setWorkspace('account')}
               aria-haspopup="dialog"
-              aria-label={`Account settings for ${user.name}`}
-              title="My account"
+              aria-label={t`Account settings for ${user.name}`}
+              title={t`My account`}
             >
               {initials(user.name)}
             </button>
@@ -238,7 +439,7 @@ export const ClinicApp = () => {
             />
           )}
           {activeView === 'records' && <RecordsView onOpenConsult={openConsult} />}
-          {activeView === 'consult' && <Consultations />}
+          {activeView === 'consult' && <Consultations onOpen={openConsult} />}
           {activeView === 'inventory' && <Inventory />}
           {activeView === 'billing' && <Billing />}
           {activeView === 'reports' && <ReportsView />}
@@ -272,6 +473,7 @@ const Dashboard = ({
   canRegister: boolean
 }) => {
   const { data, user } = useClinic()
+  const { t, i18n } = useLingui()
   const today = todayKey()
   const firstName = user.name.replace(/^Dr\.\s*/, '').split(' ')[0]
   const todaysAppointments = data.appointments.filter((a) => a.startsAt.startsWith(today))
@@ -282,11 +484,11 @@ const Dashboard = ({
   return (
     <>
       <PageHeader
-        title={`${greeting()}, ${firstName}`}
-        description={`${longDate()} · Here’s what’s happening at the clinic today.`}
+        title={t`${i18n._(greeting())}, ${firstName}`}
+        description={t`${longDate()} · Here’s what’s happening at the clinic today.`}
         action={
           <button className="button primary" onClick={onRegisterPatient} disabled={!canRegister}>
-            <Plus size={16} /> Register patient
+            <Plus size={16} /> <Trans>Register patient</Trans>
           </button>
         }
       />
@@ -296,10 +498,10 @@ const Dashboard = ({
             <CalendarDays size={19} />
           </span>
           <div>
-            <small>Today’s appointments</small>
+            <small><Trans>Today’s appointments</Trans></small>
             <strong>{todaysAppointments.length}</strong>
             <span className="stat-note">
-              {todaysAppointments.filter((a) => a.status === 'completed').length} completed
+              <Trans>{todaysAppointments.filter((a) => a.status === 'completed').length} completed</Trans>
             </span>
           </div>
         </div>
@@ -308,9 +510,9 @@ const Dashboard = ({
             <ClipboardList size={19} />
           </span>
           <div>
-            <small>Open consultations</small>
+            <small><Trans>Open consultations</Trans></small>
             <strong>{data.encounters.filter((e) => e.status === 'open').length}</strong>
-            <span className="stat-note">Ready for notes</span>
+            <span className="stat-note"><Trans>Ready for notes</Trans></span>
           </div>
         </div>
         <div className="stat-card">
@@ -318,9 +520,15 @@ const Dashboard = ({
             <CreditCard size={19} />
           </span>
           <div>
-            <small>Outstanding</small>
+            <small><Trans>Outstanding</Trans></small>
             <strong>{formatCurrency(outstanding)}</strong>
-            <span className="stat-note">{data.invoices.filter((i) => i.status !== 'paid' && i.status !== 'void').length} invoices</span>
+            <span className="stat-note">
+              <Plural
+                value={data.invoices.filter((i) => i.status !== 'paid' && i.status !== 'void').length}
+                one="# invoice"
+                other="# invoices"
+              />
+            </span>
           </div>
         </div>
         <div className="stat-card">
@@ -328,12 +536,12 @@ const Dashboard = ({
             <Stethoscope size={19} />
           </span>
           <div>
-            <small>Vaccinations due (30d)</small>
+            <small><Trans>Vaccinations due (30d)</Trans></small>
             <strong>{dueVaccinations.length}</strong>
             <span className="stat-note">
               {dueVaccinations.length > 0
-                ? `Next: ${data.patients.find((p) => p.id === dueVaccinations[0].patientId)?.name ?? '—'}`
-                : 'None upcoming'}
+                ? <Trans>Next: {data.patients.find((p) => p.id === dueVaccinations[0].patientId)?.name ?? '—'}</Trans>
+                : <Trans>None upcoming</Trans>}
             </span>
           </div>
         </div>
@@ -342,25 +550,25 @@ const Dashboard = ({
             <Wifi size={19} />
           </span>
           <div>
-            <small>Data status</small>
-            <strong>Local</strong>
-            <span className="stat-note">All changes saved</span>
+            <small><Trans>Data status</Trans></small>
+            <strong><Trans>Local</Trans></strong>
+            <span className="stat-note"><Trans>All changes saved</Trans></span>
           </div>
         </div>
       </div>
       <div className="dashboard-grid">
         <Panel
-          title="Today’s schedule"
-          description={`Appointments at ${data.clinic.name}`}
+          title={t`Today’s schedule`}
+          description={t`Appointments at ${data.clinic.name}`}
           action={
             <button className="text-button" onClick={() => onNavigate('schedule')}>
-              Open calendar
+              <Trans>Open calendar</Trans>
             </button>
           }
         >
           <div className="appointment-list">
             {todaysAppointments.length === 0 && (
-              <p className="empty-state">No appointments today. Enjoy the quiet — or book one from the calendar.</p>
+              <p className="empty-state"><Trans>No appointments today. Enjoy the quiet — or book one from the calendar.</Trans></p>
             )}
             {todaysAppointments.map((a) => {
               const patient = data.patients.find((p) => p.id === a.patientId)
@@ -373,15 +581,15 @@ const Dashboard = ({
                     <div className="appointment-main">
                       <strong>{patient?.name}</strong>
                       <span>
-                        {a.reason} · {vet?.name ?? 'Unassigned'}
+                        {a.reason} · {vet?.name ?? t`Unassigned`}
                       </span>
                     </div>
                     <Pill tone={statusTone(a.status)} dot>
-                      {a.status.replace('_', ' ')}
+                      {statusLabel(a.status)}
                     </Pill>
                     {a.status === 'booked' && (
                       <button className="small-button" onClick={() => onStart(a.id)}>
-                        Start consult
+                        <Trans>Start consult</Trans>
                       </button>
                     )}
                   </div>
@@ -390,7 +598,7 @@ const Dashboard = ({
             })}
           </div>
         </Panel>
-        <Panel title="Recent activity" description="A traceable history of clinic changes">
+        <Panel title={t`Recent activity`} description={t`A traceable history of clinic changes`}>
           <div className="activity-list">
             {data.audit.slice(0, 5).map((item) => (
               <div className="activity-row" key={item.id}>
@@ -410,11 +618,11 @@ const Dashboard = ({
       </div>
       <div className="dashboard-grid">
         <Panel
-          title="Low stock"
-          description="Items at or below their reorder level"
+          title={t`Low stock`}
+          description={t`Items at or below their reorder level`}
           action={
             <button className="text-button" onClick={() => onNavigate('inventory')}>
-              Open inventory
+              <Trans>Open inventory</Trans>
             </button>
           }
         >
@@ -422,78 +630,81 @@ const Dashboard = ({
             {data.inventoryItems
               .map((item) => ({ item, onHand: itemOnHand(item.id, data.inventoryLots) }))
               .filter(({ item, onHand }) => item.reorderLevel > 0 && onHand <= item.reorderLevel)
-              .sort((a, b) => a.onHand - b.onHand)
+              .toSorted((a, b) => a.onHand - b.onHand)
               .slice(0, 5)
               .map(({ item, onHand }) => (
                 <div className="activity-row" key={item.id}>
                   <div className="activity-mark"><Package size={14} /></div>
                   <div>
                     <strong>{item.name}</strong>
-                    <span>{onHand} {item.unit} on hand · reorder at {item.reorderLevel}</span>
+                    <span><Trans>{onHand} {item.unit} on hand · reorder at {item.reorderLevel}</Trans></span>
                   </div>
-                  <Pill tone="warn" dot>Low</Pill>
+                  <Pill tone="warn" dot><Trans>Low</Trans></Pill>
                 </div>
               ))}
             {data.inventoryItems.filter((i) => i.reorderLevel > 0 && itemOnHand(i.id, data.inventoryLots) <= i.reorderLevel).length === 0 && (
-              <p className="empty-state">Every item is above its reorder level.</p>
+              <p className="empty-state"><Trans>Every item is above its reorder level.</Trans></p>
             )}
           </div>
         </Panel>
-        <Panel title="Expiring soon" description="Active lots expiring within 30 days">
+        <Panel title={t`Expiring soon`} description={t`Active lots expiring within 30 days`}>
           <div className="activity-list">
             {lotsExpiringWithin(data.inventoryLots, 30).slice(0, 5).map((lot) => {
               const item = data.inventoryItems.find((i) => i.id === lot.itemId)
+              const itemName = item?.name ?? t`Item`
+              const unit = item?.unit ?? t`units`
               return (
                 <div className="activity-row" key={lot.id}>
                   <div className="activity-mark"><CalendarDays size={14} /></div>
                   <div>
-                    <strong>{item?.name ?? 'Item'} — lot {lot.lotNumber}</strong>
-                    <span>{lot.quantity} {item?.unit ?? 'units'} · expires {lot.expiryDate}</span>
+                    <strong><Trans>{itemName} — lot {lot.lotNumber}</Trans></strong>
+                    <span><Trans>{lot.quantity} {unit} · expires {lot.expiryDate}</Trans></span>
                   </div>
                   <Pill tone="warn" dot>{lot.expiryDate}</Pill>
                 </div>
               )
             })}
             {lotsExpiringWithin(data.inventoryLots, 30).length === 0 && (
-              <p className="empty-state">Nothing expires in the next 30 days.</p>
+              <p className="empty-state"><Trans>Nothing expires in the next 30 days.</Trans></p>
             )}
           </div>
         </Panel>
-        <Panel title="Top used medicines" description="By dispensed quantity over the last 30 days">
+        <Panel title={t`Top used medicines`} description={t`By dispensed quantity over the last 30 days`}>
           <div className="activity-list">
             {mostUsedItems(data.inventoryItems, data.stockMovements, data.inventoryLots, 30).map(({ item, usedQty }) => (
               <div className="activity-row" key={item.id}>
                 <div className="activity-mark"><ClipboardList size={14} /></div>
                 <div>
                   <strong>{item.name}</strong>
-                  <span>{categoryLabel[item.category] ?? item.category}</span>
+                  <span>{categoryLabel[item.category] ? i18n._(categoryLabel[item.category]) : item.category}</span>
                 </div>
-                <Pill tone="info">{usedQty} used</Pill>
+                <Pill tone="info"><Trans>{usedQty} used</Trans></Pill>
               </div>
             ))}
             {mostUsedItems(data.inventoryItems, data.stockMovements, data.inventoryLots, 30).length === 0 && (
-              <p className="empty-state">No dispenses recorded in the last 30 days.</p>
+              <p className="empty-state"><Trans>No dispenses recorded in the last 30 days.</Trans></p>
             )}
           </div>
         </Panel>
-        <Panel title="Vaccinations due" description="Boosters due or overdue within 30 days">
+        <Panel title={t`Vaccinations due`} description={t`Boosters due or overdue within 30 days`}>
           <div className="activity-list">
             {vaccinationsDue(data.vaccinations, 30).map((v) => {
               const patient = data.patients.find((p) => p.id === v.patientId)
               const overdue = v.nextDueAt! < today
+              const patientName = patient?.name ?? t`Patient`
               return (
                 <div className="activity-row" key={v.id}>
                   <div className="activity-mark"><CalendarDays size={14} /></div>
                   <div>
-                    <strong>{patient?.name ?? 'Patient'} — {v.vaccineName}</strong>
-                    <span>Last given {formatDate(v.administeredAt)}</span>
+                    <strong><Trans>{patientName} — {v.vaccineName}</Trans></strong>
+                    <span><Trans>Last given {formatDate(v.administeredAt)}</Trans></span>
                   </div>
-                  <Pill tone={overdue ? 'bad' : 'warn'} dot>{overdue ? `Overdue ${v.nextDueAt}` : `Due ${v.nextDueAt}`}</Pill>
+                  <Pill tone={overdue ? 'bad' : 'warn'} dot>{overdue ? t`Overdue ${v.nextDueAt}` : t`Due ${v.nextDueAt}`}</Pill>
                 </div>
               )
             })}
             {vaccinationsDue(data.vaccinations, 30).length === 0 && (
-              <p className="empty-state">No boosters due in the next 30 days.</p>
+              <p className="empty-state"><Trans>No boosters due in the next 30 days.</Trans></p>
             )}
           </div>
         </Panel>
@@ -516,6 +727,7 @@ const Owners = ({
   canWrite: boolean
 }) => {
   const { data, dispatch } = useClinic()
+  const { t } = useLingui()
   const [formMode, setFormMode] = useState<'new-owner' | 'existing-owner'>('new-owner')
   const [ownerId, setOwnerId] = useState('')
   const [ownerName, setOwnerName] = useState('')
@@ -559,7 +771,7 @@ const Owners = ({
         patient: {
           name: petName.trim(),
           species,
-          breed: breed.trim() || 'Mixed breed',
+          breed: breed.trim() || t`Mixed breed`,
           sex,
           birthDate,
           weightKg: undefined,
@@ -580,7 +792,7 @@ const Owners = ({
           ownerId: owner.id,
           name: petName.trim(),
           species,
-          breed: breed.trim() || 'Mixed breed',
+          breed: breed.trim() || t`Mixed breed`,
           sex,
           birthDate,
           weightKg: undefined,
@@ -593,17 +805,17 @@ const Owners = ({
     }
     resetForm()
     setQuery('')
-    setNotice(`${patientName} registered.`)
+    setNotice(t`${patientName} registered.`)
     setShowForm(false)
   }
   return (
     <>
       <PageHeader
-        title="Owners & pets"
-        description="Find a record quickly or register a new patient."
+        title={t`Owners & pets`}
+        description={t`Find a record quickly or register a new patient.`}
         action={
           <button className="button primary" onClick={() => { setNotice(''); setShowForm(true) }} disabled={!canWrite}>
-            <Plus size={16} /> Register Patient
+            <Plus size={16} /> <Trans>Register Patient</Trans>
           </button>
         }
       />
@@ -613,12 +825,12 @@ const Owners = ({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by owner, phone, patient, MRN or microchip…"
-            aria-label="Search owners or patients"
+            placeholder={t`Search by owner, phone, patient, MRN or microchip…`}
+            aria-label={t`Search owners or patients`}
           />
         </div>
         <button className="filter-button">
-          All patients <span aria-hidden="true">⌄</span>
+          <Trans>All patients</Trans> <span aria-hidden="true">⌄</span>
         </button>
       </div>
       {notice && (
@@ -630,25 +842,25 @@ const Owners = ({
         <div className="inline-form">
           <div className="form-heading">
             <div>
-              <strong>Register patient</strong>
-              <span>Owner and patient records are saved in one local transaction.</span>
+              <strong><Trans>Register patient</Trans></strong>
+              <span><Trans>Owner and patient records are saved in one local transaction.</Trans></span>
             </div>
-            <button className="icon-button" onClick={() => setShowForm(false)} aria-label="Close form">
+            <button className="icon-button" onClick={() => setShowForm(false)} aria-label={t`Close form`}>
               <X size={17} />
             </button>
           </div>
-          <div className="seg" role="tablist" aria-label="Registration mode">
+          <div className="seg" role="tablist" aria-label={t`Registration mode`}>
             <button role="tab" aria-selected={formMode === 'new-owner'} className={formMode === 'new-owner' ? 'active' : ''} onClick={() => setFormMode('new-owner')}>
-              New owner
+              <Trans>New owner</Trans>
             </button>
             <button role="tab" aria-selected={formMode === 'existing-owner'} className={formMode === 'existing-owner' ? 'active' : ''} onClick={() => setFormMode('existing-owner')}>
-              Existing owner
+              <Trans>Existing owner</Trans>
             </button>
           </div>
           <div className="form-grid">
             {formMode === 'new-owner' ? (
               <>
-                <Field label="Owner name" htmlFor="owner">
+                <Field label={t`Owner name`} htmlFor="owner">
                   <input
                     id="owner"
                     name="owner-name"
@@ -656,10 +868,10 @@ const Owners = ({
                     ref={ownerInputRef}
                     value={ownerName}
                     onChange={(e) => setOwnerName(e.target.value)}
-                    placeholder="e.g. Anong Srisuk…"
+                    placeholder={t`e.g. Anong Srisuk…`}
                   />
                 </Field>
-                <Field label="Owner phone" htmlFor="owner-phone">
+                <Field label={t`Owner phone`} htmlFor="owner-phone">
                   <input
                     id="owner-phone"
                     name="owner-phone"
@@ -667,22 +879,22 @@ const Owners = ({
                     inputMode="tel"
                     value={ownerPhone}
                     onChange={(e) => setOwnerPhone(e.target.value)}
-                    placeholder="e.g. 081 234 5678…"
+                    placeholder={t`e.g. 081 234 5678…`}
                   />
                 </Field>
               </>
             ) : (
-              <Field label="Owner" htmlFor="owner-select">
+              <Field label={t`Owner`} htmlFor="owner-select">
                 <NativeSelect id="owner-select" value={ownerId || data.owners[0]?.id || ''} onChange={(e) => setOwnerId(e.target.value)}>
                   {data.owners.map((o) => (
                     <option key={o.id} value={o.id}>
-                      {o.name} ({data.patients.filter((p) => p.ownerId === o.id).length} patients)
+                      {o.name} (<Plural value={data.patients.filter((p) => p.ownerId === o.id).length} one="# patient" other="# patients" />)
                     </option>
                   ))}
                 </NativeSelect>
               </Field>
             )}
-            <Field label="Patient name" htmlFor="pet">
+            <Field label={t`Patient name`} htmlFor="pet">
               <input
                 id="pet"
                 name="patient-name"
@@ -690,30 +902,30 @@ const Owners = ({
                 ref={patientInputRef}
                 value={petName}
                 onChange={(e) => setPetName(e.target.value)}
-                placeholder="e.g. Milo…"
+                placeholder={t`e.g. Milo…`}
               />
             </Field>
-            <Field label="Species" htmlFor="pet-species">
+            <Field label={t`Species`} htmlFor="pet-species">
               <NativeSelect id="pet-species" value={species} onChange={(e) => setSpecies(e.target.value as Patient['species'])}>
                 {SPECIES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s}>{speciesLabel[s]}</option>
                 ))}
               </NativeSelect>
             </Field>
-            <Field label="Breed" htmlFor="pet-breed">
-              <input id="pet-breed" autoComplete="off" value={breed} onChange={(e) => setBreed(e.target.value)} placeholder="e.g. Golden Retriever…" />
+            <Field label={t`Breed`} htmlFor="pet-breed">
+              <input id="pet-breed" autoComplete="off" value={breed} onChange={(e) => setBreed(e.target.value)} placeholder={t`e.g. Golden Retriever…`} />
             </Field>
-            <Field label="Sex" htmlFor="pet-sex">
+            <Field label={t`Sex`} htmlFor="pet-sex">
               <NativeSelect id="pet-sex" value={sex} onChange={(e) => setSex(e.target.value as Patient['sex'])}>
                 {SEXES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s}>{sexLabel[s]}</option>
                 ))}
               </NativeSelect>
             </Field>
-            <Field label="Date of birth" htmlFor="pet-dob">
+            <Field label={t`Date of birth`} htmlFor="pet-dob">
               <input id="pet-dob" type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
             </Field>
-            <Field label="Microchip (optional)" htmlFor="microchip">
+            <Field label={t`Microchip (optional)`} htmlFor="microchip">
               <input
                 id="microchip"
                 name="microchip"
@@ -722,7 +934,7 @@ const Owners = ({
                 spellCheck={false}
                 value={microchip}
                 onChange={(e) => setMicrochip(e.target.value)}
-                placeholder="e.g. 985141002341238…"
+                placeholder={t`e.g. 985141002341238…`}
               />
             </Field>
           </div>
@@ -732,18 +944,21 @@ const Owners = ({
               onClick={save}
               disabled={!petName.trim() || (formMode === 'new-owner' && !ownerName.trim()) || (formMode === 'existing-owner' && data.owners.length === 0)}
             >
-              Save Records
+              <Trans>Save Records</Trans>
             </button>
           </div>
         </div>
       )}
-      <Panel title={`${filtered.length} patients`} description="Patient identity and owner contact details">
+      <Panel
+        title={filtered.length === 1 ? t`1 patient` : t`${filtered.length} patients`}
+        description={t`Patient identity and owner contact details`}
+      >
         <div className="records-table patients-table">
           <div className="table-head">
-            <span>Patient</span>
-            <span>Owner</span>
-            <span>Species</span>
-            <span>Last visit</span>
+            <span><Trans>Patient</Trans></span>
+            <span><Trans>Owner</Trans></span>
+            <span><Trans>Species</Trans></span>
+            <span><Trans>Last visit</Trans></span>
             <span />
           </div>
           {filtered.map((patient) => {
@@ -756,18 +971,18 @@ const Owners = ({
                   <div>
                     <strong>{patient.name}</strong>
                     <span>
-                      {patient.mrn} · {patient.breed} · {patient.sex}
+                      {patient.mrn} · {patient.breed} · {sexLabel[patient.sex]}
                     </span>
                     {patient.originClinicName && (
                       <span className="patient-flags">
-                        <Pill tone="info">Received from {patient.originClinicName}</Pill>
+                        <Pill tone="info"><Trans>Received from {patient.originClinicName}</Trans></Pill>
                       </span>
                     )}
                     {flags.length > 0 && (
                       <span className="patient-flags">
                         {patient.allergies.map((a) => (
                           <Pill key={a} tone="bad">
-                            Allergy: {a}
+                            <Trans>Allergy: {a}</Trans>
                           </Pill>
                         ))}
                         {patient.medicalAlerts.map((a) => (
@@ -779,35 +994,35 @@ const Owners = ({
                     )}
                   </div>
                 </div>
-                <span data-label="Owner">{owner?.name ?? '—'}</span>
-                <span data-label="Species">
-                  <Pill tone="info">{patient.species}</Pill>
+                <span data-label={t`Owner`}>{owner?.name ?? '—'}</span>
+                <span data-label={t`Species`}>
+                  <Pill tone="info">{speciesLabel[patient.species]}</Pill>
                 </span>
-                <span data-label="Last visit">
-                  {patient.lastVisit ? formatDate(patient.lastVisit) : 'New patient'}
+                <span data-label={t`Last visit`}>
+                  {patient.lastVisit ? formatDate(patient.lastVisit) : t`New patient`}
                 </span>
                 <div className="row-actions">
                   <button className="row-action" onClick={() => setDetailId(patient.id)}>
-                    View
+                    <Trans>View</Trans>
                   </button>
                   {canWrite && (
                     <button
                       className="row-action"
-                      title="Export this patient's case bundle for another clinic"
+                      title={t`Export this patient's case bundle for another clinic`}
                       onClick={() => {
                         const bundle = buildCaseBundle(data, patient, newShareToken(), new Date().toISOString())
                         downloadCaseBundle(bundle)
                         dispatch({ type: 'exportCaseBundle', bundle })
                       }}
                     >
-                      Share
+                      <Trans>Share</Trans>
                     </button>
                   )}
                 </div>
               </div>
             )
           })}
-          {filtered.length === 0 && <p className="empty-state patients-empty">No patients match your search.</p>}
+          {filtered.length === 0 && <p className="empty-state patients-empty"><Trans>No patients match your search.</Trans></p>}
         </div>
       </Panel>
       {detailId && <PatientClinicalDialog patientId={detailId} onClose={() => setDetailId(null)} canWrite={canWrite} />}
@@ -817,6 +1032,7 @@ const Owners = ({
 
 const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: string; onClose: () => void; canWrite: boolean }) => {
   const { data, dispatch } = useClinic()
+  const { t } = useLingui()
   const patient = data.patients.find((p) => p.id === patientId)
   const owner = data.owners.find((o) => o.id === patient?.ownerId)
   const [name, setName] = useState(patient?.name ?? '')
@@ -840,11 +1056,6 @@ const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: st
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onClose])
   if (!patient) return null
-  const splitList = (value: string) =>
-    value
-      .split(',')
-      .map((entry) => entry.trim())
-      .filter(Boolean)
   const timeline = [
     ...data.encounters
       .filter((e) => e.patientId === patient.id)
@@ -860,7 +1071,7 @@ const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: st
         at: v.administeredAt,
         vaccination: v,
       })),
-  ].sort((a, b) => b.at.localeCompare(a.at))
+  ].toSorted((a, b) => b.at.localeCompare(a.at))
   return (
     <div
       className="modal-backdrop"
@@ -868,32 +1079,32 @@ const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: st
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="modal modal-wide" role="dialog" aria-modal="true" aria-label={`Clinical profile for ${patient.name}`}>
+      <div className="modal modal-wide" role="dialog" aria-modal="true" aria-label={t`Clinical profile for ${patient.name}`}>
         <div className="form-heading">
           <div>
             <strong>{name || patient.name}</strong>
             <span>
-              {patient.mrn} · {ownerName || owner?.name || 'No owner'}{ownerPhone ? ` · ${ownerPhone}` : ''} · {species} · {breed}
+              {patient.mrn} · {ownerName || owner?.name || t`No owner`}{ownerPhone ? ` · ${ownerPhone}` : ''} · {speciesLabel[species]} · {breed}
             </span>
           </div>
-          <button className="icon-button" onClick={onClose} aria-label="Close dialog">
+          <button className="icon-button" onClick={onClose} aria-label={t`Close dialog`}>
             <X size={17} />
           </button>
         </div>
         <fieldset className="form-section" disabled={!canWrite}>
-          <legend>Owner</legend>
+          <legend><Trans>Owner</Trans></legend>
           <div className="form-grid">
-            <Field label="Owner name" htmlFor="pt-owner-name">
+            <Field label={t`Owner name`} htmlFor="pt-owner-name">
               <input
                 id="pt-owner-name"
                 name="owner-name"
                 autoComplete="off"
                 value={ownerName}
                 onChange={(e) => setOwnerName(e.target.value)}
-                placeholder="e.g. Anong Srisuk…"
+                placeholder={t`e.g. Anong Srisuk…`}
               />
             </Field>
-            <Field label="Phone" htmlFor="pt-owner-phone">
+            <Field label={t`Phone`} htmlFor="pt-owner-phone">
               <input
                 id="pt-owner-phone"
                 name="owner-phone"
@@ -901,10 +1112,10 @@ const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: st
                 autoComplete="off"
                 value={ownerPhone}
                 onChange={(e) => setOwnerPhone(e.target.value)}
-                placeholder="e.g. 081 234 5678…"
+                placeholder={t`e.g. 081 234 5678…`}
               />
             </Field>
-            <Field label="Email" htmlFor="pt-owner-email">
+            <Field label={t`Email`} htmlFor="pt-owner-email">
               <input
                 id="pt-owner-email"
                 name="owner-email"
@@ -912,72 +1123,72 @@ const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: st
                 autoComplete="off"
                 value={ownerEmail}
                 onChange={(e) => setOwnerEmail(e.target.value)}
-                placeholder="e.g. anong@example.com…"
+                placeholder={t`e.g. anong@example.com…`}
               />
             </Field>
-            <Field label="Address" htmlFor="pt-owner-address">
+            <Field label={t`Address`} htmlFor="pt-owner-address">
               <input
                 id="pt-owner-address"
                 name="owner-address"
                 autoComplete="off"
                 value={ownerAddress}
                 onChange={(e) => setOwnerAddress(e.target.value)}
-                placeholder="Street, city, postcode…"
+                placeholder={t`Street, city, postcode…`}
               />
             </Field>
           </div>
         </fieldset>
 
         <fieldset className="form-section" disabled={!canWrite}>
-          <legend>Patient</legend>
+          <legend><Trans>Patient</Trans></legend>
           <div className="form-grid">
-            <Field label="Patient name" htmlFor="pt-name">
+            <Field label={t`Patient name`} htmlFor="pt-name">
               <input
                 id="pt-name"
                 name="patient-name"
                 autoComplete="off"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Milo…"
+                placeholder={t`e.g. Milo…`}
               />
             </Field>
-            <Field label="Species" htmlFor="pt-species">
+            <Field label={t`Species`} htmlFor="pt-species">
               <NativeSelect id="pt-species" value={species} onChange={(e) => setSpecies(e.target.value as Patient['species'])}>
                 {SPECIES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s}>{speciesLabel[s]}</option>
                 ))}
               </NativeSelect>
             </Field>
-            <Field label="Breed" htmlFor="pt-breed">
-              <input id="pt-breed" autoComplete="off" value={breed} onChange={(e) => setBreed(e.target.value)} placeholder="e.g. Golden Retriever…" />
+            <Field label={t`Breed`} htmlFor="pt-breed">
+              <input id="pt-breed" autoComplete="off" value={breed} onChange={(e) => setBreed(e.target.value)} placeholder={t`e.g. Golden Retriever…`} />
             </Field>
-            <Field label="Sex" htmlFor="pt-sex">
+            <Field label={t`Sex`} htmlFor="pt-sex">
               <NativeSelect id="pt-sex" value={sex} onChange={(e) => setSex(e.target.value as Patient['sex'])}>
                 {SEXES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s}>{sexLabel[s]}</option>
                 ))}
               </NativeSelect>
             </Field>
-            <Field label="Date of birth" htmlFor="pt-birth">
+            <Field label={t`Date of birth`} htmlFor="pt-birth">
               <input id="pt-birth" type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
             </Field>
-            <Field label="Weight (kg)" htmlFor="pt-weight">
+            <Field label={t`Weight (kg)`} htmlFor="pt-weight">
               <input
                 id="pt-weight"
                 inputMode="decimal"
                 autoComplete="off"
                 value={weightKg}
                 onChange={(e) => setWeightKg(e.target.value)}
-                placeholder="e.g. 4.2…"
+                placeholder={t`e.g. 4.2…`}
               />
             </Field>
           </div>
         </fieldset>
 
         <fieldset className="form-section" disabled={!canWrite}>
-          <legend>Clinical</legend>
+          <legend><Trans>Clinical</Trans></legend>
           <div className="form-grid">
-            <Field label="Microchip" htmlFor="pt-microchip">
+            <Field label={t`Microchip`} htmlFor="pt-microchip">
               <input
                 id="pt-microchip"
                 name="microchip"
@@ -986,27 +1197,27 @@ const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: st
                 spellCheck={false}
                 value={microchip}
                 onChange={(e) => setMicrochip(e.target.value)}
-                placeholder="e.g. 985141002341238…"
+                placeholder={t`e.g. 985141002341238…`}
               />
             </Field>
-            <Field label="Allergies (comma-separated)" htmlFor="pt-allergies">
+            <Field label={t`Allergies (comma-separated)`} htmlFor="pt-allergies">
               <input
                 id="pt-allergies"
                 name="allergies"
                 autoComplete="off"
                 value={allergies}
                 onChange={(e) => setAllergies(e.target.value)}
-                placeholder="e.g. Penicillin, Flea topical (pyrethrin)…"
+                placeholder={t`e.g. Penicillin, Flea topical (pyrethrin)…`}
               />
             </Field>
-            <Field label="Medical alerts (comma-separated)" htmlFor="pt-alerts">
+            <Field label={t`Medical alerts (comma-separated)`} htmlFor="pt-alerts">
               <input
                 id="pt-alerts"
                 name="medical-alerts"
                 autoComplete="off"
                 value={alerts}
                 onChange={(e) => setAlerts(e.target.value)}
-                placeholder="e.g. Aggressive during handling — muzzle first…"
+                placeholder={t`e.g. Aggressive during handling — muzzle first…`}
               />
             </Field>
           </div>
@@ -1014,7 +1225,7 @@ const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: st
 
         <div className="panel-footer">
           <button className="button secondary" onClick={onClose}>
-            Cancel
+            <Trans>Cancel</Trans>
           </button>
           <button
             className="button primary"
@@ -1050,29 +1261,29 @@ const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: st
               onClose()
             }}
           >
-            Save Profile
+            <Trans>Save Profile</Trans>
           </button>
         </div>
-        <div className="timeline" aria-label="Medical timeline">
-          <h3>Medical timeline</h3>
-          {timeline.length === 0 && <p className="empty-state">No visits or vaccinations recorded yet.</p>}
+        <div className="timeline" aria-label={t`Medical timeline`}>
+          <h3><Trans>Medical timeline</Trans></h3>
+          {timeline.length === 0 && <p className="empty-state"><Trans>No visits or vaccinations recorded yet.</Trans></p>}
           {timeline.map((entry) =>
             entry.kind === 'vaccination' ? (
               <div className="timeline-row" key={entry.vaccination.id}>
-                <Pill tone="info" dot>Vaccine</Pill>
+                <Pill tone="info" dot><Trans>Vaccine</Trans></Pill>
                 <div>
                   <strong>{entry.vaccination.vaccineName}</strong>
                   <span>
                     {formatDate(entry.vaccination.administeredAt)}
-                    {entry.vaccination.lotNumber ? ` · lot ${entry.vaccination.lotNumber}` : ''}
-                    {entry.vaccination.nextDueAt ? ` · next due ${entry.vaccination.nextDueAt}` : ''}
+                    {entry.vaccination.lotNumber ? <> · <Trans>lot {entry.vaccination.lotNumber}</Trans></> : ''}
+                    {entry.vaccination.nextDueAt ? <> · <Trans>next due {entry.vaccination.nextDueAt}</Trans></> : ''}
                   </span>
                 </div>
               </div>
             ) : (
               <div className="timeline-row" key={entry.encounter.id}>
                 <Pill tone={entry.encounter.status === 'open' ? 'warn' : 'ok'} dot>
-                  {entry.encounter.status === 'open' ? 'Open visit' : 'Visit'}
+                  {entry.encounter.status === 'open' ? t`Open visit` : t`Visit`}
                 </Pill>
                 <div>
                   <strong>
@@ -1081,12 +1292,12 @@ const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: st
                   </strong>
                   {entry.encounter.prescriptions.length > 0 && (
                     <span>
-                      Rx: {entry.encounter.prescriptions.map((rx) => `${rx.medication} (${rx.dose} ${rx.frequency})`).join(', ')}
+                      <Trans>Rx: {entry.encounter.prescriptions.map((rx) => `${rx.medication} (${rx.dose} ${rx.frequency})`).join(', ')}</Trans>
                     </span>
                   )}
                   <span>
-                    {entry.encounter.notes.length} note{entry.encounter.notes.length === 1 ? '' : 's'}
-                    {entry.encounter.vitals.weightKg ? ` · weight ${entry.encounter.vitals.weightKg} kg` : ''}
+                    <Plural value={entry.encounter.notes.length} one="# note" other="# notes" />
+                    {entry.encounter.vitals.weightKg ? <> · <Trans>weight {entry.encounter.vitals.weightKg} kg</Trans></> : ''}
                   </span>
                 </div>
               </div>
@@ -1098,13 +1309,15 @@ const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: st
   )
 }
 
-const Consultations = () => {
+const Consultations = ({ onOpen }: { onOpen: (encounterId: string) => void }) => {
   const { data, session, dispatch } = useClinic()
+  const { t } = useLingui()
   const open =
     data.encounters.find((e) => e.id === session.activeEncounterId) ??
     data.encounters.find((e) => e.status === 'open')
   const patient = open && data.patients.find((p) => p.id === open.patientId)
   const appt = open && data.appointments.find((a) => a.id === open.appointmentId)
+  const recentEncounters = data.encounters.toSorted((a, b) => b.openedAt.localeCompare(a.openedAt)).slice(0, 8)
   const [note, setNote] = useState('')
   const [vitals, setVitals] = useState<Vitals>(open?.vitals ?? { weightKg: '', tempC: '', heartRate: '', respRate: '' })
   const [dxText, setDxText] = useState('')
@@ -1113,7 +1326,7 @@ const Consultations = () => {
   const [rxDose, setRxDose] = useState('')
   const [rxRoute, setRxRoute] = useState('PO')
   const [rxFrequency, setRxFrequency] = useState('BID')
-  const [rxDuration, setRxDuration] = useState('7 days')
+  const [rxDuration, setRxDuration] = useState(t`7 days`)
   const [rxQuantity, setRxQuantity] = useState('1')
   const [vacName, setVacName] = useState('')
   const [vacLot, setVacLot] = useState('')
@@ -1123,9 +1336,13 @@ const Consultations = () => {
   const [amendNoteId, setAmendNoteId] = useState<string | null>(null)
   const [amendBody, setAmendBody] = useState('')
   const [amendReason, setAmendReason] = useState('')
-  useEffect(() => {
-    if (open) setVitals(open.vitals)
-  }, [open?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Reset the vitals draft when a different encounter opens. Adjusting state
+  // during render keeps the reset in the same pass — no effect, no stale deps.
+  const [vitalsEncounterId, setVitalsEncounterId] = useState(open?.id)
+  if (open && open.id !== vitalsEncounterId) {
+    setVitalsEncounterId(open.id)
+    setVitals(open.vitals)
+  }
   // Dispensable catalog: live inventory items (medicine/vaccine) plus legacy
   // medication products so historical prescriptions still resolve.
   const catalog = useMemo(
@@ -1150,33 +1367,163 @@ const Consultations = () => {
   if (!open || !patient)
     return (
       <>
-        <PageHeader title="Consultation" description="Open an appointment to start a consultation." />
-        <Panel title="No active consultation">
-          <p className="empty-state">Choose a booked appointment from the calendar to begin.</p>
+        <PageHeader title={t`Consultation`} description={t`Open an appointment to start a consultation.`} />
+        <Panel title={t`No active consultation`}>
+          <p className="empty-state">
+            <Trans>Choose a booked appointment from the calendar to begin, or open a past visit below.</Trans>
+          </p>
+          {recentEncounters.length > 0 && (
+            <div className="activity-list">
+              {recentEncounters.map((encounter) => {
+                const encounterPatient = data.patients.find((p) => p.id === encounter.patientId)
+                return (
+                  <div className="activity-row" key={encounter.id}>
+                    <div className="activity-mark"><Stethoscope size={14} /></div>
+                    <div>
+                      <strong>{encounterPatient?.name ?? t`Unknown patient`}</strong>
+                      <span>
+                        {formatDate(encounter.openedAt)} ·{' '}
+                        {encounter.status === 'open' ? <Trans>Consultation in progress</Trans> : <Trans>Archived visit</Trans>}
+                      </span>
+                    </div>
+                    <button className="small-button" onClick={() => onOpen(encounter.id)}>
+                      {encounter.status === 'open' ? <Trans>Continue</Trans> : <Trans>View</Trans>}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </Panel>
       </>
     )
   if (open.status === 'closed') {
     const invoice = data.invoices.find((i) => i.encounterId === open.id)
+    const owner = data.owners.find((o) => o.id === patient.ownerId)
+    const attending = data.users.find((u) => u.id === open.attendingId)
+    const vitalsRows = [
+      { label: t`Weight (kg)`, value: open.vitals.weightKg },
+      { label: t`Temperature (°C)`, value: open.vitals.tempC },
+      { label: t`Heart rate (bpm)`, value: open.vitals.heartRate },
+      { label: t`Respiratory rate`, value: open.vitals.respRate },
+    ]
     return (
       <>
         <PageHeader
-          title="Consultation closed"
-          description={`The clinical record for ${patient.name} is archived — notes, diagnoses and prescriptions are preserved.`}
+          title={t`Consultation closed`}
+          description={t`The clinical record for ${patient.name} is archived — notes, diagnoses and prescriptions are preserved.`}
+          action={<Pill tone="muted" dot><Trans>Archived</Trans></Pill>}
         />
-        <Panel title="Visit complete">
-          <p className="empty-state">
-            {invoice ? `Draft invoice ${invoice.number} was created and is ready to post in Billing.` : 'No invoice was created for this visit.'}
-          </p>
-          <div className="panel-footer">
-            <button
-              className="button primary"
-              onClick={() => dispatch({ type: 'session', patch: { view: 'billing', activeEncounterId: undefined } })}
-            >
-              Go to billing
-            </button>
+        <div className="consult-grid">
+          <div className="side-stack">
+            <Panel title={t`Patient snapshot`} description={t`Current patient details`}>
+              <div className="patient-profile">
+                <div className="large-pet-avatar">{patient.name.slice(0, 1)}</div>
+                <div>
+                  <h3>{patient.name}</h3>
+                  <span>{patient.mrn} · {sexLabel[patient.sex]} · {patient.breed}</span>
+                  <span><Trans>Owner: {owner?.name}</Trans></span>
+                  <span>
+                    {formatDate(open.openedAt)}
+                    {open.closedAt ? <> · <Trans>Closed {formatDate(open.closedAt)}</Trans></> : null}
+                    {attending ? <> · {attending.name}</> : null}
+                  </span>
+                </div>
+              </div>
+            </Panel>
+            <Panel title={t`Vitals`} description={t`Weight, temperature, pulse and respiration`}>
+              <div className="activity-list">
+                {vitalsRows.map(({ label, value }) => (
+                  <div className="activity-row" key={label}>
+                    <div>
+                      <strong>{label}</strong>
+                      <span>{value || '—'}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Panel>
           </div>
-        </Panel>
+          <div className="side-stack">
+            <Panel title={t`Diagnoses`} description={t`Provisional working diagnoses and confirmed findings`}>
+              <div className="rx-list">
+                {open.diagnoses.length === 0 && <p className="empty-state"><Trans>No diagnoses recorded yet.</Trans></p>}
+                {open.diagnoses.map((diagnosis) => (
+                  <div className="rx-row" key={diagnosis.id}>
+                    <div>
+                      <strong>{diagnosis.description}</strong>
+                      <span>{statusLabel(diagnosis.status)}</span>
+                    </div>
+                    <Pill tone={diagnosis.status === 'confirmed' ? 'ok' : 'warn'} dot>
+                      {statusLabel(diagnosis.status)}
+                    </Pill>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+            <Panel title={t`Prescriptions`} description={t`Dispensed from pharmacy stock when the visit closes`}>
+              <div className="rx-list">
+                {open.prescriptions.length === 0 && <p className="empty-state"><Trans>No prescriptions on this visit.</Trans></p>}
+                {open.prescriptions.map((rx) => (
+                  <div className="rx-row" key={rx.id}>
+                    <div>
+                      <strong>{rx.medication}</strong>
+                      <span>
+                        {rx.dose} · {rx.route} · {rx.frequency} · {rx.duration} · <Trans>qty {rx.quantity}</Trans>
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+            <Panel title={t`Clinical notes`} description={t`Authored notes are preserved as a revision history`}>
+              {open.notes.length === 0 && <p className="empty-state"><Trans>No notes were recorded for this visit.</Trans></p>}
+              {open.notes.length > 0 && (
+                <div className="note-history">
+                  {open.notes.map((clinicalNote) => {
+                    const author = data.users.find((u) => u.id === clinicalNote.authorId)
+                    const amendmentReason = clinicalNote.amendReason || t`not recorded`
+                    return (
+                      <div key={clinicalNote.id} className={clinicalNote.amends ? 'note-entry amended' : 'note-entry'}>
+                        <span>
+                          {formatDate(clinicalNote.createdAt)}
+                          {author ? ` · ${author.name}` : ''}
+                          {clinicalNote.amends && (
+                            <>
+                              {' · '}
+                              <Pill tone="warn" dot>
+                                <Trans>Amendment</Trans>
+                              </Pill>
+                            </>
+                          )}
+                        </span>
+                        <p>{clinicalNote.body}</p>
+                        {clinicalNote.amends && (
+                          <span className="note-amend-meta">
+                            <Trans>Reason: {amendmentReason}</Trans>
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </Panel>
+            <Panel title={t`Visit complete`}>
+              <p className="empty-state">
+                {invoice ? t`Draft invoice ${invoice.number} was created and is ready to post in Billing.` : t`No invoice was created for this visit.`}
+              </p>
+              <div className="panel-footer">
+                <button
+                  className="button primary"
+                  onClick={() => dispatch({ type: 'session', patch: { view: 'billing', activeEncounterId: undefined } })}
+                >
+                  <Trans>Go to billing</Trans>
+                </button>
+              </div>
+            </Panel>
+          </div>
+        </div>
       </>
     )
   }
@@ -1223,7 +1570,7 @@ const Consultations = () => {
       vaccination: {
         vaccineName: vacName.trim(),
         lotNumber: vacLot.trim() || undefined,
-        administeredAt: new Date().toISOString(),
+        administeredAt: nowIso(),
         nextDueAt: vacNextDue || undefined,
         encounterId: open.id,
       },
@@ -1240,41 +1587,42 @@ const Consultations = () => {
         patientId: patient.id,
         startsAt: `${followUpDate}T${followUpTime || '10:00'}:00+07:00`,
         durationMin: 30,
-        reason: `Follow-up${appt ? `: ${appt.reason}` : ''}`,
+        reason: appt ? t`Follow-up: ${appt.reason}` : t`Follow-up`,
         vetId: open.attendingId,
       },
     })
     setFollowUpDate('')
   }
+  const apptSuffix = appt ? ` · ${appt.reason}` : ''
   return (
     <>
       <PageHeader
-        title="Consultation"
-        description={`Clinical record for ${patient.name} · ${patient.species} · ${patient.breed}${appt ? ` · ${appt.reason}` : ''}`}
+        title={t`Consultation`}
+        description={t`Clinical record for ${patient.name} · ${speciesLabel[patient.species]} · ${patient.breed}${apptSuffix}`}
         action={
           <Pill tone="ok" dot>
-            Saved locally
+            <Trans>Saved locally</Trans>
           </Pill>
         }
       />
       <div className="consult-grid">
         <div className="side-stack">
-          <Panel title="Patient snapshot" description="Current patient details">
+          <Panel title={t`Patient snapshot`} description={t`Current patient details`}>
             <div className="patient-profile">
               <div className="large-pet-avatar">{patient.name.slice(0, 1)}</div>
               <div>
                 <h3>{patient.name}</h3>
                 <span>
-                  {patient.mrn} · {patient.sex} · {patient.breed}
+                  {patient.mrn} · {sexLabel[patient.sex]} · {patient.breed}
                 </span>
-                <span>Owner: {data.owners.find((o) => o.id === patient.ownerId)?.name}</span>
+                <span><Trans>Owner: {data.owners.find((o) => o.id === patient.ownerId)?.name}</Trans></span>
               </div>
             </div>
             {(patient.allergies.length > 0 || patient.medicalAlerts.length > 0) && (
               <div className="patient-flags consult-flags" role="alert">
                 {patient.allergies.map((a) => (
                   <Pill key={a} tone="bad" dot>
-                    Allergy: {a}
+                    <Trans>Allergy: {a}</Trans>
                   </Pill>
                 ))}
                 {patient.medicalAlerts.map((a) => (
@@ -1285,19 +1633,19 @@ const Consultations = () => {
               </div>
             )}
           </Panel>
-          <Panel title="Vitals" description="Weight, temperature, pulse and respiration">
+          <Panel title={t`Vitals`} description={t`Weight, temperature, pulse and respiration`}>
             <div className="form-grid">
-              <Field label="Weight (kg)" htmlFor="vt-weight">
-                <input id="vt-weight" inputMode="decimal" value={vitals.weightKg} onChange={(e) => setVitals({ ...vitals, weightKg: e.target.value })} placeholder="e.g. 28.6" />
+              <Field label={t`Weight (kg)`} htmlFor="vt-weight">
+                <input id="vt-weight" inputMode="decimal" value={vitals.weightKg} onChange={(e) => setVitals({ ...vitals, weightKg: e.target.value })} placeholder={t`e.g. 28.6`} />
               </Field>
-              <Field label="Temperature (°C)" htmlFor="vt-temp">
-                <input id="vt-temp" inputMode="decimal" value={vitals.tempC} onChange={(e) => setVitals({ ...vitals, tempC: e.target.value })} placeholder="e.g. 38.6" />
+              <Field label={t`Temperature (°C)`} htmlFor="vt-temp">
+                <input id="vt-temp" inputMode="decimal" value={vitals.tempC} onChange={(e) => setVitals({ ...vitals, tempC: e.target.value })} placeholder={t`e.g. 38.6`} />
               </Field>
-              <Field label="Heart rate (bpm)" htmlFor="vt-hr">
-                <input id="vt-hr" inputMode="numeric" value={vitals.heartRate} onChange={(e) => setVitals({ ...vitals, heartRate: e.target.value })} placeholder="e.g. 96" />
+              <Field label={t`Heart rate (bpm)`} htmlFor="vt-hr">
+                <input id="vt-hr" inputMode="numeric" value={vitals.heartRate} onChange={(e) => setVitals({ ...vitals, heartRate: e.target.value })} placeholder={t`e.g. 96`} />
               </Field>
-              <Field label="Respiratory rate" htmlFor="vt-rr">
-                <input id="vt-rr" inputMode="numeric" value={vitals.respRate} onChange={(e) => setVitals({ ...vitals, respRate: e.target.value })} placeholder="e.g. 22" />
+              <Field label={t`Respiratory rate`} htmlFor="vt-rr">
+                <input id="vt-rr" inputMode="numeric" value={vitals.respRate} onChange={(e) => setVitals({ ...vitals, respRate: e.target.value })} placeholder={t`e.g. 22`} />
               </Field>
             </div>
             <div className="panel-footer">
@@ -1305,34 +1653,34 @@ const Consultations = () => {
                 className="button secondary"
                 onClick={() => dispatch({ type: 'updateVitals', encounterId: open.id, vitals })}
               >
-                Record vitals
+                <Trans>Record vitals</Trans>
               </button>
             </div>
           </Panel>
-          <Panel title="Vaccinations" description="Recorded during this visit and prior history">
+          <Panel title={t`Vaccinations`} description={t`Recorded during this visit and prior history`}>
             <div className="inline-form nested">
               <div className="form-grid">
-                <Field label="Vaccine" htmlFor="vac-name">
-                  <input id="vac-name" list="vac-options" value={vacName} onChange={(e) => setVacName(e.target.value)} placeholder="e.g. Rabies vaccine…" />
+                <Field label={t`Vaccine`} htmlFor="vac-name">
+                  <input id="vac-name" list="vac-options" value={vacName} onChange={(e) => setVacName(e.target.value)} placeholder={t`e.g. Rabies vaccine…`} />
                   <datalist id="vac-options">
                     {data.inventoryItems.filter((i) => i.category === 'vaccine').map((i) => (
                       <option key={i.id} value={i.name} />
                     ))}
                   </datalist>
                 </Field>
-                <Field label="Lot number" htmlFor="vac-lot">
-                  <input id="vac-lot" value={vacLot} onChange={(e) => setVacLot(e.target.value)} placeholder="e.g. RAB-2610B…" />
+                <Field label={t`Lot number`} htmlFor="vac-lot">
+                  <input id="vac-lot" value={vacLot} onChange={(e) => setVacLot(e.target.value)} placeholder={t`e.g. RAB-2610B…`} />
                 </Field>
-                <Field label="Next due" htmlFor="vac-next">
+                <Field label={t`Next due`} htmlFor="vac-next">
                   <input id="vac-next" type="date" value={vacNextDue} onChange={(e) => setVacNextDue(e.target.value)} />
                 </Field>
               </div>
               <button className="button secondary" onClick={recordVac} disabled={!vacName.trim()}>
-                Record vaccination
+                <Trans>Record vaccination</Trans>
               </button>
             </div>
             <div className="activity-list">
-              {patientVaccinations.length === 0 && <p className="empty-state">No vaccinations recorded for this patient.</p>}
+              {patientVaccinations.length === 0 && <p className="empty-state"><Trans>No vaccinations recorded for this patient.</Trans></p>}
               {patientVaccinations.map((v) => (
                 <div className="activity-row" key={v.id}>
                   <div className="activity-mark"><CalendarDays size={14} /></div>
@@ -1340,8 +1688,8 @@ const Consultations = () => {
                     <strong>{v.vaccineName}</strong>
                     <span>
                       {formatDate(v.administeredAt)}
-                      {v.lotNumber ? ` · lot ${v.lotNumber}` : ''}
-                      {v.nextDueAt ? ` · next due ${v.nextDueAt}` : ''}
+                      {v.lotNumber ? <> · <Trans>lot {v.lotNumber}</Trans></> : ''}
+                      {v.nextDueAt ? <> · <Trans>next due {v.nextDueAt}</Trans></> : ''}
                     </span>
                   </div>
                 </div>
@@ -1350,16 +1698,16 @@ const Consultations = () => {
           </Panel>
         </div>
         <div className="side-stack">
-          <Panel title="Diagnoses" description="Provisional working diagnoses and confirmed findings">
+          <Panel title={t`Diagnoses`} description={t`Provisional working diagnoses and confirmed findings`}>
             <div className="inline-form nested">
               <div className="form-grid">
-                <Field label="Diagnosis" htmlFor="dx-text">
-                  <input id="dx-text" value={dxText} onChange={(e) => setDxText(e.target.value)} placeholder="e.g. Soft tissue strain, right stifle…" />
+                <Field label={t`Diagnosis`} htmlFor="dx-text">
+                  <input id="dx-text" value={dxText} onChange={(e) => setDxText(e.target.value)} placeholder={t`e.g. Soft tissue strain, right stifle…`} />
                 </Field>
-                <Field label="Status" htmlFor="dx-status">
+                <Field label={t`Status`} htmlFor="dx-status">
                   <NativeSelect id="dx-status" value={dxStatus} onChange={(e) => setDxStatus(e.target.value as 'provisional' | 'confirmed')}>
-                    <option value="provisional">Provisional</option>
-                    <option value="confirmed">Confirmed</option>
+                    <option value="provisional">{t`Provisional`}</option>
+                    <option value="confirmed">{t`Confirmed`}</option>
                   </NativeSelect>
                 </Field>
               </div>
@@ -1371,110 +1719,110 @@ const Consultations = () => {
                   setDxText('')
                 }}
               >
-                Add diagnosis
+                <Trans>Add diagnosis</Trans>
               </button>
             </div>
             <div className="rx-list">
-              {open.diagnoses.length === 0 && <p className="empty-state">No diagnoses recorded yet.</p>}
+              {open.diagnoses.length === 0 && <p className="empty-state"><Trans>No diagnoses recorded yet.</Trans></p>}
               {open.diagnoses.map((d) => (
                 <div className="rx-row" key={d.id}>
                   <div>
                     <strong>{d.description}</strong>
-                    <span>{d.status}</span>
+                    <span>{statusLabel(d.status)}</span>
                   </div>
                   {d.status === 'provisional' ? (
                     <button
                       className="small-button"
                       onClick={() => dispatch({ type: 'confirmDiagnosis', encounterId: open.id, diagnosisId: d.id })}
-                      aria-label={`Confirm diagnosis ${d.description}`}
+                      aria-label={t`Confirm diagnosis ${d.description}`}
                     >
-                      Confirm
+                      <Trans>Confirm</Trans>
                     </button>
                   ) : (
-                    <Pill tone="ok" dot>{d.status}</Pill>
+                    <Pill tone="ok" dot>{statusLabel(d.status)}</Pill>
                   )}
                 </div>
               ))}
             </div>
           </Panel>
-          <Panel title="Prescriptions" description="Dispensed from pharmacy stock when the visit closes">
+          <Panel title={t`Prescriptions`} description={t`Dispensed from pharmacy stock when the visit closes`}>
             <div className="inline-form nested">
               <div className="form-grid">
-                <Field label="Medication" htmlFor="rx-item">
+                <Field label={t`Medication`} htmlFor="rx-item">
                   <NativeSelect id="rx-item" value={rxItemId} onChange={(e) => setRxItemId(e.target.value)}>
-                    <option value="">— select medication —</option>
+                    <option value="">{t`— select medication —`}</option>
                     {catalog.map((c) => {
                       const stock = data.inventoryItems.some((i) => i.id === c.id) ? stockLeft(c.id) : undefined
                       return (
                         <option key={c.id} value={c.id}>
                           {c.name}
-                          {stock !== undefined ? ` — ${stock} ${c.unit} in stock` : ''}
+                          {stock !== undefined ? <> — <Trans>{stock} {c.unit} in stock</Trans></> : ''}
                         </option>
                       )
                     })}
                   </NativeSelect>
                 </Field>
-                <Field label="Dose" htmlFor="rx-dose">
-                  <input id="rx-dose" value={rxDose} onChange={(e) => setRxDose(e.target.value)} placeholder="e.g. 0.1 mg/kg" />
+                <Field label={t`Dose`} htmlFor="rx-dose">
+                  <input id="rx-dose" value={rxDose} onChange={(e) => setRxDose(e.target.value)} placeholder={t`e.g. 0.1 mg/kg`} />
                 </Field>
-                <Field label="Route" htmlFor="rx-route">
-                  <input id="rx-route" value={rxRoute} onChange={(e) => setRxRoute(e.target.value)} placeholder="PO / SC / IM" />
+                <Field label={t`Route`} htmlFor="rx-route">
+                  <input id="rx-route" value={rxRoute} onChange={(e) => setRxRoute(e.target.value)} placeholder={t`PO / SC / IM`} />
                 </Field>
-                <Field label="Frequency" htmlFor="rx-freq">
-                  <input id="rx-freq" value={rxFrequency} onChange={(e) => setRxFrequency(e.target.value)} placeholder="SID / BID / TID" />
+                <Field label={t`Frequency`} htmlFor="rx-freq">
+                  <input id="rx-freq" value={rxFrequency} onChange={(e) => setRxFrequency(e.target.value)} placeholder={t`SID / BID / TID`} />
                 </Field>
-                <Field label="Duration" htmlFor="rx-duration">
-                  <input id="rx-duration" value={rxDuration} onChange={(e) => setRxDuration(e.target.value)} placeholder="e.g. 7 days" />
+                <Field label={t`Duration`} htmlFor="rx-duration">
+                  <input id="rx-duration" value={rxDuration} onChange={(e) => setRxDuration(e.target.value)} placeholder={t`e.g. 7 days`} />
                 </Field>
-                <Field label="Quantity" htmlFor="rx-qty">
+                <Field label={t`Quantity`} htmlFor="rx-qty">
                   <input id="rx-qty" type="number" min="1" value={rxQuantity} onChange={(e) => setRxQuantity(e.target.value)} />
                 </Field>
               </div>
               {allergyHit && (
                 <p className="allergy-warning" role="alert">
-                  <Pill tone="bad" dot>Allergy warning</Pill>
-                  {patient.name} is allergic to “{allergyHit}” — check this prescription before dispensing.
+                  <Pill tone="bad" dot><Trans>Allergy warning</Trans></Pill>
+                  <Trans>{patient.name} is allergic to “{allergyHit}” — check this prescription before dispensing.</Trans>
                 </p>
               )}
               {selectedRx && selectedStock !== undefined && (
                 <p className={stockShortage ? 'form-hint is-bad' : 'form-hint'} role={stockShortage ? 'alert' : undefined}>
                   {stockShortage
-                    ? `Only ${Math.max(0, selectedStock)} ${selectedRx.unit} left in stock — reduce the quantity or receive a delivery first.`
-                    : `${selectedStock} ${selectedRx.unit} available in stock.`}
+                    ? t`Only ${Math.max(0, selectedStock)} ${selectedRx.unit} left in stock — reduce the quantity or receive a delivery first.`
+                    : t`${selectedStock} ${selectedRx.unit} available in stock.`}
                 </p>
               )}
               <button className="button secondary" onClick={addRx} disabled={!selectedRx || !rxDose.trim() || stockShortage}>
-                Add prescription
+                <Trans>Add prescription</Trans>
               </button>
             </div>
             <div className="rx-list">
-              {open.prescriptions.length === 0 && <p className="empty-state">No prescriptions on this visit.</p>}
+              {open.prescriptions.length === 0 && <p className="empty-state"><Trans>No prescriptions on this visit.</Trans></p>}
               {open.prescriptions.map((rx) => (
                 <div className="rx-row" key={rx.id}>
                   <div>
                     <strong>{rx.medication}</strong>
                     <span>
-                      {rx.dose} · {rx.route} · {rx.frequency} · {rx.duration} · qty {rx.quantity}
+                      {rx.dose} · {rx.route} · {rx.frequency} · {rx.duration} · <Trans>qty {rx.quantity}</Trans>
                     </span>
                   </div>
                   <button className="text-button" onClick={() => dispatch({ type: 'removePrescription', encounterId: open.id, prescriptionId: rx.id })}>
-                    Remove
+                    <Trans>Remove</Trans>
                   </button>
                 </div>
               ))}
             </div>
           </Panel>
-          <Panel title="Clinical notes" description="Authored notes are preserved as a revision history">
+          <Panel title={t`Clinical notes`} description={t`Authored notes are preserved as a revision history`}>
             <textarea
               className="note-box"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              aria-label="Clinical notes"
-              placeholder="Record the consultation findings, assessment and plan…"
+              aria-label={t`Clinical notes`}
+              placeholder={t`Record the consultation findings, assessment and plan…`}
             />
             <div className="panel-footer">
               <span className="save-hint">
-                <span className="pulse" /> Draft is saved locally
+                <span className="pulse" /> <Trans>Draft is saved locally</Trans>
               </span>
               <button
                 className="button secondary"
@@ -1489,13 +1837,13 @@ const Consultations = () => {
                   }
                 }}
               >
-                Add note
+                <Trans>Add note</Trans>
               </button>
               <button
                 className="button primary"
                 onClick={() => dispatch({ type: 'closeEncounter', encounterId: open.id })}
               >
-                Close consultation
+                <Trans>Close consultation</Trans>
               </button>
             </div>
             {open.notes.length > 0 && (
@@ -1503,6 +1851,7 @@ const Consultations = () => {
                 {open.notes.map((n) => {
                   const author = data.users.find((u) => u.id === n.authorId)
                   const amends = n.amends ? open.notes.find((x) => x.id === n.amends) : undefined
+                  const amendmentReason = n.amendReason || t`not recorded`
                   return (
                     <div key={n.id} className={n.amends ? 'note-entry amended' : 'note-entry'}>
                       <span>
@@ -1512,7 +1861,7 @@ const Consultations = () => {
                           <>
                             {' · '}
                             <Pill tone="warn" dot>
-                              Amendment
+                              <Trans>Amendment</Trans>
                             </Pill>
                           </>
                         )}
@@ -1520,38 +1869,38 @@ const Consultations = () => {
                       <p>{n.body}</p>
                       {n.amends && (
                         <span className="note-amend-meta">
-                          Reason: {n.amendReason || 'not recorded'}
-                          {amends ? ' · supersedes an earlier note' : ' · original note no longer on file'}
+                          <Trans>Reason: {amendmentReason}</Trans>
+                          {amends ? <> · <Trans>supersedes an earlier note</Trans></> : <> · <Trans>original note no longer on file</Trans></>}
                         </span>
                       )}
                       {amendNoteId === n.id ? (
                         <div className="note-amend-form">
-                          <Field label="Reason for amendment" htmlFor="note-amend-reason">
+                          <Field label={t`Reason for amendment`} htmlFor="note-amend-reason">
                             <input
                               id="note-amend-reason"
                               value={amendReason}
                               onChange={(e) => setAmendReason(e.target.value)}
-                              placeholder="e.g. Corrected the recorded dose…"
+                              placeholder={t`e.g. Corrected the recorded dose…`}
                             />
                           </Field>
                           <textarea
                             className="note-box"
-                            aria-label="Amended note"
+                            aria-label={t`Amended note`}
                             value={amendBody}
                             onChange={(e) => setAmendBody(e.target.value)}
                           />
                           <div className="panel-footer">
                             <button className="small-button" onClick={cancelAmend}>
-                              Cancel
+                              <Trans>Cancel</Trans>
                             </button>
                             <button className="button primary" onClick={saveAmend} disabled={!amendBody.trim() || !amendReason.trim()}>
-                              Save amendment
+                              <Trans>Save amendment</Trans>
                             </button>
                           </div>
                         </div>
                       ) : (
                         <button className="text-button" onClick={() => startAmend(n.id, n.body)}>
-                          Amend
+                          <Trans>Amend</Trans>
                         </button>
                       )}
                     </div>
@@ -1560,18 +1909,18 @@ const Consultations = () => {
               </div>
             )}
           </Panel>
-          <Panel title="Follow-up" description="Book the next visit before closing">
+          <Panel title={t`Follow-up`} description={t`Book the next visit before closing`}>
             <div className="inline-form nested">
               <div className="form-grid">
-                <Field label="Follow-up date" htmlFor="fu-date">
+                <Field label={t`Follow-up date`} htmlFor="fu-date">
                   <input id="fu-date" type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
                 </Field>
-                <Field label="Time" htmlFor="fu-time">
+                <Field label={t`Time`} htmlFor="fu-time">
                   <input id="fu-time" type="time" value={followUpTime} onChange={(e) => setFollowUpTime(e.target.value)} />
                 </Field>
               </div>
               <button className="button secondary" onClick={bookFollowUp} disabled={!followUpDate}>
-                Book follow-up
+                <Trans>Book follow-up</Trans>
               </button>
             </div>
           </Panel>
@@ -1583,6 +1932,7 @@ const Consultations = () => {
 
 const Billing = () => {
   const { data, dispatch } = useClinic()
+  const { t } = useLingui()
   const billing = usePermission('billing.write')
   const today = todayKey()
   const [newInvoiceOpen, setNewInvoiceOpen] = useState(false)
@@ -1624,13 +1974,13 @@ const Billing = () => {
   )
 
   const stats = [
-    { label: 'Outstanding balance', value: formatCurrency(outstanding), note: `${openInvoices.length} open invoices`, icon: CreditCard, tone: 'teal' },
-    { label: 'Collected today', value: formatCurrency(collectedToday), note: `${data.payments.filter((p) => p.receivedAt.startsWith(today)).length} payments`, icon: Plus, tone: 'violet' },
-    { label: 'Draft invoices', value: String(drafts.length), note: 'Ready to post', icon: ClipboardList, tone: 'amber' },
-    { label: 'Billed all time', value: formatCurrency(billedTotal), note: `${data.invoices.length} invoices`, icon: BarChart3, tone: 'teal' },
+    { label: t`Outstanding balance`, value: formatCurrency(outstanding), note: t`${openInvoices.length} open invoices`, icon: CreditCard, tone: 'teal' },
+    { label: t`Collected today`, value: formatCurrency(collectedToday), note: t`${data.payments.filter((p) => p.receivedAt.startsWith(today)).length} payments`, icon: Plus, tone: 'violet' },
+    { label: t`Draft invoices`, value: String(drafts.length), note: t`Ready to post`, icon: ClipboardList, tone: 'amber' },
+    { label: t`Billed all time`, value: formatCurrency(billedTotal), note: t`${data.invoices.length} invoices`, icon: BarChart3, tone: 'teal' },
   ]
 
-  const sortedInvoices = [...data.invoices].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const sortedInvoices = data.invoices.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))
   const paymentInvoice = data.invoices.find((i) => i.id === paymentInvoiceId)
   const paymentBalance = paymentInvoice ? invoiceTotals(paymentInvoice, data.clinic.vatRate, data.payments).balance : 0
   const refundPayment = data.payments.find((p) => p.id === refundPaymentId)
@@ -1669,11 +2019,11 @@ const Billing = () => {
   return (
     <>
       <PageHeader
-        title="Billing & payments"
-        description="Invoices, payments and adjustments stay traceable."
+        title={t`Billing & payments`}
+        description={t`Invoices, payments and adjustments stay traceable.`}
         action={
           <button className="button primary" onClick={() => setNewInvoiceOpen(true)} disabled={!billing.allowed} title={billing.reason || undefined}>
-            <Plus size={16} /> New invoice
+            <Plus size={16} /> <Trans>New invoice</Trans>
           </button>
         }
       />
@@ -1695,30 +2045,30 @@ const Billing = () => {
         <div className="inline-form">
           <div className="form-heading">
             <div>
-              <strong>New invoice</strong>
-              <span>Draft invoices can be edited and posted when settled at the desk.</span>
+              <strong><Trans>New invoice</Trans></strong>
+              <span><Trans>Draft invoices can be edited and posted when settled at the desk.</Trans></span>
             </div>
-            <button className="icon-button" onClick={() => setNewInvoiceOpen(false)} aria-label="Close form">
+            <button className="icon-button" onClick={() => setNewInvoiceOpen(false)} aria-label={t`Close form`}>
               <X size={17} />
             </button>
           </div>
           <div className="form-grid">
-            <Field label="Owner" htmlFor="ni-owner">
+            <Field label={t`Owner`} htmlFor="ni-owner">
               <NativeSelect id="ni-owner" value={niOwnerId || data.owners[0]?.id || ''} onChange={(e) => setNiOwnerId(e.target.value)}>
                 {data.owners.map((o) => (
                   <option key={o.id} value={o.id}>{o.name}</option>
                 ))}
               </NativeSelect>
             </Field>
-            <Field label="Line item" htmlFor="ni-item">
+            <Field label={t`Line item`} htmlFor="ni-item">
               <NativeSelect id="ni-item" value={niCatalogId} onChange={(e) => setNiCatalogId(e.target.value)}>
-                <option value="">— select item —</option>
+                <option value="">{t`— select item —`}</option>
                 {catalog.map((c) => (
                   <option key={c.id} value={c.id}>{c.name} — {formatCurrency(c.unitPrice)}</option>
                 ))}
               </NativeSelect>
             </Field>
-            <Field label="Quantity" htmlFor="ni-qty">
+            <Field label={t`Quantity`} htmlFor="ni-qty">
               <input id="ni-qty" type="number" min="1" value={niQuantity} onChange={(e) => setNiQuantity(e.target.value)} />
             </Field>
           </div>
@@ -1740,23 +2090,23 @@ const Billing = () => {
                 setNewInvoiceOpen(false)
               }}
             >
-              Create draft invoice
+              <Trans>Create draft invoice</Trans>
             </button>
           </div>
         </div>
       )}
       <Panel
-        title="Invoices"
-        description="Drafts can be reviewed before posting; posted invoices are immutable."
+        title={t`Invoices`}
+        description={t`Drafts can be reviewed before posting; posted invoices are immutable.`}
       >
         <div className="records-table table-wide billing-table">
           <div className="table-head">
-            <span>Invoice</span>
-            <span>Owner</span>
-            <span>Items</span>
-            <span>Status</span>
-            <span>Total</span>
-            <span>Balance</span>
+            <span><Trans>Invoice</Trans></span>
+            <span><Trans>Owner</Trans></span>
+            <span><Trans>Items</Trans></span>
+            <span><Trans>Status</Trans></span>
+            <span><Trans>Total</Trans></span>
+            <span><Trans>Balance</Trans></span>
             <span />
           </div>
           {sortedInvoices.map((invoice) => {
@@ -1772,11 +2122,11 @@ const Billing = () => {
                   </div>
                   <span>{owner?.name}</span>
                   <span>
-                    {invoice.items.length} item{invoice.items.length === 1 ? '' : 's'}
+                    <Plural value={invoice.items.length} one="# item" other="# items" />
                   </span>
                   <span>
                     <Pill tone={statusTone(invoice.status)} dot>
-                      {invoice.status}
+                      {statusLabel(invoice.status)}
                     </Pill>
                   </span>
                   <strong>{formatCurrency(totals.total)}</strong>
@@ -1787,13 +2137,13 @@ const Billing = () => {
                     {invoice.status === 'draft' && (
                       <>
                         <button className="row-action" onClick={() => setAddItemInvoiceId(addItemInvoiceId === invoice.id ? null : invoice.id)}>
-                          Add item
+                          <Trans>Add item</Trans>
                         </button>
                         <button
                           className="small-button"
                           onClick={() => dispatch({ type: 'postInvoice', invoiceId: invoice.id })}
                         >
-                          Post invoice
+                          <Trans>Post invoice</Trans>
                         </button>
                       </>
                     )}
@@ -1807,7 +2157,7 @@ const Billing = () => {
                           setPayAmount((totals.balance / 100).toFixed(2))
                         }}
                       >
-                        Record payment
+                        <Trans>Record payment</Trans>
                       </button>
                     )}
                     {invoice.status === 'posted' && totals.paid === 0 && (
@@ -1816,17 +2166,17 @@ const Billing = () => {
                         disabled={!billing.allowed}
                         title={billing.reason || undefined}
                         onClick={() => {
-                          if (confirm(`Void ${invoice.number}? This cannot be undone.`)) {
+                          if (confirm(t`Void ${invoice.number}? This cannot be undone.`)) {
                             dispatch({ type: 'voidInvoice', invoiceId: invoice.id })
                           }
                         }}
                       >
-                        Void
+                        <Trans>Void</Trans>
                       </button>
                     )}
                     {(invoice.status !== 'draft' || totals.balance === 0) && (
                       <button className="row-action" onClick={() => setReceiptInvoiceId(invoice.id)}>
-                        Receipt
+                        <Trans>Receipt</Trans>
                       </button>
                     )}
                   </div>
@@ -1834,15 +2184,15 @@ const Billing = () => {
                 {addItemInvoiceId === invoice.id && (
                   <div className="inline-form nested">
                     <div className="form-grid">
-                      <Field label="Item" htmlFor={`ai-item-${invoice.id}`}>
+                      <Field label={t`Item`} htmlFor={`ai-item-${invoice.id}`}>
                         <NativeSelect id={`ai-item-${invoice.id}`} value={addItemCatalogId} onChange={(e) => setAddItemCatalogId(e.target.value)}>
-                          <option value="">— select item —</option>
+                          <option value="">{t`— select item —`}</option>
                           {catalog.map((c) => (
                             <option key={c.id} value={c.id}>{c.name} — {formatCurrency(c.unitPrice)}</option>
                           ))}
                         </NativeSelect>
                       </Field>
-                      <Field label="Quantity" htmlFor={`ai-qty-${invoice.id}`}>
+                      <Field label={t`Quantity`} htmlFor={`ai-qty-${invoice.id}`}>
                         <input id={`ai-qty-${invoice.id}`} type="number" min="1" value={addItemQuantity} onChange={(e) => setAddItemQuantity(e.target.value)} />
                       </Field>
                     </div>
@@ -1860,20 +2210,20 @@ const Billing = () => {
                         setAddItemInvoiceId(null)
                       }}
                     >
-                      Add to invoice
+                      <Trans>Add to invoice</Trans>
                     </button>
                   </div>
                 )}
               </div>
             )
           })}
-          {sortedInvoices.length === 0 && <p className="empty-state">No invoices yet.</p>}
+          {sortedInvoices.length === 0 && <p className="empty-state"><Trans>No invoices yet.</Trans></p>}
         </div>
       </Panel>
-      <Panel title="Recent payments" description="Every payment is appended to an immutable ledger.">
+      <Panel title={t`Recent payments`} description={t`Every payment is appended to an immutable ledger.`}>
         <div className="activity-list">
-          {[...data.payments]
-            .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
+          {data.payments
+            .toSorted((a, b) => b.receivedAt.localeCompare(a.receivedAt))
             .slice(0, 10)
             .map((payment) => {
               const invoice = data.invoices.find((i) => i.id === payment.invoiceId)
@@ -1893,10 +2243,10 @@ const Billing = () => {
                   </div>
                   <div>
                     <strong>
-                      {formatCurrency(payment.amount)} · {invoice?.number ?? 'Unassigned'}
+                      {formatCurrency(payment.amount)} · {invoice?.number ?? t`Unassigned`}
                     </strong>
                     <span>
-                      {isRefund ? `Refund — ${payment.note ?? 'no reason'}` : payment.method} · {formatDate(payment.receivedAt)} ·{' '}
+                      {isRefund ? t`Refund — ${payment.note ?? t`no reason`}` : payment.method} · {formatDate(payment.receivedAt)} ·{' '}
                       {formatTime(payment.receivedAt)}
                     </span>
                   </div>
@@ -1909,14 +2259,14 @@ const Billing = () => {
                         setRefundNote('')
                       }}
                     >
-                      Refund
+                      <Trans>Refund</Trans>
                     </button>
                   )}
-                  <Pill tone={isRefund ? 'bad' : 'muted'}>{isRefund ? 'refund' : payment.method}</Pill>
+                  <Pill tone={isRefund ? 'bad' : 'muted'}>{isRefund ? t`refund` : payment.method}</Pill>
                 </div>
               )
             })}
-          {data.payments.length === 0 && <p className="empty-state">No payments recorded yet.</p>}
+          {data.payments.length === 0 && <p className="empty-state"><Trans>No payments recorded yet.</Trans></p>}
         </div>
       </Panel>
 
@@ -1927,41 +2277,41 @@ const Billing = () => {
             if (e.target === e.currentTarget) setPaymentInvoiceId(null)
           }}
         >
-          <div className="modal" role="dialog" aria-modal="true" aria-label={`Record payment for ${paymentInvoice.number}`}>
+          <div className="modal" role="dialog" aria-modal="true" aria-label={t`Record payment for ${paymentInvoice.number}`}>
             <div className="form-heading">
               <div>
-                <strong>Record payment — {paymentInvoice.number}</strong>
+                <strong><Trans>Record payment — {paymentInvoice.number}</Trans></strong>
                 <span>
-                  Balance due {formatCurrency(paymentBalance)} · partial payments are supported
+                  <Trans>Balance due {formatCurrency(paymentBalance)} · partial payments are supported</Trans>
                 </span>
               </div>
-              <button className="icon-button" onClick={() => setPaymentInvoiceId(null)} aria-label="Close dialog">
+              <button className="icon-button" onClick={() => setPaymentInvoiceId(null)} aria-label={t`Close dialog`}>
                 <X size={17} />
               </button>
             </div>
             <div className="form-grid">
-              <Field label="Amount (THB)" htmlFor="pay-amount">
+              <Field label={t`Amount (THB)`} htmlFor="pay-amount">
                 <input id="pay-amount" type="number" min="0" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
               </Field>
-              <Field label="Method" htmlFor="pay-method">
+              <Field label={t`Method`} htmlFor="pay-method">
                 <NativeSelect id="pay-method" value={payMethod} onChange={(e) => setPayMethod(e.target.value as typeof payMethod)}>
-                  <option value="cash">Cash</option>
-                  <option value="card">Card</option>
-                  <option value="promptpay">PromptPay</option>
-                  <option value="transfer">Bank transfer</option>
+                  <option value="cash">{t`Cash`}</option>
+                  <option value="card">{t`Card`}</option>
+                  <option value="promptpay">{t`PromptPay`}</option>
+                  <option value="transfer">{t`Bank transfer`}</option>
                 </NativeSelect>
               </Field>
             </div>
             <div className="panel-footer">
               <button className="button secondary" onClick={() => setPaymentInvoiceId(null)}>
-                Cancel
+                <Trans>Cancel</Trans>
               </button>
               <button
                 className="button primary"
                 onClick={submitPayment}
                 disabled={!(Number(payAmount) > 0) || Math.round(Number(payAmount) * 100) > paymentBalance}
               >
-                Record payment
+                <Trans>Record payment</Trans>
               </button>
             </div>
           </div>
@@ -1981,22 +2331,22 @@ const Billing = () => {
             className="modal"
             role="dialog"
             aria-modal="true"
-            aria-label={`Refund payment on ${data.invoices.find((i) => i.id === refundPayment.invoiceId)?.number ?? 'invoice'}`}
+            aria-label={t`Refund payment on ${data.invoices.find((i) => i.id === refundPayment.invoiceId)?.number ?? t`invoice`}`}
           >
             <div className="form-heading">
               <div>
-                <strong>Refund payment</strong>
+                <strong><Trans>Refund payment</Trans></strong>
                 <span>
-                  {formatCurrency(refundPayment.amount)} recorded on {formatDate(refundPayment.receivedAt)} · up to{' '}
-                  {formatCurrency(refundable)} refundable
+                  <Trans>{formatCurrency(refundPayment.amount)} recorded on {formatDate(refundPayment.receivedAt)} · up to{' '}
+                  {formatCurrency(refundable)} refundable</Trans>
                 </span>
               </div>
-              <button className="icon-button" onClick={() => setRefundPaymentId(null)} aria-label="Close dialog">
+              <button className="icon-button" onClick={() => setRefundPaymentId(null)} aria-label={t`Close dialog`}>
                 <X size={17} />
               </button>
             </div>
             <div className="form-grid">
-              <Field label="Refund amount (THB)" htmlFor="refund-amount">
+              <Field label={t`Refund amount (THB)`} htmlFor="refund-amount">
                 <input
                   id="refund-amount"
                   type="number"
@@ -2006,28 +2356,28 @@ const Billing = () => {
                   onChange={(e) => setRefundAmount(e.target.value)}
                 />
               </Field>
-              <Field label="Reason (recorded on the receipt)" htmlFor="refund-note">
+              <Field label={t`Reason (recorded on the receipt)`} htmlFor="refund-note">
                 <input
                   id="refund-note"
                   value={refundNote}
                   onChange={(e) => setRefundNote(e.target.value)}
-                  placeholder="e.g. Dispensed the wrong strength…"
+                  placeholder={t`e.g. Dispensed the wrong strength…`}
                 />
               </Field>
             </div>
             <p className="form-hint">
-              Refunds are appended to the payment ledger; the original payment and the receipt stay unchanged.
+              <Trans>Refunds are appended to the payment ledger; the original payment and the receipt stay unchanged.</Trans>
             </p>
             <div className="panel-footer">
               <button className="button secondary" onClick={() => setRefundPaymentId(null)}>
-                Cancel
+                <Trans>Cancel</Trans>
               </button>
               <button
                 className="button primary"
                 onClick={submitRefund}
                 disabled={!(Number(refundAmount) > 0) || Math.round(Number(refundAmount) * 100) > refundable || !refundNote.trim()}
               >
-                Record refund
+                <Trans>Record refund</Trans>
               </button>
             </div>
           </div>
@@ -2039,6 +2389,7 @@ const Billing = () => {
 
 const ReceiptDialog = ({ invoiceId, onClose }: { invoiceId: string; onClose: () => void }) => {
   const { data } = useClinic()
+  const { t } = useLingui()
   const invoice = data.invoices.find((i) => i.id === invoiceId)
   if (!invoice) return null
   const owner = data.owners.find((o) => o.id === invoice.ownerId)
@@ -2051,11 +2402,11 @@ const ReceiptDialog = ({ invoiceId, onClose }: { invoiceId: string; onClose: () 
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="modal" role="dialog" aria-modal="true" aria-label={`Receipt for ${invoice.number}`}>
+      <div className="modal" role="dialog" aria-modal="true" aria-label={t`Receipt for ${invoice.number}`}>
         <div className="print-area receipt">
           <header>
             <h2>{data.clinic.name}</h2>
-            <span>Invoice / Receipt</span>
+            <span><Trans>Invoice / Receipt</Trans></span>
           </header>
           <div className="receipt-meta">
             <span>{invoice.number}</span>
@@ -2064,10 +2415,10 @@ const ReceiptDialog = ({ invoiceId, onClose }: { invoiceId: string; onClose: () 
           </div>
           <div className="receipt-items">
             <div className="receipt-line receipt-head">
-              <span>Item</span>
-              <span>Qty</span>
-              <span>Price</span>
-              <span>Amount</span>
+              <span><Trans>Item</Trans></span>
+              <span><Trans>Qty</Trans></span>
+              <span><Trans>Price</Trans></span>
+              <span><Trans>Amount</Trans></span>
             </div>
             {invoice.items.map((item) => (
               <div className="receipt-line" key={item.id}>
@@ -2079,32 +2430,32 @@ const ReceiptDialog = ({ invoiceId, onClose }: { invoiceId: string; onClose: () 
             ))}
           </div>
           <div className="receipt-totals">
-            <div><span>Subtotal</span><strong>{formatCurrency(totals.subtotal)}</strong></div>
-            <div><span>VAT ({Math.round(data.clinic.vatRate * 100)}%)</span><strong>{formatCurrency(totals.tax)}</strong></div>
-            <div className="receipt-grand"><span>Total</span><strong>{formatCurrency(totals.total)}</strong></div>
+            <div><span><Trans>Subtotal</Trans></span><strong>{formatCurrency(totals.subtotal)}</strong></div>
+            <div><span><Trans>VAT ({Math.round(data.clinic.vatRate * 100)}%)</Trans></span><strong>{formatCurrency(totals.tax)}</strong></div>
+            <div className="receipt-grand"><span><Trans>Total</Trans></span><strong>{formatCurrency(totals.total)}</strong></div>
             {invoicePayments.length > 0 && (
               <>
                 {invoicePayments.map((p) => (
                   <div key={p.id}>
                     <span>
-                      {p.kind === 'refund' ? 'Refund' : 'Paid'} — {p.method}
+                      {p.kind === 'refund' ? t`Refund` : t`Paid`} — {p.method}
                       {p.note ? ` · ${p.note}` : ''}
                     </span>
                     <strong>{formatCurrency(p.amount)}</strong>
                   </div>
                 ))}
-                <div className="receipt-grand"><span>Balance due</span><strong>{formatCurrency(totals.balance)}</strong></div>
+                <div className="receipt-grand"><span><Trans>Balance due</Trans></span><strong>{formatCurrency(totals.balance)}</strong></div>
               </>
             )}
           </div>
-          <footer>Thank you — {data.clinic.name} · {data.clinic.timezone}</footer>
+          <footer><Trans>Thank you — {data.clinic.name} · {data.clinic.timezone}</Trans></footer>
         </div>
         <div className="panel-footer no-print">
           <button className="button secondary" onClick={onClose}>
-            Close
+            <Trans>Close</Trans>
           </button>
           <button className="button primary" onClick={() => window.print()}>
-            Print receipt
+            <Trans>Print receipt</Trans>
           </button>
         </div>
       </div>
@@ -2112,15 +2463,16 @@ const ReceiptDialog = ({ invoiceId, onClose }: { invoiceId: string; onClose: () 
   )
 }
 
-const categoryLabel: Record<string, string> = {
-  medicine: 'Medicine',
-  vaccine: 'Vaccine',
-  equipment: 'Equipment',
-  supply: 'Supply',
+const categoryLabel: Record<string, MessageDescriptor> = {
+  medicine: msg`Medicine`,
+  vaccine: msg`Vaccine`,
+  equipment: msg`Equipment`,
+  supply: msg`Supply`,
 }
 
 const Inventory = () => {
   const { data, dispatch } = useClinic()
+  const { t, i18n } = useLingui()
   const inventory = usePermission('inventory.write')
   const [category, setCategory] = useState<'all' | 'medicine' | 'vaccine' | 'equipment' | 'supply'>('all')
   const [showItemForm, setShowItemForm] = useState(false)
@@ -2170,44 +2522,44 @@ const Inventory = () => {
   return (
     <>
       <PageHeader
-        title="Pharmacy & inventory"
-        description="Items, batch lots and an append-only stock ledger with clear reorder signals."
+        title={t`Pharmacy & inventory`}
+        description={t`Items, batch lots and an append-only stock ledger with clear reorder signals.`}
         action={
           <button className="button primary" onClick={() => setShowItemForm((v) => !v)} disabled={!inventory.allowed}>
-            <Plus size={16} /> Add item
+            <Plus size={16} /> <Trans>Add item</Trans>
           </button>
         }
       />
-      {!inventory.allowed && <p className="empty-state">{inventory.reason}. Inventory changes require admin or pharmacist access.</p>}
+      {!inventory.allowed && <p className="empty-state">{inventory.reason}. <Trans>Inventory changes require admin or pharmacist access.</Trans></p>}
       {showItemForm && (
         <div className="inline-form">
           <div className="form-heading">
             <div>
-              <strong>Add inventory item</strong>
-              <span>Define the stock-keeping unit; lots are received against it.</span>
+              <strong><Trans>Add inventory item</Trans></strong>
+              <span><Trans>Define the stock-keeping unit; lots are received against it.</Trans></span>
             </div>
-            <button className="icon-button" onClick={() => setShowItemForm(false)} aria-label="Close form">
+            <button className="icon-button" onClick={() => setShowItemForm(false)} aria-label={t`Close form`}>
               <X size={17} />
             </button>
           </div>
           <div className="form-grid">
-            <Field label="Name" htmlFor="inv-name">
-              <input id="inv-name" value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder="e.g. Amoxicillin 250 mg…" />
+            <Field label={t`Name`} htmlFor="inv-name">
+              <input id="inv-name" value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder={t`e.g. Amoxicillin 250 mg…`} />
             </Field>
-            <Field label="Category" htmlFor="inv-cat">
+            <Field label={t`Category`} htmlFor="inv-cat">
               <select id="inv-cat" value={itemCategory} onChange={(e) => setItemCategory(e.target.value as InventoryCategory)}>
                 {Object.entries(categoryLabel).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
+                  <option key={value} value={value}>{i18n._(label)}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Unit" htmlFor="inv-unit">
-              <input id="inv-unit" value={itemUnit} onChange={(e) => setItemUnit(e.target.value)} placeholder="tablet / dose / bottle…" />
+            <Field label={t`Unit`} htmlFor="inv-unit">
+              <input id="inv-unit" value={itemUnit} onChange={(e) => setItemUnit(e.target.value)} placeholder={t`tablet / dose / bottle…`} />
             </Field>
-            <Field label="Reorder level" htmlFor="inv-reorder">
+            <Field label={t`Reorder level`} htmlFor="inv-reorder">
               <input id="inv-reorder" type="number" min="0" value={itemReorder} onChange={(e) => setItemReorder(e.target.value)} />
             </Field>
-            <Field label="Selling price (THB)" htmlFor="inv-price">
+            <Field label={t`Selling price (THB)`} htmlFor="inv-price">
               <input id="inv-price" type="number" min="0" step="0.01" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} />
             </Field>
           </div>
@@ -2231,7 +2583,7 @@ const Inventory = () => {
               setShowItemForm(false)
             }}
           >
-            Save item
+            <Trans>Save item</Trans>
           </button>
         </div>
       )}
@@ -2239,18 +2591,18 @@ const Inventory = () => {
         <div className="inline-form">
           <div className="form-heading">
             <div>
-              <strong>Add supplier</strong>
-              <span>Lots can be tagged with the vendor they were purchased from.</span>
+              <strong><Trans>Add supplier</Trans></strong>
+              <span><Trans>Lots can be tagged with the vendor they were purchased from.</Trans></span>
             </div>
-            <button className="icon-button" onClick={() => setShowSupplierForm(false)} aria-label="Close form">
+            <button className="icon-button" onClick={() => setShowSupplierForm(false)} aria-label={t`Close form`}>
               <X size={17} />
             </button>
           </div>
           <div className="form-grid">
-            <Field label="Supplier name" htmlFor="sup-name">
-              <input id="sup-name" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="e.g. Thai Vet Pharma Co.…" />
+            <Field label={t`Supplier name`} htmlFor="sup-name">
+              <input id="sup-name" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder={t`e.g. Thai Vet Pharma Co.…`} />
             </Field>
-            <Field label="Phone" htmlFor="sup-phone">
+            <Field label={t`Phone`} htmlFor="sup-phone">
               <input id="sup-phone" value={supplierPhone} onChange={(e) => setSupplierPhone(e.target.value)} />
             </Field>
           </div>
@@ -2264,29 +2616,32 @@ const Inventory = () => {
               setShowSupplierForm(false)
             }}
           >
-            Save supplier
+            <Trans>Save supplier</Trans>
           </button>
         </div>
       )}
       <div className="toolbar">
-        <div className="filter-group" role="tablist" aria-label="Inventory category filter">
+        <div className="filter-group" role="tablist" aria-label={t`Inventory category filter`}>
           {(['all', 'medicine', 'vaccine', 'equipment', 'supply'] as const).map((c) => (
             <button key={c} className={`filter-chip ${category === c ? 'active' : ''}`} onClick={() => setCategory(c)}>
-              {c === 'all' ? 'All' : categoryLabel[c]}
+              {c === 'all' ? t`All` : i18n._(categoryLabel[c])}
             </button>
           ))}
         </div>
         <button className="filter-button" onClick={() => setShowSupplierForm((v) => !v)}>
-          Suppliers ({data.suppliers.length}) <span>⌄</span>
+          <Trans>Suppliers ({data.suppliers.length})</Trans> <span>⌄</span>
         </button>
       </div>
-      <Panel title={`${items.length} items`} description="Quantity-on-hand is derived from lot quantities">
+      <Panel
+        title={items.length === 1 ? t`1 item` : t`${items.length} items`}
+        description={t`Quantity-on-hand is derived from lot quantities`}
+      >
         <div className="records-table table-wide">
           <div className="table-head">
-            <span>Item</span>
-            <span>Category</span>
-            <span>On hand</span>
-            <span>Stock</span>
+            <span><Trans>Item</Trans></span>
+            <span><Trans>Category</Trans></span>
+            <span><Trans>On hand</Trans></span>
+            <span><Trans>Stock</Trans></span>
             <span />
           </div>
           {items.map((item) => {
@@ -2300,78 +2655,78 @@ const Inventory = () => {
                     <strong>{item.name}</strong>
                     <span>{item.unit} · {formatCurrency(item.sellingPrice)}</span>
                   </div>
-                  <span><Pill tone="info">{categoryLabel[item.category]}</Pill></span>
+                  <span><Pill tone="info">{i18n._(categoryLabel[item.category])}</Pill></span>
                   <strong>{onHand}</strong>
                   <span>
-                    <Pill tone={low ? 'warn' : 'ok'} dot>{low ? `Low — reorder at ${item.reorderLevel}` : 'In stock'}</Pill>
+                    <Pill tone={low ? 'warn' : 'ok'} dot>{low ? t`Low — reorder at ${item.reorderLevel}` : t`In stock`}</Pill>
                   </span>
                   <div className="row-actions">
                     <button className="row-action" onClick={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}>
-                      {expandedItemId === item.id ? 'Hide lots' : `Lots (${lots.length})`}
+                      {expandedItemId === item.id ? t`Hide lots` : t`Lots (${lots.length})`}
                     </button>
                     <button className="small-button" onClick={() => setReceivingItemId(receivingItemId === item.id ? null : item.id)} disabled={!inventory.allowed}>
-                      Receive stock
+                      <Trans>Receive stock</Trans>
                     </button>
                   </div>
                 </div>
                 {receivingItemId === item.id && (
                   <div className="inline-form nested">
                     <div className="form-grid">
-                      <Field label="Lot number" htmlFor={`lot-num-${item.id}`}>
-                        <input id={`lot-num-${item.id}`} value={lotNumber} onChange={(e) => setLotNumber(e.target.value)} placeholder="e.g. AMX-2611C…" />
+                      <Field label={t`Lot number`} htmlFor={`lot-num-${item.id}`}>
+                        <input id={`lot-num-${item.id}`} value={lotNumber} onChange={(e) => setLotNumber(e.target.value)} placeholder={t`e.g. AMX-2611C…`} />
                       </Field>
-                      <Field label="Quantity" htmlFor={`lot-qty-${item.id}`}>
+                      <Field label={t`Quantity`} htmlFor={`lot-qty-${item.id}`}>
                         <input id={`lot-qty-${item.id}`} type="number" min="1" value={lotQuantity} onChange={(e) => setLotQuantity(e.target.value)} />
                       </Field>
-                      <Field label="Expiry date" htmlFor={`lot-exp-${item.id}`}>
+                      <Field label={t`Expiry date`} htmlFor={`lot-exp-${item.id}`}>
                         <input id={`lot-exp-${item.id}`} type="date" value={lotExpiry} onChange={(e) => setLotExpiry(e.target.value)} />
                       </Field>
-                      <Field label="Supplier" htmlFor={`lot-sup-${item.id}`}>
+                      <Field label={t`Supplier`} htmlFor={`lot-sup-${item.id}`}>
                         <select id={`lot-sup-${item.id}`} value={lotSupplier} onChange={(e) => setLotSupplier(e.target.value)}>
-                          <option value="">— none —</option>
+                          <option value="">{t`— none —`}</option>
                           {data.suppliers.map((s) => (
                             <option key={s.id} value={s.id}>{s.name}</option>
                           ))}
                         </select>
                       </Field>
-                      <Field label="Cost/unit (THB)" htmlFor={`lot-cost-${item.id}`}>
+                      <Field label={t`Cost/unit (THB)`} htmlFor={`lot-cost-${item.id}`}>
                         <input id={`lot-cost-${item.id}`} type="number" min="0" step="0.01" value={lotCost} onChange={(e) => setLotCost(e.target.value)} />
                       </Field>
                     </div>
-                    <button className="button primary" onClick={() => receiveLot(item.id)}>Record receipt</button>
+                    <button className="button primary" onClick={() => receiveLot(item.id)}><Trans>Record receipt</Trans></button>
                   </div>
                 )}
                 {expandedItemId === item.id && (
                   <div className="lot-breakdown">
-                    {lots.length === 0 && <p className="empty-state">No lots received yet.</p>}
+                    {lots.length === 0 && <p className="empty-state"><Trans>No lots received yet.</Trans></p>}
                     {lots.map((lot) => {
                       const supplier = data.suppliers.find((s) => s.id === lot.supplierId)
                       const movements = data.stockMovements.filter((m) => m.lotId === lot.id)
                       return (
                         <div className="lot-row" key={lot.id}>
                           <div className="lot-main">
-                            <strong>Lot {lot.lotNumber}</strong>
+                            <strong><Trans>Lot {lot.lotNumber}</Trans></strong>
                             <span>
                               {lot.quantity} {item.unit}
-                              {lot.expiryDate ? ` · exp ${lot.expiryDate}` : ''}
+                              {lot.expiryDate ? <> · <Trans>exp {lot.expiryDate}</Trans></> : ''}
                               {supplier ? ` · ${supplier.name}` : ''}
                             </span>
                           </div>
-                          <span className="lot-ledger">{movements.length} ledger entries</span>
+                          <span className="lot-ledger"><Plural value={movements.length} one="# ledger entry" other="# ledger entries" /></span>
                           <div className="row-actions">
                             <button
                               className="row-action"
                               disabled={!inventory.allowed || lot.quantity <= 0}
                               onClick={() => dispatch({ type: 'recordStockMovement', lotId: lot.id, delta: -1, reason: 'stock_out', notes: 'manual dispense' })}
                             >
-                              Dispense 1
+                              <Trans>Dispense 1</Trans>
                             </button>
                             <button
                               className="row-action"
                               disabled={!inventory.allowed}
                               onClick={() => dispatch({ type: 'recordStockMovement', lotId: lot.id, delta: -1, reason: 'waste', notes: 'write-off' })}
                             >
-                              Waste 1
+                              <Trans>Waste 1</Trans>
                             </button>
                           </div>
                         </div>
@@ -2382,22 +2737,22 @@ const Inventory = () => {
               </div>
             )
           })}
-          {items.length === 0 && <p className="empty-state">No items in this category yet.</p>}
+          {items.length === 0 && <p className="empty-state"><Trans>No items in this category yet.</Trans></p>}
         </div>
       </Panel>
-      <Panel title="Suppliers" description="Vendors lots are purchased from">
+      <Panel title={t`Suppliers`} description={t`Vendors lots are purchased from`}>
         <div className="activity-list">
           {data.suppliers.map((s) => (
             <div className="activity-row" key={s.id}>
               <div className="activity-mark"><Package size={14} /></div>
               <div>
                 <strong>{s.name}</strong>
-                <span>{[s.phone, s.email].filter(Boolean).join(' · ') || 'No contact details'}</span>
+                <span>{[s.phone, s.email].filter(Boolean).join(' · ') || t`No contact details`}</span>
               </div>
-              <Pill tone="muted">{data.inventoryLots.filter((l) => l.supplierId === s.id).length} lots</Pill>
+              <Pill tone="muted"><Plural value={data.inventoryLots.filter((l) => l.supplierId === s.id).length} one="# lot" other="# lots" /></Pill>
             </div>
           ))}
-          {data.suppliers.length === 0 && <p className="empty-state">No suppliers recorded yet.</p>}
+          {data.suppliers.length === 0 && <p className="empty-state"><Trans>No suppliers recorded yet.</Trans></p>}
         </div>
       </Panel>
     </>

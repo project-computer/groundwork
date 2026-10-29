@@ -123,8 +123,8 @@ func (f *fakeLotRepo) ListByItem(_ context.Context, _, itemID int) ([]*models.In
 	return out, nil
 }
 
-func (f *fakeLotRepo) Update(_ context.Context, _, id int, _ *models.UpdateInventoryLotRequest) (*models.InventoryLot, error) {
-	return f.GetByID(nil, 0, id)
+func (f *fakeLotRepo) Update(ctx context.Context, _, id int, _ *models.UpdateInventoryLotRequest) (*models.InventoryLot, error) {
+	return f.GetByID(ctx, 0, id)
 }
 
 // RecordMovement mirrors the real transactional repo: ledger row + cached quantity

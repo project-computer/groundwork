@@ -235,6 +235,7 @@ func scanVaccinationWidgetRows(rows pgx.Rows) ([]models.DashboardVaccinationItem
 	}
 	return out, rows.Err()
 }
+
 // `months` controls how many entries to return; 6 is the default.
 func (r *DashboardRepository) MonthlyRevenueSeries(ctx context.Context, clinicID, months int) ([]models.DashboardRevenueEntry, error) {
 	if months < 1 || months > 24 {

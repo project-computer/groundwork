@@ -14,6 +14,9 @@ const savedAppointments = () => {
   return raw ? (JSON.parse(raw).appointments as unknown[]) : []
 }
 
+const warningText = () => document.querySelector('[role="alert"]')?.textContent ?? ""
+const saveButton = () => document.querySelector<HTMLButtonElement>(".modal .panel-footer .button.primary")
+
 afterEach(() => {
   cleanup()
   localStorage.clear()
@@ -28,17 +31,15 @@ it("warns before double-booking a vet and saves once acknowledged", async () => 
   await page.getByRole("button", { name: "Book appointment" }).click()
 
   // Dr. Pim already has a checked-in patient at 10:00–10:20 today.
-  const warningText = () => document.querySelector('[role="alert"]')?.textContent ?? ""
   await expect.poll(warningText).toContain("already booked at 10:00")
   await expect.poll(warningText).toContain("Moo Daeng")
 
-  const save = () => document.querySelector<HTMLButtonElement>(".modal .panel-footer .button.primary")
-  expect(save()?.disabled, "clash must block the save button").toBe(true)
+  expect(saveButton()?.disabled, "clash must block the save button").toBe(true)
 
   await page.getByLabelText(/Book anyway/).click()
-  await expect.poll(() => save()?.disabled).toBe(false)
+  await expect.poll(() => saveButton()?.disabled).toBe(false)
 
-  save()?.click()
+  saveButton()?.click()
 
   await expect.poll(() => document.querySelector(".modal")).toBeNull()
   await expect.poll(() => savedAppointments().length).toBe(seedState.appointments.length + 1)

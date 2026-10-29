@@ -14,6 +14,9 @@ import (
 
 var ErrInvalidState = errors.New("invalid clinic state")
 
+// requiredArrays mirrors fixtures/clinic-document.json and the frontend
+// CLINIC_STATE_COLLECTIONS: every collection must be present before a
+// document is persisted. Pinned by store_test.go.
 var requiredArrays = []string{
 	"users",
 	"owners",
@@ -22,8 +25,13 @@ var requiredArrays = []string{
 	"encounters",
 	"products",
 	"stockMovements",
+	"suppliers",
+	"inventoryItems",
+	"inventoryLots",
 	"invoices",
 	"payments",
+	"vaccinations",
+	"caseTransfers",
 	"audit",
 	"outbox",
 }

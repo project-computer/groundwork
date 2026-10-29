@@ -7,6 +7,7 @@ import { seedState } from "@/lib/vet/seed"
 
 const STORAGE_KEY = "clinicbook:state:v1"
 const seed = (state: object) => localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, lastSyncedAt: undefined }))
+const addPrescription = () => [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim() === "Add prescription")
 
 afterEach(() => {
   cleanup()
@@ -35,12 +36,11 @@ it("refuses to prescribe more than the pharmacy has in stock", async () => {
   await page.getByLabelText("Quantity").fill("30")
 
   await expect.poll(() => document.querySelector(".form-hint.is-bad")?.textContent ?? "").toContain("Only 24 tablet left in stock")
-  const add = () => [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim() === "Add prescription")
-  expect(add()?.disabled).toBe(true)
+  expect(addPrescription()?.disabled).toBe(true)
 
   await page.getByLabelText("Quantity").fill("8")
-  await expect.poll(() => add()?.disabled).toBe(false)
-  add()?.click()
+  await expect.poll(() => addPrescription()?.disabled).toBe(false)
+  addPrescription()?.click()
 
   await expect.poll(() => document.querySelectorAll(".rx-row strong")).toBeTruthy()
   expect(document.body.innerText).toContain("Amoxicillin 250 mg tablet")

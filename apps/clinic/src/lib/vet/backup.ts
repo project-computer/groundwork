@@ -1,4 +1,4 @@
-import { isClinicState } from './store'
+import { isClinicState, parseClinicState } from './store'
 import type { ClinicState } from './types'
 
 /**
@@ -8,8 +8,8 @@ import type { ClinicState } from './types'
  * one patient's shareable history, a backup is the whole installation.
  */
 
-export const BACKUP_FORMAT = 'vetcare-clinic-backup'
-export const BACKUP_VERSION = 1
+const BACKUP_FORMAT = 'vetcare-clinic-backup'
+const BACKUP_VERSION = 1
 
 export interface ClinicBackup {
   format: typeof BACKUP_FORMAT
@@ -69,10 +69,16 @@ export const parseBackup = (text: string): BackupParseResult => {
   if (candidate.version !== BACKUP_VERSION) {
     return { ok: false, error: `Backup version ${String(candidate.version)} is not supported by this app.` }
   }
-  if (!isClinicBackup(raw)) {
+  if (typeof candidate.createdAt !== 'string' || candidate.createdAt.length === 0) {
     return { ok: false, error: 'The backup is missing clinic records and cannot be restored.' }
   }
-  return { ok: true, backup: raw }
+  // Normalises backups written before newer collections existed, so an old
+  // export still restores into the current document shape.
+  const state = parseClinicState(candidate.state)
+  if (!state) {
+    return { ok: false, error: 'The backup is missing clinic records and cannot be restored.' }
+  }
+  return { ok: true, backup: { format: BACKUP_FORMAT, version: BACKUP_VERSION, createdAt: candidate.createdAt, state } }
 }
 
 export const summarizeBackup = (backup: ClinicBackup): BackupSummary => ({

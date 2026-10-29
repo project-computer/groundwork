@@ -1,35 +1,36 @@
 # Data Model
 
-Source of truth: `apps/clinic/src-tauri/migrations/` (0001 → 0002).
-TypeScript mirror: `apps/clinic/src/lib/types.ts` (camelCase).
+Source of truth: the **clinic document** — one JSON blob in the `clinic_state`
+table (migration 0003), validated by the Go sidecar and written atomically.
+The TypeScript model lives in `apps/clinic/src/lib/vet/types.ts`; domain
+vocabulary lives in `CONTEXT.md`.
 
-Migration 0002 replaced the initial normalized schema with the VetDesk
-model (see ADR 0009). Conventions: UUID text PKs, UTC ISO-8601 timestamps,
-`updated_at` drives merge-on-sync (last write wins).
+## Tables
 
-## Tables (0002)
+- **clinic_state** — single row (`id = 1`), `content` JSON is the whole clinic
+  document (clinic settings, staff, owners, patients, appointments, encounters,
+  invoices, payments, inventory, audit log, outbox). The frontend reducer owns
+  the domain logic; storage just persists the committed document.
+- **sync_meta** — key/value pull cursor and device identity (sidecar only,
+  migration 0004). The outbox itself lives inside the clinic document.
+- **schema_migrations** — applied migration versions, written by the runner.
 
-- **patients** — id, name, species, breed, sex, birth_date, weight_kg,
-  owner_name/phone/email (embedded owner), allergies, notes, timestamps.
-- **appointments** — id, patient_id → patients (ON DELETE CASCADE),
-  date_time, duration_min, reason, vet, status CHECK
-  (`scheduled|checked-in|in-consult|completed|cancelled|no-show`), notes,
-  checked_in_at / started_at / completed_at (stamped automatically on
-  status change), record_id, timestamps. Indexes on patient, date, status.
-- **medical_records** — id, patient_id → patients (CASCADE), appointment_id
-  (no FK; records may outlive their appointment row), vet, date, paid,
-  status CHECK (`draft|final`), **content JSON** (vitals, SOAP notes,
-  prescriptions, charges, follow-up), timestamps.
-- **clinic_settings** — single row (id=1), content JSON, updated_at.
+Legacy VetDesk tables from 0002 (`patients`, `appointments`,
+`medical_records`, `clinic_settings`) were dropped by 0005 once the
+clinic_state document replaced them; nothing reads or writes them.
 
-## Status behavior
+## Sync
 
-- `appointment_set_status` stamps `checked_in_at` when entering
-  `checked-in` and `completed_at` when entering `completed` (NULL-preserving).
-- Records: `draft → final`, `paid` boolean.
+The sync unit is an **entity** (`entityType` + `entityId`), not a table row.
+Each local commit appends an outbox envelope to the document; the sidecar
+pushes pending envelopes, pulls newer entities by cursor, merges
+last-write-wins on `updatedAt`/`occurredAt` with `version` for merged
+top-level entities, then prunes acknowledged entries.
 
 ## Backup format
 
-`ClinicData` JSON (version 2) exported/imported by the Sync panel;
-`data_replace` wipes and reloads in one transaction, `data_merge` merges
-per-entity by `updated_at` (last write wins).
+`vetcare-clinic-backup` **v1** envelope (`apps/clinic/src/lib/vet/backup.ts`):
+`{ format, version, createdAt, state }` where `state` is the full clinic
+document. Restores are validated with `isClinicState` before replacing
+anything. Distinct from a CaseBundle, which carries one Patient's selected
+Visits for transfer to another clinic.

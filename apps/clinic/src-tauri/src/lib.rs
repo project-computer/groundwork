@@ -48,8 +48,8 @@ fn sidecar_binary() -> Option<PathBuf> {
     }
 
     // Development: use the build produced by desktop/scripts/build-sidecar.sh.
-    let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../apps/sidecar/bin/clinic-core");
+    let dev =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../apps/sidecar/bin/clinic-core");
     if dev.exists() {
         return Some(dev);
     }

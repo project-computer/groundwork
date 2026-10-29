@@ -25,7 +25,10 @@ it("keeps dashboard pills inside their panel at every viewport width", async () 
 
   const overflows: string[] = []
   for (const width of widths) {
+    // Viewport resizes must be measured one at a time, after a layout settle.
+    // oxlint-disable-next-line no-await-in-loop
     await page.viewport(width, 900)
+    // oxlint-disable-next-line no-await-in-loop
     await new Promise((r) => setTimeout(r, 60))
 
     for (const pill of document.querySelectorAll<HTMLElement>(".pill")) {

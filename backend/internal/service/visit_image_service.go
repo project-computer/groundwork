@@ -77,7 +77,7 @@ func (s *VisitImageService) Upload(ctx context.Context, clinicID, visitID, userI
 
 	written, err := io.Copy(dst, src)
 	if err != nil {
-		os.Remove(dstPath)
+		_ = os.Remove(dstPath) // best-effort cleanup of the partial file
 		return nil, fmt.Errorf("failed to write uploaded file: %w", err)
 	}
 
@@ -93,7 +93,7 @@ func (s *VisitImageService) Upload(ctx context.Context, clinicID, visitID, userI
 		img.Caption = models.NewNullString(caption)
 	}
 	if err := s.repo.Create(ctx, img); err != nil {
-		os.Remove(dstPath)
+		_ = os.Remove(dstPath) // best-effort cleanup of the orphaned file
 		return nil, err
 	}
 

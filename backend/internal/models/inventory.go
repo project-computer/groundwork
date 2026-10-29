@@ -73,30 +73,30 @@ type InventoryItemListQuery struct {
 
 // InventoryLot is a specific batch of an InventoryItem from a Supplier.
 type InventoryLot struct {
-	ID           int        `json:"id"`
-	ClinicID     int        `json:"clinicId"`
-	ItemID       int        `json:"itemId"`
-	ItemName     string     `json:"itemName,omitempty"`
-	LotNumber    string     `json:"lotNumber"`
-	Quantity     int        `json:"quantity"`
-	ExpiryDate   NullTime   `json:"expiryDate,omitempty"`
-	SupplierID   NullInt32  `json:"supplierId,omitempty"`
-	SupplierName NullString `json:"supplierName,omitempty"`
+	ID           int         `json:"id"`
+	ClinicID     int         `json:"clinicId"`
+	ItemID       int         `json:"itemId"`
+	ItemName     string      `json:"itemName,omitempty"`
+	LotNumber    string      `json:"lotNumber"`
+	Quantity     int         `json:"quantity"`
+	ExpiryDate   NullTime    `json:"expiryDate,omitempty"`
+	SupplierID   NullInt32   `json:"supplierId,omitempty"`
+	SupplierName NullString  `json:"supplierName,omitempty"`
 	CostPerUnit  NullFloat64 `json:"costPerUnit,omitempty"`
-	ReceivedDate time.Time  `json:"receivedDate"`
-	CreatedAt    time.Time  `json:"createdAt"`
-	UpdatedAt    time.Time  `json:"updatedAt"`
-	DeletedAt    NullTime   `json:"deletedAt,omitempty"`
+	ReceivedDate time.Time   `json:"receivedDate"`
+	CreatedAt    time.Time   `json:"createdAt"`
+	UpdatedAt    time.Time   `json:"updatedAt"`
+	DeletedAt    NullTime    `json:"deletedAt,omitempty"`
 }
 
 type CreateInventoryLotRequest struct {
-	ItemID      int     `json:"itemId" validate:"required"`
-	LotNumber   string  `json:"lotNumber" validate:"required"`
-	Quantity    int     `json:"quantity" validate:"required,gte=0"`
-	ExpiryDate  string  `json:"expiryDate,omitempty"` // YYYY-MM-DD
-	SupplierID  int     `json:"supplierId,omitempty"`
-	CostPerUnit float64 `json:"costPerUnit,omitempty"`
-	ReceivedDate string `json:"receivedDate,omitempty"` // YYYY-MM-DD; empty → today
+	ItemID       int     `json:"itemId" validate:"required"`
+	LotNumber    string  `json:"lotNumber" validate:"required"`
+	Quantity     int     `json:"quantity" validate:"required,gte=0"`
+	ExpiryDate   string  `json:"expiryDate,omitempty"` // YYYY-MM-DD
+	SupplierID   int     `json:"supplierId,omitempty"`
+	CostPerUnit  float64 `json:"costPerUnit,omitempty"`
+	ReceivedDate string  `json:"receivedDate,omitempty"` // YYYY-MM-DD; empty → today
 }
 
 type UpdateInventoryLotRequest struct {

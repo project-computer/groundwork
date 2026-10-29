@@ -1,9 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
+import { i18n } from '@lingui/core'
+import { msg } from '@lingui/core/macro'
 import { invoke } from '@tauri-apps/api/core'
 import { isTauri } from '@/platform'
 import { fetchState, pushState, runSync } from './backend'
 import { can, invoiceTotals, roleLabel } from './format'
 import { seedState } from './seed'
+import { CLINIC_STATE_COLLECTIONS } from './types'
 import type {
   Appointment,
   AppointmentStatus,
@@ -30,7 +33,7 @@ import type {
 } from './types'
 import type { ClinicBackup } from './backup'
 
-export type Plan = 'local' | 'cloud'
+type Plan = 'local' | 'cloud'
 export type View =
   | 'dashboard'
   | 'schedule'
@@ -160,7 +163,7 @@ const updateEncounter = (data: ClinicState, id: string, fn: (e: Encounter) => En
 const patientName = (data: ClinicState, id: string) => data.patients.find((p) => p.id === id)?.name ?? 'patient'
 
 /** Human-readable Medical Record Number, e.g. PT-2026-0042 (see CONTEXT.md). */
-export const formatMrn = (sequence: number, year = new Date().getFullYear()) => {
+const formatMrn = (sequence: number, year = new Date().getFullYear()) => {
   return `PT-${year}-${String(sequence).padStart(4, '0')}`
 }
 
@@ -245,8 +248,8 @@ export const reducer = (store: Store, action: Action): Store => {
   if (action.type === 'restoreBackup') {
     const actor = data.users.find((u) => u.id === session.currentUserId)
     if (!actor || !can(actor.role, 'data.export')) return store
-    const restored = action.backup.state
-    if (!isClinicState(restored)) return store
+    const restored = parseClinicState(action.backup.state)
+    if (!restored) return store
     const nextUser =
       restored.users.find((u) => u.id === actor.id) ??
       restored.users.find((u) => u.role === 'admin' && u.active) ??
@@ -655,7 +658,7 @@ export const reducer = (store: Store, action: Action): Store => {
           let remaining = rx.quantity
           const fefo = lots
             .filter((l) => l.itemId === item.id && l.quantity > 0)
-            .sort((a, b) => (a.expiryDate ?? '9999-12-31').localeCompare(b.expiryDate ?? '9999-12-31'))
+            .toSorted((a, b) => (a.expiryDate ?? '9999-12-31').localeCompare(b.expiryDate ?? '9999-12-31'))
           for (const lot of fefo) {
             if (remaining <= 0) break
             const take = Math.min(lot.quantity, remaining)
@@ -984,52 +987,60 @@ export const reducer = (store: Store, action: Action): Store => {
 
 /* ---------- persistence ---------- */
 
-/** Structural guard so a corrupt or foreign payload never reaches the reducer. */
+/**
+ * Structural guard so a corrupt or foreign payload never reaches the reducer.
+ * The required-collection list is `CLINIC_STATE_COLLECTIONS`; the Go sidecar
+ * (`store.Validate`) and the Rust fallback (`validate_state`) enforce the same
+ * list, and all three are pinned to `fixtures/clinic-document.json` by tests.
+ */
 export const isClinicState = (value: unknown): value is ClinicState => {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
-  return (
-    !!v.clinic &&
-    Array.isArray(v.users) &&
-    Array.isArray(v.owners) &&
-    Array.isArray(v.patients) &&
-    Array.isArray(v.appointments) &&
-    Array.isArray(v.encounters) &&
-    Array.isArray(v.invoices)
-  )
+  return !!v.clinic && CLINIC_STATE_COLLECTIONS.every((key) => Array.isArray(v[key]))
 }
 
-const parseState = (raw: unknown): ClinicState | null => {
-  if (!isClinicState(raw)) return null
+/**
+ * Validates and normalises a foreign document (storage, backup, sync result):
+ * collections added after older persisted documents are backfilled with empty
+ * arrays, staff activation defaults on, and patient fields are backfilled.
+ * A collection that is present but not an array is corrupt and rejected —
+ * never silently dropped. Returns null when the payload is not a clinic
+ * document at all.
+ */
+export const parseClinicState = (raw: unknown): ClinicState | null => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const candidate = raw as Record<string, unknown>
+  if (!candidate.clinic) return null
+  const filled: Record<string, unknown> = { ...candidate }
+  for (const key of CLINIC_STATE_COLLECTIONS) {
+    if (filled[key] === undefined) filled[key] = []
+  }
+  if (!isClinicState(filled)) return null
+  const state = filled as ClinicState
   // Documents persisted before staff activation existed default to active.
   return {
-    ...raw,
-    users: raw.users.map((u) => ({ ...u, active: u.active ?? true })),
-    patients: raw.patients.map(backfillPatient),
-    suppliers: raw.suppliers ?? [],
-    inventoryItems: raw.inventoryItems ?? [],
-    inventoryLots: raw.inventoryLots ?? [],
-    vaccinations: raw.vaccinations ?? [],
-    caseTransfers: raw.caseTransfers ?? [],
+    ...state,
+    users: state.users.map((u) => ({ ...u, active: u.active ?? true })),
+    patients: state.patients.map(backfillPatient),
   }
 }
 
-export const loadState = async (): Promise<ClinicState | null> => {
+const loadState = async (): Promise<ClinicState | null> => {
   if (isTauri()) {
     try {
-      const fromSidecar = parseState(await fetchState())
+      const fromSidecar = parseClinicState(await fetchState())
       if (fromSidecar) return fromSidecar
     } catch (error) {
       console.error('failed to load clinic state from sidecar', error)
     }
     try {
-      return parseState(await invoke<unknown>('state_load_command'))
+      return parseClinicState(await invoke<unknown>('state_load_command'))
     } catch {
       return null
     }
   }
   try {
-    return parseState(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? 'null'))
+    return parseClinicState(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? 'null'))
   } catch {
     return null
   }
@@ -1227,8 +1238,8 @@ export const useClinic = () => {
 
 export const usePermission = (permission: Permission) => {
   const { user, session } = useClinic()
-  if (!session.lanOnline) return { allowed: false, reason: 'Offline from clinic server — read-only' }
-  if (!can(user.role, permission)) return { allowed: false, reason: 'Your role does not permit this action' }
+  if (!session.lanOnline) return { allowed: false, reason: i18n._(msg`Offline from clinic server — read-only`) }
+  if (!can(user.role, permission)) return { allowed: false, reason: i18n._(msg`Your role does not permit this action`) }
   return { allowed: true, reason: '' }
 }
 

@@ -51,7 +51,7 @@ The plan is written against this reality — do not re-implement what is done.
 | Dashboard: stats + revenue chart | ✅ Done | `dashboard_handler.go` |
 | Audit log table | ⚠️ Schema only — not wired | `audit_logs` table |
 | `visit_images` table | ⚠️ Schema only — no upload endpoint | `visit_images` table |
-| Docker Compose (Postgres 18 + API + Nginx frontend), Makefile | ✅ Done | `docker-compose.yml`, `Makefile` |
+| Docker Compose (Postgres 18 + API + Nginx frontend), Makefile | ✅ Done | `compose.yaml`, `Makefile` |
 | SQL migrations (up/down) + seed | ✅ Done | `backend/migrations/`, `backend/scripts/seed.sql` |
 
 ### Gaps (drive the workstreams below)
@@ -123,7 +123,7 @@ The plan is written against this reality — do not re-implement what is done.
 | Database | **PostgreSQL 18** | UUID ext enabled; current PKs are SERIAL |
 | Migrations | Plain SQL `NNNNNN_name.up.sql` / `.down.sql` in `backend/migrations/` | applied via `Makefile` |
 | Cache/Queue | **Redis — Phase 2 only.** Until then, in-process events + Postgres `notifications` table | Fiber runs a single binary; don't add Redis before there's a need |
-| Image Storage | **MinIO (S3-compatible)** in docker-compose; AWS S3 in prod | objects never in Postgres |
+| Image Storage | **MinIO (S3-compatible)** in `compose.yaml`; AWS S3 in prod | objects never in Postgres |
 | Infra | Docker Compose now; single VPS acceptable for launch | no Kubernetes |
 | CI/CD | GitHub Actions (to create) | |
 | Monitoring | Sentry (Go + JS SDKs), UptimeRobot; Grafana/Prometheus optional Phase 3 | |
@@ -152,7 +152,7 @@ The plan is written against this reality — do not re-implement what is done.
   /docs                     # PLAN.md, API.md, ERD.md, MIGRATION.md, RUNBOOK.md
   /infra                    # (new) backup scripts, monitoring config
   /scripts                  # (new) /migration scripts for old data
-  docker-compose.yml
+  compose.yaml
   Makefile
 ```
 
@@ -272,7 +272,7 @@ Workstreams are re-scoped against existing code. "Exists" items become **verify 
 1. Create `docs/API.md` from **existing** routes (source: `cmd/api/main.go`) — document actual conventions (§9 below).
 2. Create `docs/ERD.md` from **existing** schema (source: `backend/migrations/000001_init_schema.up.sql`).
 3. Add GitHub Actions: backend job (`go vet`, `go test ./...`, `go build`), frontend job (`pnpm lint`, `tsc -b`, `pnpm build`).
-4. Add MinIO service to `docker-compose.yml` + bucket bootstrap script.
+4. Add MinIO service to `compose.yaml` + bucket bootstrap script.
 5. Add first Go tests + Vitest setup so CI has something to run.
 6. Create branch protection + PR template.
 7. Write `docs/MIGRATION.md` skeleton (old-system field mapping comes in Phase 3).
@@ -454,7 +454,7 @@ Any API change updates `docs/API.md` **in the same PR**.
 | `internal/middleware/` | WS9 (auth middleware changes coordinated with WS1) |
 | `internal/utils/response.go` | WS0, frozen after Phase 0 |
 | `docs/API.md` / `docs/ERD.md` | append-only per PR |
-| `docker-compose.yml` | WS0 then WS10 |
+| `compose.yaml` | WS0 then WS10 |
 | Frontend `src/shared/api/client.ts` | `apiFetch()` config frozen after WS0; each WS adds its own `features/<domain>/` folder (§6b) |
 
 ### PR Rules

@@ -25,7 +25,7 @@ const paidState = () => ({
       receivedAt: seedState.invoices[0].createdAt,
     },
   ],
-  invoices: seedState.invoices.map((i) => (i.id === "inv-1" ? { ...i, status: "paid" as const } : i)),
+  invoices: seedState.invoices.map((i) => (i.id === "inv-1" ? Object.assign({}, i, { status: "paid" as const }) : i)),
 })
 
 it("refunds part of a payment and reopens the invoice", async () => {

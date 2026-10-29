@@ -25,6 +25,10 @@ test('nav mounts each view', async ({ page }) => {
   await page.getByRole('button', { name: 'Medical Records' }).click()
   await expect(page.getByRole('heading', { name: 'Medical Records' })).toBeVisible()
 
+  // Consultation sits as a sub-item under Medical Records.
+  await page.getByRole('button', { name: 'Consultation' }).click()
+  await expect(page.getByRole('heading', { name: 'Consultation', exact: true })).toBeVisible()
+
   await page.getByRole('button', { name: 'Pharmacy & Inventory' }).click()
   await expect(page.getByRole('heading', { name: 'Pharmacy & inventory' })).toBeVisible()
 

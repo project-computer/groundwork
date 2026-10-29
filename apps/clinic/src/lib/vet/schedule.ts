@@ -9,7 +9,7 @@ import type { Appointment, AppointmentStatus } from './types'
  * count as conflicts.
  */
 
-const ACTIVE_STATUSES: AppointmentStatus[] = ['booked', 'checked_in', 'in_consult']
+const ACTIVE_STATUSES = new Set<AppointmentStatus>(['booked', 'checked_in', 'in_consult'])
 
 export interface AppointmentSlot {
   vetId: string
@@ -32,7 +32,7 @@ export const findAppointmentConflict = (
   if (Number.isNaN(start)) return undefined
   return appointments.find((appt) => {
     if (appt.id === excludeId || appt.vetId !== slot.vetId) return false
-    if (!ACTIVE_STATUSES.includes(appt.status)) return false
+    if (!ACTIVE_STATUSES.has(appt.status)) return false
     const other = toRange(appt)
     if (Number.isNaN(other.start)) return false
     return start < other.end && other.start < end

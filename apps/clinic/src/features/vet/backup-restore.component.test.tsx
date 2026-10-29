@@ -85,7 +85,7 @@ it("previews a backup before replacing the clinic", async () => {
 
   await expect.poll(() => document.body.innerText).toContain("Restore clinic backup")
   expect(document.body.innerText).toContain("Riverside Recovery")
-  expect(document.body.innerText).toContain("1 patients")
+  expect(document.body.innerText).toMatch(/1 patients?/)
 
   // Nothing has changed yet — the preview is not destructive.
   const before = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}")
@@ -94,7 +94,7 @@ it("previews a backup before replacing the clinic", async () => {
   await page.getByRole("button", { name: "Restore backup" }).click()
 
   await expect.poll(() => document.querySelector(".modal")).toBeNull()
-  await expect.poll(() => document.body.innerText).toContain("Restored 1 patients")
+  await expect.poll(() => document.body.innerText).toMatch(/Restored 1 patients?/)
 
   const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}")
   expect(saved.clinic.name).toBe("Riverside Recovery")

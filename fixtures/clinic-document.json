@@ -1,0 +1,29 @@
+{
+  "$comment": "Canonical minimal clinic document. Single source of truth for the document-shape guards: apps/clinic (isClinicState), apps/sidecar store.Validate, src-tauri validate_state. Every guard must accept this file and reject it with any collection key removed. Keys mirror ClinicState in apps/clinic/src/lib/vet/types.ts.",
+  "clinic": {
+    "id": "clinic-01",
+    "name": "Baan Sathorn Animal Clinic",
+    "timezone": "Asia/Bangkok",
+    "currency": "THB",
+    "vatRate": 0.07,
+    "address": "128 Charoen Krung Rd, Bang Rak, Bangkok 10500",
+    "phone": "02 234 5678",
+    "email": "hello@baansathorn.vet"
+  },
+  "users": [],
+  "owners": [],
+  "patients": [],
+  "appointments": [],
+  "encounters": [],
+  "products": [],
+  "stockMovements": [],
+  "suppliers": [],
+  "inventoryItems": [],
+  "inventoryLots": [],
+  "invoices": [],
+  "payments": [],
+  "vaccinations": [],
+  "caseTransfers": [],
+  "audit": [],
+  "outbox": []
+}

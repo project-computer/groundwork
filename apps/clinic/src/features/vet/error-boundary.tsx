@@ -1,4 +1,6 @@
 import { Component, type ReactNode } from 'react'
+import { i18n } from '@lingui/core'
+import { msg } from '@lingui/core/macro'
 
 interface Props {
   children: ReactNode
@@ -28,15 +30,15 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.error) return this.props.children
     return (
       <div className="crash-screen" role="alert">
-        <strong>Something went wrong while drawing the workspace</strong>
+        <strong>{i18n._(msg`Something went wrong while drawing the workspace`)}</strong>
         <span className="crash-message">{this.state.error.message}</span>
-        <span>Your records are saved on this computer — nothing was lost.</span>
+        <span>{i18n._(msg`Your records are saved on this computer — nothing was lost.`)}</span>
         <div className="crash-actions">
           <button className="button primary" onClick={() => this.setState({ error: null })}>
-            Try again
+            {i18n._(msg`Try again`)}
           </button>
           <button className="button secondary" onClick={() => window.location.reload()}>
-            Reload the app
+            {i18n._(msg`Reload the app`)}
           </button>
         </div>
       </div>

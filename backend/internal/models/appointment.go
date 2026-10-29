@@ -5,22 +5,22 @@ import (
 )
 
 type Appointment struct {
-	ID                int        `json:"id"`
-	ClinicID          int        `json:"clinicId"`
-	CustomID          string     `json:"customId"`
-	PatientID         int        `json:"patientId"`
-	PatientName       string     `json:"patientName"`
-	OwnerName         string     `json:"ownerName"`
-	Date              time.Time  `json:"date"`
-	Time              string     `json:"time"`
-	Type              string     `json:"type"`
-	Status            string     `json:"status"`
-	Notes             NullString `json:"notes,omitempty"`
-	VeterinarianID    NullInt32  `json:"veterinarianId,omitempty"`
-	VeterinarianName  NullString `json:"veterinarianName,omitempty"`
-	CreatedBy         int        `json:"createdBy"`
-	CreatedAt         time.Time  `json:"createdAt"`
-	UpdatedAt         time.Time  `json:"updatedAt"`
+	ID               int        `json:"id"`
+	ClinicID         int        `json:"clinicId"`
+	CustomID         string     `json:"customId"`
+	PatientID        int        `json:"patientId"`
+	PatientName      string     `json:"patientName"`
+	OwnerName        string     `json:"ownerName"`
+	Date             time.Time  `json:"date"`
+	Time             string     `json:"time"`
+	Type             string     `json:"type"`
+	Status           string     `json:"status"`
+	Notes            NullString `json:"notes,omitempty"`
+	VeterinarianID   NullInt32  `json:"veterinarianId,omitempty"`
+	VeterinarianName NullString `json:"veterinarianName,omitempty"`
+	CreatedBy        int        `json:"createdBy"`
+	CreatedAt        time.Time  `json:"createdAt"`
+	UpdatedAt        time.Time  `json:"updatedAt"`
 }
 
 type CreateAppointmentRequest struct {

@@ -18,12 +18,40 @@ fn sample_state() -> serde_json::Value {
         "encounters": [],
         "products": [],
         "stockMovements": [],
+        "suppliers": [],
+        "inventoryItems": [],
+        "inventoryLots": [],
         "invoices": [ { "id": "inv-1", "number": "INV-2026-0142", "ownerId": "o-1", "status": "posted", "items": [], "createdAt": "t", "version": 1 } ],
         "payments": [],
+        "vaccinations": [],
+        "caseTransfers": [],
         "audit": [],
         "outbox": [],
         "lastSyncedAt": null
     })
+}
+
+/// fixtures/clinic-document.json is the canonical document both other
+/// guards (TS isClinicState, Go store.Validate) are pinned to.
+const FIXTURE_STATE: &str = include_str!("../../../../fixtures/clinic-document.json");
+
+#[test]
+fn save_accepts_shared_fixture_document() {
+    let database = open_temp();
+    let state: serde_json::Value = serde_json::from_str(FIXTURE_STATE).expect("fixture must parse");
+    clinic::state_save(&database, &state).expect("shared fixture must validate");
+}
+
+#[test]
+fn save_rejects_document_missing_collection() {
+    let database = open_temp();
+    let mut state = sample_state();
+    state["suppliers"] = serde_json::Value::Null;
+    state.as_object_mut().unwrap().remove("suppliers");
+    assert!(
+        clinic::state_save(&database, &state).is_err(),
+        "document missing a required collection must be rejected"
+    );
 }
 
 #[test]
@@ -54,19 +82,26 @@ fn save_replaces_previous_document() {
     clinic::state_save(&database, &next).unwrap();
 
     let loaded = clinic::state_load(&database).unwrap();
-    assert_eq!(loaded["patients"].as_array().map(Vec::len), Some(0), "save must replace, not append");
+    assert_eq!(
+        loaded["patients"].as_array().map(Vec::len),
+        Some(0),
+        "save must replace, not append"
+    );
     assert_eq!(loaded["invoices"].as_array().map(Vec::len), Some(1));
 }
 
 #[test]
 fn save_rejects_document_missing_collections() {
     let database = open_temp();
-    let err = clinic::state_save(
-        &database,
-        &json!({ "clinic": {}, "patients": [] }),
+    let err = clinic::state_save(&database, &json!({ "clinic": {}, "patients": [] }));
+    assert!(
+        err.is_err(),
+        "state without core collections must be rejected"
     );
-    assert!(err.is_err(), "state without core collections must be rejected");
-    assert!(clinic::state_load(&database).unwrap().is_null(), "rejected writes must not persist");
+    assert!(
+        clinic::state_load(&database).unwrap().is_null(),
+        "rejected writes must not persist"
+    );
 }
 
 #[test]
@@ -79,10 +114,10 @@ fn save_rejects_non_array_collection() {
 }
 
 #[test]
-fn migrations_apply_through_version_3() {
+fn migrations_apply_through_version_5() {
     let database = open_temp();
     let conn = database.conn.lock().unwrap();
-    assert_eq!(db::applied_versions(&conn).unwrap(), vec![1, 2, 3]);
+    assert_eq!(db::applied_versions(&conn).unwrap(), vec![1, 2, 3, 5]);
 }
 
 #[test]
@@ -92,5 +127,5 @@ fn re_run_is_idempotent() {
     drop(db::open(&path).unwrap());
     let second = db::open(&path).unwrap();
     let conn = second.conn.lock().unwrap();
-    assert_eq!(db::applied_versions(&conn).unwrap(), vec![1, 2, 3]);
+    assert_eq!(db::applied_versions(&conn).unwrap(), vec![1, 2, 3, 5]);
 }

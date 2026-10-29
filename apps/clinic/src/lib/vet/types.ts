@@ -92,7 +92,7 @@ export interface Vitals {
   respRate: string
 }
 
-export interface ClinicalNote {
+interface ClinicalNote {
   id: string
   authorId: string
   body: string
@@ -137,7 +137,7 @@ export interface Encounter {
   version: number
 }
 
-export interface Product {
+interface Product {
   id: string
   sku: string
   name: string
@@ -202,7 +202,7 @@ export interface InvoiceItem {
   productId?: string
 }
 
-export type InvoiceStatus = 'draft' | 'posted' | 'paid' | 'void'
+type InvoiceStatus = 'draft' | 'posted' | 'paid' | 'void'
 
 export interface Invoice {
   id: string
@@ -215,8 +215,7 @@ export interface Invoice {
   version: number
 }
 
-export type PaymentMethod = 'cash' | 'card' | 'promptpay' | 'transfer'
-export const PAYMENT_METHODS: PaymentMethod[] = ['cash', 'card', 'promptpay', 'transfer']
+type PaymentMethod = 'cash' | 'card' | 'promptpay' | 'transfer'
 
 export interface Payment {
   id: string
@@ -288,7 +287,7 @@ export const isCaseBundle = (value: unknown): value is CaseBundle => {
   )
 }
 
-export interface AuditEvent {
+interface AuditEvent {
   id: string
   actorId: string
   action: string
@@ -298,7 +297,7 @@ export interface AuditEvent {
   occurredAt: string
 }
 
-export interface SyncChange {
+interface SyncChange {
   changeId: string
   entityType: string
   entityId: string
@@ -326,3 +325,28 @@ export interface ClinicState {
   outbox: SyncChange[]
   lastSyncedAt?: string
 }
+
+/**
+ * The collection keys every clinic document must carry. Single source of truth
+ * for the shape guards; mirrored by fixtures/clinic-document.json, the Go
+ * sidecar's store.Validate and the Rust validate_state — all three are pinned
+ * to the fixture by tests, so a key added here without the others fails CI.
+ */
+export const CLINIC_STATE_COLLECTIONS = [
+  'users',
+  'owners',
+  'patients',
+  'appointments',
+  'encounters',
+  'products',
+  'stockMovements',
+  'suppliers',
+  'inventoryItems',
+  'inventoryLots',
+  'invoices',
+  'payments',
+  'vaccinations',
+  'caseTransfers',
+  'audit',
+  'outbox',
+] as const

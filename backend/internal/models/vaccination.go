@@ -6,11 +6,11 @@ import "time"
 // schedule. Per ADR-0002, protocols are NOT tenant-scoped — rabies is annual everywhere.
 // clinic_id deliberately absent.
 type VaccineProtocol struct {
-	ID                 int       `json:"id"`
-	Name               string    `json:"name"`
-	Species            string    `json:"species"`
+	ID                  int       `json:"id"`
+	Name                string    `json:"name"`
+	Species             string    `json:"species"`
 	DefaultIntervalDays int       `json:"defaultIntervalDays"`
-	CreatedAt          time.Time `json:"createdAt"`
+	CreatedAt           time.Time `json:"createdAt"`
 }
 
 // Vaccination is a discrete clinical event in which a vaccine was administered.
@@ -35,15 +35,15 @@ type Vaccination struct {
 }
 
 type CreateVaccinationRequest struct {
-	PatientID           int     `json:"patientId" validate:"required"`
-	VisitID             int     `json:"visitId,omitempty"`
-	AdministeredByVetID int     `json:"administeredByVetId,omitempty"`
-	VaccineName         string  `json:"vaccineName" validate:"required"`
-	Manufacturer        string  `json:"manufacturer,omitempty"`
-	LotNumber           string  `json:"lotNumber,omitempty"`
-	AdministeredDate    string  `json:"administeredDate" validate:"required"` // YYYY-MM-DD
-	NextDueDate         string  `json:"nextDueDate,omitempty"`                  // YYYY-MM-DD; empty → auto-calc
-	Notes               string  `json:"notes,omitempty"`
+	PatientID           int    `json:"patientId" validate:"required"`
+	VisitID             int    `json:"visitId,omitempty"`
+	AdministeredByVetID int    `json:"administeredByVetId,omitempty"`
+	VaccineName         string `json:"vaccineName" validate:"required"`
+	Manufacturer        string `json:"manufacturer,omitempty"`
+	LotNumber           string `json:"lotNumber,omitempty"`
+	AdministeredDate    string `json:"administeredDate" validate:"required"` // YYYY-MM-DD
+	NextDueDate         string `json:"nextDueDate,omitempty"`                // YYYY-MM-DD; empty → auto-calc
+	Notes               string `json:"notes,omitempty"`
 }
 
 type UpdateVaccinationRequest struct {

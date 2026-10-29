@@ -1,4 +1,23 @@
+import { i18n, type MessageDescriptor } from '@lingui/core'
+import { msg } from '@lingui/core/macro'
 import type { InventoryItem, InventoryLot, Invoice, Payment, Permission, Role, StockMovement, Vaccination } from './types'
+
+/**
+ * Turns a map of Lingui message descriptors into a map of lazily translated
+ * strings. Property access always reads the active locale, so existing
+ * `map[key]` call sites keep working across language switches.
+ */
+const translatedMap = <K extends string>(messages: Record<K, MessageDescriptor>): Record<K, string> => {
+  const output = {} as Record<K, string>
+  for (const key of Object.keys(messages) as K[]) {
+    Object.defineProperty(output, key, {
+      enumerable: true,
+      get: () => i18n._(messages[key]),
+    })
+  }
+  return output
+}
+
 
 /** Shared pill tone mapping for entity statuses across views. */
 export const statusTone = (status: string): 'ok' | 'warn' | 'bad' | 'muted' | 'info' => {
@@ -34,13 +53,26 @@ export const formatMoney = (minor: number) => money.format(minor / 100)
 export const formatTime = (iso: string) => time.format(new Date(iso))
 export const formatDate = (iso: string) => date.format(new Date(iso))
 
-export const ageFrom = (birthDate: string, today = todayKey()) => {
-  const b = new Date(birthDate)
-  const t = new Date(today)
-  let months = (t.getFullYear() - b.getFullYear()) * 12 + (t.getMonth() - b.getMonth())
-  if (t.getDate() < b.getDate()) months--
-  if (months < 12) return `${months} mo`
-  return `${Math.floor(months / 12)} yr`
+/** Shifts a YYYY-MM-DD key by whole days. */
+export const shiftDays = (iso: string, days: number): string => {
+  const d = new Date(`${iso}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+/** Shifts a YYYY-MM-DD key by whole months, anchored to the first of the month. */
+export const shiftMonth = (iso: string, delta: number): string => {
+  const d = new Date(`${iso.slice(0, 7)}-01T12:00:00Z`)
+  d.setUTCMonth(d.getUTCMonth() + delta)
+  return d.toISOString().slice(0, 10)
+}
+
+/** 6-week Monday-start grid of YYYY-MM-DD keys covering the month of `iso`. */
+export const monthGrid = (iso: string): string[] => {
+  const first = `${iso.slice(0, 7)}-01`
+  const weekday = new Date(`${first}T12:00:00Z`).getUTCDay()
+  const monday = shiftDays(first, weekday === 0 ? -6 : 1 - weekday)
+  return Array.from({ length: 42 }, (_, i) => shiftDays(monday, i))
 }
 
 export const invoiceTotals = (invoice: Invoice, vatRate: number, payments: Payment[]) => {
@@ -49,10 +81,6 @@ export const invoiceTotals = (invoice: Invoice, vatRate: number, payments: Payme
   const total = subtotal + tax
   const paid = payments.filter((p) => p.invoiceId === invoice.id).reduce((s, p) => s + p.amount, 0)
   return { subtotal, tax, total, paid, balance: total - paid }
-}
-
-export const stockOnHand = (productId: string, movements: StockMovement[]) => {
-  return movements.filter((m) => m.productId === productId).reduce((s, m) => s + m.delta, 0)
 }
 
 /** Quantity-on-hand for an item is the sum of its lots' quantities (slice 0008). */
@@ -70,7 +98,7 @@ export const lotsExpiringWithin = (lots: InventoryLot[], days = 30, today = toda
       const expiry = new Date(l.expiryDate!)
       return expiry >= new Date(today) && expiry <= limit
     })
-    .sort((a, b) => a.expiryDate!.localeCompare(b.expiryDate!))
+    .toSorted((a, b) => a.expiryDate!.localeCompare(b.expiryDate!))
 }
 
 /** Top stock_out items over `days`, medicine + vaccine only (slice 0009). */
@@ -99,7 +127,7 @@ export const mostUsedItems = (
   return [...usage.entries()]
     .map(([id, usedQty]) => ({ item: itemById.get(id)!, usedQty }))
     .filter((r) => r.item)
-    .sort((a, b) => b.usedQty - a.usedQty)
+    .toSorted((a, b) => b.usedQty - a.usedQty)
     .slice(0, 5)
 }
 
@@ -118,17 +146,7 @@ export const vaccinationsDue = (vaccinations: Vaccination[], days = 30, today = 
       const due = new Date(v.nextDueAt!)
       return due <= limit
     })
-    .sort((a, b) => a.nextDueAt!.localeCompare(b.nextDueAt!))
-}
-
-/** Latest vaccination per patient keyed by patient id — the immunization status view. */
-export const latestVaccinations = (vaccinations: Vaccination[]) => {
-  const latest = new Map<string, Vaccination>()
-  for (const v of vaccinations) {
-    const existing = latest.get(v.patientId)
-    if (!existing || v.administeredAt > existing.administeredAt) latest.set(v.patientId, v)
-  }
-  return latest
+    .toSorted((a, b) => a.nextDueAt!.localeCompare(b.nextDueAt!))
 }
 
 const rolePermissions: Record<Role, Permission[]> = {
@@ -159,27 +177,86 @@ export const PERMISSIONS: Permission[] = [
   'data.export',
 ]
 
-export const permissionLabel: Record<Permission, string> = {
-  'records.write': 'Patients & records',
-  'appointments.write': 'Appointments & queue',
-  'clinical.write': 'Clinical records',
-  'billing.write': 'Billing & payments',
-  'inventory.write': 'Pharmacy & inventory',
-  'staff.manage': 'Staff management',
-  'clinic.manage': 'Clinic identity',
-  'data.export': 'Data export',
+export const permissionLabel = translatedMap<Permission>({
+  'records.write': msg`Patients & records`,
+  'appointments.write': msg`Appointments & queue`,
+  'clinical.write': msg`Clinical records`,
+  'billing.write': msg`Billing & payments`,
+  'inventory.write': msg`Pharmacy & inventory`,
+  'staff.manage': msg`Staff management`,
+  'clinic.manage': msg`Clinic identity`,
+  'data.export': msg`Data export`,
+})
+
+export const roleLabel = translatedMap<Role>({
+  reception: msg`Reception`,
+  veterinarian: msg`Veterinarian`,
+  pharmacist: msg`Pharmacist`,
+  admin: msg`Clinic admin`,
+})
+
+export const roleDescription = translatedMap<Role>({
+  reception: msg`Front desk — registers patients, books appointments and takes payments.`,
+  veterinarian: msg`Clinical care — records visits, diagnoses and prescriptions.`,
+  pharmacist: msg`Dispensing — manages stock, lots and pharmacy billing.`,
+  admin: msg`Full workspace control, including staff and clinic identity.`,
+})
+
+export const speciesLabel = translatedMap<'Dog' | 'Cat' | 'Rabbit' | 'Bird' | 'Other'>({
+  Dog: msg`Dog`,
+  Cat: msg`Cat`,
+  Rabbit: msg`Rabbit`,
+  Bird: msg`Bird`,
+  Other: msg`Other`,
+})
+
+export const sexLabel = translatedMap<'Male' | 'Female' | 'Male (neutered)' | 'Female (spayed)' | 'Unknown'>({
+  Male: msg`Male`,
+  Female: msg`Female`,
+  'Male (neutered)': msg`Male (neutered)`,
+  'Female (spayed)': msg`Female (spayed)`,
+  Unknown: msg`Unknown`,
+})
+
+const appointmentStatusMessages = {
+  booked: msg`booked`,
+  checked_in: msg`checked in`,
+  in_consult: msg`in consultation`,
+  completed: msg`completed`,
+  cancelled: msg`cancelled`,
+  no_show: msg`no show`,
+} as const
+
+const invoiceStatusMessages = {
+  draft: msg`draft`,
+  posted: msg`posted`,
+  paid: msg`paid`,
+  void: msg`void`,
+  refunded: msg`refunded`,
+} as const
+
+const stockReasonMessages = {
+  stock_in: msg`stock in`,
+  stock_out: msg`stock out`,
+  adjustment: msg`adjustment`,
+  waste: msg`waste`,
+} as const
+
+const statusMessages: Record<string, MessageDescriptor> = {
+  ...appointmentStatusMessages,
+  ...invoiceStatusMessages,
+  ...stockReasonMessages,
+  open: msg`open`,
+  closed: msg`closed`,
+  archived: msg`archived`,
+  active: msg`active`,
+  inactive: msg`inactive`,
+  provisional: msg`provisional`,
+  confirmed: msg`confirmed`,
 }
 
-export const roleLabel: Record<Role, string> = {
-  reception: 'Reception',
-  veterinarian: 'Veterinarian',
-  pharmacist: 'Pharmacist',
-  admin: 'Clinic admin',
-}
-
-export const roleDescription: Record<Role, string> = {
-  reception: 'Front desk — registers patients, books appointments and takes payments.',
-  veterinarian: 'Clinical care — records visits, diagnoses and prescriptions.',
-  pharmacist: 'Dispensing — manages stock, lots and pharmacy billing.',
-  admin: 'Full workspace control, including staff and clinic identity.',
+/** Human-readable status label; unknown statuses fall back to the raw value. */
+export const statusLabel = (status: string): string => {
+  const descriptor = statusMessages[status]
+  return descriptor ? i18n._(descriptor) : status.replace(/_/g, ' ')
 }

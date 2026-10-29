@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { X } from 'lucide-react'
+import { Trans, useLingui } from '@lingui/react/macro'
 import { useClinic } from '@/lib/vet/store'
 import { createPinCredential, hasPin, isPinFormat, PIN_MAX_LENGTH } from '@/lib/vet/auth'
 import { Field } from '@/components/vet/fields'
@@ -8,6 +9,7 @@ import type { StaffUser } from '@/lib/vet/types'
 /** Admin/self dialog for setting, changing, or removing a member's PIN. */
 export const PinDialog = ({ member, onClose }: { member: StaffUser; onClose: () => void }) => {
   const { dispatch } = useClinic()
+  const { t } = useLingui()
   const existing = hasPin(member)
   const [pin, setPin] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -26,11 +28,11 @@ export const PinDialog = ({ member, onClose }: { member: StaffUser; onClose: () 
     event.preventDefault()
     setError('')
     if (!isPinFormat(pin)) {
-      setError('PIN must be 4–8 digits')
+      setError(t`PIN must be 4–8 digits`)
       return
     }
     if (pin !== confirm) {
-      setError('PINs do not match')
+      setError(t`PINs do not match`)
       return
     }
     setBusy(true)
@@ -51,21 +53,21 @@ export const PinDialog = ({ member, onClose }: { member: StaffUser; onClose: () 
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="modal" role="dialog" aria-modal="true" aria-label={`Set a PIN for ${member.name}`}>
+      <div className="modal" role="dialog" aria-modal="true" aria-label={t`Set a PIN for ${member.name}`}>
         <div className="form-heading">
           <div>
             <strong>
-              {existing ? 'Change' : 'Set'} PIN — {member.name}
+              {existing ? <Trans>Change PIN — {member.name}</Trans> : <Trans>Set PIN — {member.name}</Trans>}
             </strong>
-            <span>PINs are hashed on this device and never synced in plain text.</span>
+            <span><Trans>PINs are hashed on this device and never synced in plain text.</Trans></span>
           </div>
-          <button className="icon-button" onClick={onClose} aria-label="Close dialog">
+          <button className="icon-button" onClick={onClose} aria-label={t`Close dialog`}>
             <X size={17} />
           </button>
         </div>
         <form onSubmit={save}>
           <div className="form-grid">
-            <Field label="New PIN (4–8 digits)" htmlFor="pin-new">
+            <Field label={t`New PIN (4–8 digits)`} htmlFor="pin-new">
               <input
                 id="pin-new"
                 type="password"
@@ -77,7 +79,7 @@ export const PinDialog = ({ member, onClose }: { member: StaffUser; onClose: () 
                 autoFocus
               />
             </Field>
-            <Field label="Confirm PIN" htmlFor="pin-confirm">
+            <Field label={t`Confirm PIN`} htmlFor="pin-confirm">
               <input
                 id="pin-confirm"
                 type="password"
@@ -97,14 +99,14 @@ export const PinDialog = ({ member, onClose }: { member: StaffUser; onClose: () 
           <div className="panel-footer">
             {existing && (
               <button type="button" className="small-button" onClick={clear}>
-                Remove PIN
+                <Trans>Remove PIN</Trans>
               </button>
             )}
             <button type="button" className="small-button" onClick={onClose}>
-              Cancel
+              <Trans>Cancel</Trans>
             </button>
             <button type="submit" className="button primary" disabled={busy || !pin || !confirm}>
-              {busy ? 'Saving…' : existing ? 'Change PIN' : 'Set PIN'}
+              {busy ? t`Saving…` : existing ? t`Change PIN` : t`Set PIN`}
             </button>
           </div>
         </form>

@@ -1,4 +1,4 @@
-export type Platform = "tauri" | "web";
+type Platform = "tauri" | "web";
 
 declare global {
   interface Window {
@@ -6,7 +6,7 @@ declare global {
   }
 }
 
-export const currentPlatform = (): Platform => {
+const currentPlatform = (): Platform => {
   if (typeof window !== "undefined" && window.__TAURI_INTERNALS__ !== undefined) {
     return "tauri";
   }

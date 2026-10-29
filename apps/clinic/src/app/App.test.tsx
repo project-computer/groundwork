@@ -1,6 +1,7 @@
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createRoot, type Root } from "react-dom/client";
+import { todayKey } from "@/lib/vet/format";
 import { App } from "./App";
 
 let container: HTMLDivElement;
@@ -31,6 +32,8 @@ const click = (element: Element) => {
   });
 }
 
+const themeToggle = () => findButton("Change theme");
+
 /** Switches the signed-in staff account via Staff & Permissions. */
 const signInAs = async (name: string) => {
   click(findButton("Staff & Permissions"));
@@ -53,6 +56,15 @@ const setValue = (element: HTMLInputElement | HTMLSelectElement, value: string) 
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
 }
+
+/** Drag events in jsdom carry no dataTransfer; attach a minimal stub. */
+const dragEvent = (type: string) => {
+  const event = new MouseEvent(type, { bubbles: true, cancelable: true });
+  Object.defineProperty(event, "dataTransfer", {
+    value: { effectAllowed: "", dropEffect: "", setData: () => {}, getData: () => "" },
+  });
+  return event;
+};
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -138,6 +150,62 @@ describe("App", () => {
     expect((document.getElementById("bk-duration") as HTMLSelectElement).value).toBe("30");
   });
 
+  it("opens a booking dialog for the clicked day from a week slot", async () => {
+    renderApp();
+    await flush();
+    click(findButton("Appointments & Queue"));
+    await flush();
+    click(findButton("Week"));
+    await flush();
+
+    const column = [...document.querySelectorAll(".week-col")].find((c) => c.querySelector("header.today"));
+    const slot = column?.querySelector('.week-slot[data-slot-hour="8"]') as HTMLElement;
+    expect(slot?.getAttribute("data-slot-iso")).toBe(todayKey());
+
+    act(() => {
+      slot.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, clientY: 0 }));
+      slot.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientY: 0 }));
+    });
+
+    const dialog = document.querySelector(".modal");
+    expect(dialog).toBeTruthy();
+    expect(document.getElementById("bk-date")?.getAttribute("data-value")).toBe(todayKey());
+    expect((document.getElementById("bk-time") as HTMLInputElement).value).toBe("08:00");
+  });
+
+  it("reschedules a week chip onto another day's hour slot", async () => {
+    renderApp();
+    await flush();
+    click(findButton("Appointments & Queue"));
+    await flush();
+    click(findButton("Week"));
+    await flush();
+
+    const chip = [...document.querySelectorAll(".week-slot .cal-appt")].find((el) =>
+      el.textContent?.includes("Mochi"),
+    ) as HTMLElement;
+    expect(chip).toBeTruthy();
+
+    const column = [...document.querySelectorAll(".week-col")].find((c) => !c.querySelector("header.today"));
+    const target = column?.querySelector('.week-slot[data-slot-hour="9"]') as HTMLElement;
+    const targetIso = target?.getAttribute("data-slot-iso");
+    expect(targetIso).toBeTruthy();
+
+    act(() => {
+      chip.dispatchEvent(dragEvent("dragstart"));
+    });
+    act(() => {
+      target.dispatchEvent(dragEvent("dragover"));
+    });
+    act(() => {
+      target.dispatchEvent(dragEvent("drop"));
+    });
+    await flush();
+
+    expect(target?.textContent).toContain("Mochi");
+    expect(target?.textContent).toContain("09:30");
+  });
+
   it("shows staff roles and the audit trail", async () => {
     renderApp();
     await flush();
@@ -196,15 +264,35 @@ describe("App", () => {
   it("cycles the theme and reflects it on <html>", async () => {
     renderApp();
     await flush();
-    const toggle = () => findButton("Change theme");
+    click(themeToggle()); // system -> light
     expect(document.documentElement.classList.contains("dark")).toBe(false);
-    click(toggle()); // system -> light
-    expect(document.documentElement.classList.contains("dark")).toBe(false);
-    click(toggle()); // light -> dark
+    click(themeToggle()); // light -> dark
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(document.documentElement.classList.contains("light")).toBe(false);
-    click(toggle()); // dark -> system (resolves to light in jsdom)
+    click(themeToggle()); // dark -> system (resolves to light in jsdom)
     expect(document.documentElement.classList.contains("dark")).toBe(false);
+  });
+
+  it("opens a past consultation from Medical Records and from the Consultation sub-nav", async () => {
+    renderApp();
+    await flush();
+
+    // Closed visits are readable from the medical records list.
+    click(findButton("Medical Records"));
+    await flush();
+    click(findButton("View"));
+    await flush();
+    expect(document.body.textContent).toContain("Consultation closed");
+    expect(document.body.textContent).toContain("Soft tissue strain, right stifle");
+
+    // The sidebar exposes Consultation directly and offers a picker when no
+    // visit is currently open.
+    click(findButton("Consultation"));
+    await flush();
+    expect(document.body.textContent).toContain("No active consultation");
+    click(findButton("View"));
+    await flush();
+    expect(document.body.textContent).toContain("Consultation closed");
   });
 
   it("runs a full visit: vitals, diagnosis, prescription, close, invoice, partial payment and receipt", async () => {

@@ -6,14 +6,14 @@ fn lock(db: &Db) -> Result<std::sync::MutexGuard<'_, rusqlite::Connection>, Stri
     db.conn.lock().map_err(|e| e.to_string())
 }
 
-/// Structural guard mirroring the frontend `isClinicState`: the document must
-/// carry the core collections before it is accepted for persistence.
+/// Structural guard mirroring the frontend `isClinicState` and the sidecar
+/// `store.Validate`: the document must carry every collection listed in
+/// fixtures/clinic-document.json before it is accepted for persistence.
 fn validate_state(state: &Value) -> Result<(), String> {
     let obj = state
         .as_object()
         .ok_or_else(|| "state must be a JSON object".to_string())?;
     for key in [
-        "clinic",
         "users",
         "owners",
         "patients",
@@ -21,28 +21,34 @@ fn validate_state(state: &Value) -> Result<(), String> {
         "encounters",
         "products",
         "stockMovements",
+        "suppliers",
+        "inventoryItems",
+        "inventoryLots",
         "invoices",
         "payments",
+        "vaccinations",
+        "caseTransfers",
         "audit",
         "outbox",
     ] {
         let value = obj
             .get(key)
             .ok_or_else(|| format!("state.{key} is required"))?;
-        if key != "clinic" && !value.is_array() {
+        if !value.is_array() {
             return Err(format!("state.{key} must be an array"));
         }
+    }
+    if !obj.contains_key("clinic") {
+        return Err("state.clinic is required".to_string());
     }
     Ok(())
 }
 
 pub fn state_load(db: &Db) -> Result<Value, String> {
     let conn = lock(db)?;
-    match conn.query_row(
-        "SELECT content FROM clinic_state WHERE id = 1",
-        [],
-        |row| row.get::<_, String>(0),
-    ) {
+    match conn.query_row("SELECT content FROM clinic_state WHERE id = 1", [], |row| {
+        row.get::<_, String>(0)
+    }) {
         Ok(content) => serde_json::from_str(&content).map_err(|e| e.to_string()),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(Value::Null),
         Err(e) => Err(e.to_string()),

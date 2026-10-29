@@ -1,0 +1,355 @@
+/* Split from index.css — lines 4-357. Order of these files is cascade-significant: see index.css. */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: ui-sans-serif, system-ui, 'Noto Sans Thai', 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, monospace;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning: var(--warning);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  color-scheme: light;
+  --font-plex-sans: 'IBM Plex Sans', 'IBM Plex Sans Thai', 'Noto Sans Thai', ui-sans-serif, system-ui, sans-serif;
+  --font-plex-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --warning: oklch(0.68 0.14 70);
+  --warning-foreground: oklch(0.32 0.08 60);
+  --background: oklch(0.985 0.004 180);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.52 0.1 182);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.95 0.015 180);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.955 0.008 180);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.94 0.03 180);
+  --accent-foreground: oklch(0.3 0.06 185);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.91 0.01 190);
+  --input: oklch(0.91 0.01 190);
+  --ring: oklch(0.52 0.1 182);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.75rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  color-scheme: dark;
+  --warning: oklch(0.78 0.14 75);
+  --warning-foreground: oklch(0.985 0 0);
+  --background: oklch(0.16 0.012 210);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.2 0.014 210);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.22 0.014 210);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.74 0.11 178);
+  --primary-foreground: oklch(0.18 0.02 200);
+  --secondary: oklch(0.26 0.016 210);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.25 0.014 210);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.28 0.03 185);
+  --accent-foreground: oklch(0.92 0.04 178);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.74 0.11 178);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    color-scheme: dark;
+    --warning: oklch(0.78 0.14 75);
+    --warning-foreground: oklch(0.985 0 0);
+    --background: oklch(0.16 0.012 210);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.2 0.014 210);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.22 0.014 210);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.74 0.11 178);
+    --primary-foreground: oklch(0.18 0.02 200);
+    --secondary: oklch(0.26 0.016 210);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.25 0.014 210);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.28 0.03 185);
+    --accent-foreground: oklch(0.92 0.04 178);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.74 0.11 178);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-ring: oklch(0.556 0 0);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+/* ---------- Clinic workspace design system (Vettera) ----------
+   Second palette, ported from the VetDesk app. It intentionally owns
+   --sidebar-border (the shadcn duplicates were removed): component CSS below
+   consumes these vars. One-palette merge lands with the Tailwind migration
+   of each view — until then this is the single source for these names. */
+:root {
+  --ink: #18343d;
+  --ink-muted: #6c8185;
+  --line: #dfe9e8;
+  --paper: #fff;
+  --surface: #fff;
+  --canvas: #f5f9f8;
+  --teal: #168778;
+  --teal-dark: #0f655b;
+  --teal-soft: #e4f3ef;
+  --teal-wash: #edf8f4;
+  --teal-wash-border: #c8e7de;
+  --teal-line: #cde9e1;
+  --navy: #203c48;
+  --amber: #b7791f;
+  --amber-soft: #fff1d7;
+  --violet: #7662bd;
+  --violet-soft: #ede9f8;
+  --blue: #477ca2;
+  --blue-soft: #e4eff8;
+  --shadow: 0 10px 30px rgba(24, 52, 61, 0.05);
+  --sidebar-bg: #edf5f3;
+  --sidebar-border: #d7e6e2;
+  --sidebar-shadow: 10px 0 30px rgba(24, 52, 61, 0.125);
+  --chip-bg: #f8fcfb;
+  --avatar-bg: #d6eee8;
+  --nav-fg: #678084;
+  --nav-active-bg: #dcefe9;
+  --nav-badge-bg: #cce8e1;
+  --topbar-bg: rgba(255, 255, 255, 0.75);
+  --pulse: #34ae87;
+  --pulse-ring: #d9f2e9;
+  --row-border: #edf2f1;
+  --thead-bg: #f7faf9;
+  --table-fg: #607578;
+  --tile-bg: #f5f9f8;
+  --backdrop: rgba(24, 52, 61, 0.33);
+}
+.dark {
+  --ink: #dbeae7;
+  --ink-muted: #a3bcb8;
+  --line: #22403e;
+  --paper: #0f2120;
+  --surface: #0f2120;
+  --canvas: #0a1514;
+  --teal: #2fa78f;
+  --teal-dark: #7ccfb9;
+  --teal-soft: #12332c;
+  --teal-wash: #10302a;
+  --teal-wash-border: #1e4a40;
+  --teal-line: #1e4a40;
+  --navy: #0c1c1e;
+  --amber: #d9a441;
+  --amber-soft: #33270f;
+  --violet: #9f8ce0;
+  --violet-soft: #241f38;
+  --blue: #6ea6c7;
+  --blue-soft: #12242f;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --sidebar-bg: #0d1b1a;
+  --sidebar-border: #1c3432;
+  --sidebar-shadow: 10px 0 30px rgba(0, 0, 0, 0.35);
+  --chip-bg: #122524;
+  --avatar-bg: #1a3a34;
+  --nav-fg: #94aeaa;
+  --nav-active-bg: #14332d;
+  --nav-badge-bg: #1a4038;
+  --topbar-bg: rgba(10, 21, 20, 0.75);
+  --pulse: #34ae87;
+  --pulse-ring: rgba(52, 174, 135, 0.22);
+  --row-border: #1a2f2e;
+  --thead-bg: #0d1d1c;
+  --table-fg: #b4c9c5;
+  --tile-bg: #0d1d1c;
+  --backdrop: rgba(0, 0, 0, 0.55);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --ink: #dbeae7;
+    --ink-muted: #a3bcb8;
+    --line: #22403e;
+    --paper: #0f2120;
+    --surface: #0f2120;
+    --canvas: #0a1514;
+    --teal: #2fa78f;
+    --teal-dark: #7ccfb9;
+    --teal-soft: #12332c;
+    --teal-wash: #10302a;
+    --teal-wash-border: #1e4a40;
+    --teal-line: #1e4a40;
+    --navy: #0c1c1e;
+    --amber: #d9a441;
+    --amber-soft: #33270f;
+    --violet: #9f8ce0;
+    --violet-soft: #241f38;
+    --blue: #6ea6c7;
+    --blue-soft: #12242f;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    --sidebar-bg: #0d1b1a;
+    --sidebar-shadow: 10px 0 30px rgba(0, 0, 0, 0.35);
+    --chip-bg: #122524;
+    --avatar-bg: #1a3a34;
+    --nav-fg: #94aeaa;
+    --nav-active-bg: #14332d;
+    --nav-badge-bg: #1a4038;
+    --topbar-bg: rgba(10, 21, 20, 0.75);
+    --pulse: #34ae87;
+    --pulse-ring: rgba(52, 174, 135, 0.22);
+    --row-border: #1a2f2e;
+    --thead-bg: #0d1d1c;
+    --table-fg: #b4c9c5;
+    --tile-bg: #0d1d1c;
+    --backdrop: rgba(0, 0, 0, 0.55);
+  }
+}
+* {
+  box-sizing: border-box;
+  border-color: var(--line);
+}
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--canvas);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+}
+@media (pointer: fine) {
+  html {
+    overscroll-behavior: none;
+  }
+}
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+[id] {
+  scroll-margin-top: 84px;
+}
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+input,
+select,
+textarea {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 9px 10px;
+  font-size: 12px;
+  outline: 0;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 22%, transparent);
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

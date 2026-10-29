@@ -1,11 +1,13 @@
 import { useRef, useState } from 'react'
 import { Activity, AlertTriangle, Database, RotateCcw, ShieldCheck, Stethoscope, X } from 'lucide-react'
+import { plural } from '@lingui/core/macro'
+import { Trans, Plural, useLingui } from '@lingui/react/macro'
 import { Field, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission, useSyncState } from '@/lib/vet/store'
 import { hasPin } from '@/lib/vet/auth'
 import { buildBackup, downloadBackup, parseBackup, summarizeBackup, type BackupSummary, type ClinicBackup } from '@/lib/vet/backup'
 import { isCaseBundle, type CaseBundle } from '@/lib/vet/types'
-import { formatDate, permissionsFor, roleLabel, ROLES, statusTone, todayKey } from '@/lib/vet/format'
+import { formatDate, permissionsFor, roleLabel, ROLES, statusLabel, statusTone, todayKey } from '@/lib/vet/format'
 import type { StaffUser } from '@/lib/vet/types'
 import { PinDialog } from './pin-dialog'
 
@@ -13,6 +15,7 @@ import { PinDialog } from './pin-dialog'
 
 export const RecordsView = ({ onOpenConsult }: { onOpenConsult: (encounterId: string) => void }) => {
   const { data } = useClinic()
+  const { t } = useLingui()
   const [query, setQuery] = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const encounters = data.encounters
@@ -20,35 +23,38 @@ export const RecordsView = ({ onOpenConsult }: { onOpenConsult: (encounterId: st
       const patient = data.patients.find((p) => p.id === e.patientId)
       return `${patient?.name} ${e.diagnoses.map((d) => d.description).join(' ')}`.toLowerCase().includes(query.toLowerCase())
     })
-    .sort((a, b) => b.openedAt.localeCompare(a.openedAt))
+    .toSorted((a, b) => b.openedAt.localeCompare(a.openedAt))
   return (
     <>
       <PageHeader
-        title="Medical records"
-        description="Every consultation is an immutable encounter with a full note history."
+        title={t`Medical records`}
+        description={t`Every consultation is an immutable encounter with a full note history.`}
         action={
           <div className="flex items-center gap-3">
             <input
               className="search-input"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by patient or diagnosis…"
-              aria-label="Search medical records"
+              placeholder={t`Search by patient or diagnosis…`}
+              aria-label={t`Search medical records`}
             />
             <button className="button secondary" onClick={() => setImportOpen(true)}>
-              Import case
+              <Trans>Import case</Trans>
             </button>
           </div>
         }
       />
       {importOpen && <ImportCaseDialog onClose={() => setImportOpen(false)} />}
-      <Panel title={`${encounters.length} encounters`} description="Newest first">
+      <Panel
+        title={plural(encounters.length, { one: '# encounter', other: '# encounters' })}
+        description={t`Newest first`}
+      >
         <div className="records-table encounters-table">
           <div className="table-head">
-            <span>Patient</span>
-            <span>Opened</span>
-            <span>Diagnoses</span>
-            <span>Notes</span>
+            <span><Trans>Patient</Trans></span>
+            <span><Trans>Opened</Trans></span>
+            <span><Trans>Diagnoses</Trans></span>
+            <span><Trans>Notes</Trans></span>
             <span />
           </div>
           {encounters.map((encounter) => {
@@ -59,25 +65,36 @@ export const RecordsView = ({ onOpenConsult }: { onOpenConsult: (encounterId: st
                   <div className="pet-avatar">{patient?.name.slice(0, 1)}</div>
                   <div>
                     <strong>{patient?.name}</strong>
-                    <span>{encounter.status === 'open' ? 'Consultation in progress' : `Closed ${encounter.closedAt ? formatDate(encounter.closedAt) : ''}`}</span>
+                    <span>
+                      {encounter.status === 'open' ? (
+                        <Trans>Consultation in progress</Trans>
+                      ) : (
+                        <Trans>Closed {encounter.closedAt ? formatDate(encounter.closedAt) : ''}</Trans>
+                      )}
+                    </span>
                   </div>
                 </div>
-                <span data-label="Opened">{formatDate(encounter.openedAt)}</span>
-                <span data-label="Diagnoses">{encounter.diagnoses.map((d) => d.description).join(', ') || '—'}</span>
-                <span data-label="Notes">{encounter.notes.length}</span>
+                <span data-label={t`Opened`}>{formatDate(encounter.openedAt)}</span>
+                <span data-label={t`Diagnoses`}>{encounter.diagnoses.map((d) => d.description).join(', ') || '—'}</span>
+                <span data-label={t`Notes`}>{encounter.notes.length}</span>
                 {encounter.status === 'open' ? (
                   <button className="small-button" onClick={() => onOpenConsult(encounter.id)}>
-                    <Stethoscope size={13} /> Continue
+                    <Stethoscope size={13} /> <Trans>Continue</Trans>
                   </button>
                 ) : (
-                  <Pill tone={statusTone('completed')} dot>
-                    archived
-                  </Pill>
+                  <div className="row-actions">
+                    <Pill tone={statusTone('completed')} dot>
+                      <Trans>archived</Trans>
+                    </Pill>
+                    <button className="small-button" onClick={() => onOpenConsult(encounter.id)}>
+                      <Trans>View</Trans>
+                    </button>
+                  </div>
                 )}
               </div>
             )
           })}
-          {encounters.length === 0 && <p className="empty-state">No encounters match your search.</p>}
+          {encounters.length === 0 && <p className="empty-state"><Trans>No encounters match your search.</Trans></p>}
         </div>
       </Panel>
       <Vaccinations />
@@ -93,6 +110,7 @@ type ImportOutcome =
 
 const ImportCaseDialog = ({ onClose }: { onClose: () => void }) => {
   const { data, dispatch } = useClinic()
+  const { t } = useLingui()
   const [paste, setPaste] = useState('')
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null)
 
@@ -101,16 +119,19 @@ const ImportCaseDialog = ({ onClose }: { onClose: () => void }) => {
     try {
       parsed = JSON.parse(raw)
     } catch {
-      setOutcome({ state: 'error', message: 'That is not valid JSON — paste the case bundle file contents or choose a .json file.' })
+      setOutcome({ state: 'error', message: t`That is not valid JSON — paste the case bundle file contents or choose a .json file.` })
       return
     }
     if (!isCaseBundle(parsed)) {
-      setOutcome({ state: 'error', message: 'This file is not a VetCare case bundle.' })
+      setOutcome({ state: 'error', message: t`This file is not a VetCare case bundle.` })
       return
     }
     const bundle = parsed as CaseBundle
-    if (data.caseTransfers.some((t) => t.token === bundle.token)) {
-      setOutcome({ state: 'error', message: `This case was already received (token ${bundle.token.slice(0, 8)}…). Import skipped to avoid duplicates.` })
+    if (data.caseTransfers.some((transfer) => transfer.token === bundle.token)) {
+      setOutcome({
+        state: 'error',
+        message: t`This case was already received (token ${bundle.token.slice(0, 8)}…). Import skipped to avoid duplicates.`,
+      })
       return
     }
     dispatch({ type: 'importCaseBundle', bundle })
@@ -118,7 +139,7 @@ const ImportCaseDialog = ({ onClose }: { onClose: () => void }) => {
     void received
     setOutcome({
       state: 'done',
-      message: `Received ${bundle.patient.name} from ${bundle.fromClinic.name}: ${bundle.encounters.length} visit${bundle.encounters.length === 1 ? '' : 's'} and ${bundle.vaccinations.length} vaccination${bundle.vaccinations.length === 1 ? '' : 's'} copied into this clinic with a new MRN.`,
+      message: t`Received ${bundle.patient.name} from ${bundle.fromClinic.name}: ${plural(bundle.encounters.length, { one: '# visit', other: '# visits' })} and ${plural(bundle.vaccinations.length, { one: '# vaccination', other: '# vaccinations' })} copied into this clinic with a new MRN.`,
     })
   }
 
@@ -129,17 +150,17 @@ const ImportCaseDialog = ({ onClose }: { onClose: () => void }) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="modal" role="dialog" aria-modal="true" aria-label="Import a case bundle">
+      <div className="modal" role="dialog" aria-modal="true" aria-label={t`Import a case bundle`}>
         <div className="form-heading">
           <div>
-            <strong>Import case bundle</strong>
-            <span>Receives a shared case from another clinic. Copies are stamped with the source clinic — nothing is shared in place.</span>
+            <strong><Trans>Import case bundle</Trans></strong>
+            <span><Trans>Receives a shared case from another clinic. Copies are stamped with the source clinic — nothing is shared in place.</Trans></span>
           </div>
-          <button className="icon-button" onClick={onClose} aria-label="Close dialog">
+          <button className="icon-button" onClick={onClose} aria-label={t`Close dialog`}>
             <X size={17} />
           </button>
         </div>
-        <Field label="Bundle file (.json)" htmlFor="import-file">
+        <Field label={t`Bundle file (.json)`} htmlFor="import-file">
           <input
             id="import-file"
             type="file"
@@ -150,7 +171,7 @@ const ImportCaseDialog = ({ onClose }: { onClose: () => void }) => {
             }}
           />
         </Field>
-        <Field label="…or paste bundle JSON" htmlFor="import-paste">
+        <Field label={t`…or paste bundle JSON`} htmlFor="import-paste">
           <textarea
             id="import-paste"
             rows={6}
@@ -167,10 +188,10 @@ const ImportCaseDialog = ({ onClose }: { onClose: () => void }) => {
         )}
         <div className="form-actions">
           <button className="button secondary" onClick={() => receive(paste)} disabled={!paste.trim()}>
-            Import pasted bundle
+            <Trans>Import pasted bundle</Trans>
           </button>
           <button className="button primary" onClick={onClose}>
-            Done
+            <Trans>Done</Trans>
           </button>
         </div>
       </div>
@@ -182,12 +203,15 @@ const ImportCaseDialog = ({ onClose }: { onClose: () => void }) => {
 
 const Vaccinations = () => {
   const { data, dispatch } = useClinic()
+  const { t } = useLingui()
   const canWrite = usePermission('records.write').allowed
   const [patientId, setPatientId] = useState('')
   const [vaccineName, setVaccineName] = useState('')
   const [lotNumber, setLotNumber] = useState('')
   const [administeredAt, setAdministeredAt] = useState(todayKey())
   const [nextDueAt, setNextDueAt] = useState('')
+  // Captured once per mount: the "overdue" column refreshes when the view remounts.
+  const [nowIso] = useState(() => new Date().toISOString())
 
   const record = () => {
     if (!patientId || !vaccineName.trim()) return
@@ -207,70 +231,74 @@ const Vaccinations = () => {
     setNextDueAt('')
   }
 
-  const rows = [...data.vaccinations]
-    .sort((a, b) => b.administeredAt.localeCompare(a.administeredAt))
+  const rows = data.vaccinations
+    .toSorted((a, b) => b.administeredAt.localeCompare(a.administeredAt))
     .map((v) => {
       const patient = data.patients.find((p) => p.id === v.patientId)
       const vet = data.users.find((u) => u.id === v.vetId)
-      const overdue = v.nextDueAt ? v.nextDueAt < new Date().toISOString() : false
-      return { ...v, patient, vet, overdue }
+      const overdue = v.nextDueAt ? v.nextDueAt < nowIso : false
+      return Object.assign({}, v, { patient, vet, overdue })
     })
 
   return (
-    <Panel title="Vaccinations" description="Vaccine history and next-due dates">
+    <Panel title={t`Vaccinations`} description={t`Vaccine history and next-due dates`}>
       {canWrite && (
         <div className="vaccination-form">
-          <select value={patientId} onChange={(e) => setPatientId(e.target.value)} aria-label="Patient">
-            <option value="">Select patient…</option>
+          <select value={patientId} onChange={(e) => setPatientId(e.target.value)} aria-label={t`Patient`}>
+            <option value=""><Trans>Select patient…</Trans></option>
             {data.patients.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name} ({p.mrn})
               </option>
             ))}
           </select>
-          <input value={vaccineName} onChange={(e) => setVaccineName(e.target.value)} placeholder="Vaccine name" aria-label="Vaccine name" />
-          <input value={lotNumber} onChange={(e) => setLotNumber(e.target.value)} placeholder="Lot number" aria-label="Lot number" />
-          <input type="date" value={administeredAt} onChange={(e) => setAdministeredAt(e.target.value)} aria-label="Date administered" />
-          <input type="date" value={nextDueAt} onChange={(e) => setNextDueAt(e.target.value)} aria-label="Next due date" />
+          <input value={vaccineName} onChange={(e) => setVaccineName(e.target.value)} placeholder={t`Vaccine name`} aria-label={t`Vaccine name`} />
+          <input value={lotNumber} onChange={(e) => setLotNumber(e.target.value)} placeholder={t`Lot number`} aria-label={t`Lot number`} />
+          <input type="date" value={administeredAt} onChange={(e) => setAdministeredAt(e.target.value)} aria-label={t`Date administered`} />
+          <input type="date" value={nextDueAt} onChange={(e) => setNextDueAt(e.target.value)} aria-label={t`Next due date`} />
           <button className="small-button" onClick={record} disabled={!patientId || !vaccineName.trim()}>
-            Record
+            <Trans>Record</Trans>
           </button>
         </div>
       )}
       <div className="records-table vaccinations-table">
         <div className="table-head">
-          <span>Patient</span>
-          <span>Vaccine</span>
-          <span>Given</span>
-          <span>Next due</span>
-          <span>Vet</span>
+          <span><Trans>Patient</Trans></span>
+          <span><Trans>Vaccine</Trans></span>
+          <span><Trans>Given</Trans></span>
+          <span><Trans>Next due</Trans></span>
+          <span><Trans>Vet</Trans></span>
         </div>
-        {rows.length === 0 && <p className="empty-state">No vaccinations recorded yet.</p>}
+        {rows.length === 0 && <p className="empty-state"><Trans>No vaccinations recorded yet.</Trans></p>}
         {rows.map(({ patient, vet, overdue, ...v }) => (
           <div className="table-row" key={v.id}>
             <div className="patient-cell">
               <div className="pet-avatar">{patient?.name.slice(0, 1) ?? '?'}</div>
               <div>
-                <strong>{patient?.name ?? 'Unknown'}</strong>
+                <strong>{patient?.name ?? <Trans>Unknown</Trans>}</strong>
                 <span>{patient?.mrn}</span>
               </div>
             </div>
-            <span data-label="Vaccine">
+            <span data-label={t`Vaccine`}>
               {v.vaccineName}
               {v.lotNumber ? ` · ${v.lotNumber}` : ''}
             </span>
-            <span data-label="Given">{formatDate(v.administeredAt)}</span>
-            <span data-label="Next due">
+            <span data-label={t`Given`}>{formatDate(v.administeredAt)}</span>
+            <span data-label={t`Next due`}>
               {v.nextDueAt ? (
                 <Pill tone={overdue ? 'bad' : 'muted'} dot>
-                  {overdue ? 'Overdue ' : ''}
+                  {overdue ? (
+                    <>
+                      <Trans>Overdue</Trans>{' '}
+                    </>
+                  ) : null}
                   {formatDate(v.nextDueAt)}
                 </Pill>
               ) : (
                 '—'
               )}
             </span>
-            <span data-label="Vet">{vet?.name ?? '—'}</span>
+            <span data-label={t`Vet`}>{vet?.name ?? '—'}</span>
           </div>
         ))}
       </div>
@@ -282,6 +310,7 @@ const Vaccinations = () => {
 
 export const StaffView = () => {
   const { data, session, dispatch } = useClinic()
+  const { t } = useLingui()
   const manage = usePermission('staff.manage')
   const [name, setName] = useState('')
   const [role, setRole] = useState<StaffUser['role']>('reception')
@@ -307,20 +336,23 @@ export const StaffView = () => {
 
   return (
     <>
-      <PageHeader title="Staff & permissions" description="Roles decide who can write records, bill, adjust stock and export." />
+      <PageHeader
+        title={t`Staff & permissions`}
+        description={t`Roles decide who can write records, bill, adjust stock and export.`}
+      />
       {manage.allowed && (
-        <Panel title="Add staff member" description="New members start active with the permissions of their role">
+        <Panel title={t`Add staff member`} description={t`New members start active with the permissions of their role`}>
           <div className="form-grid">
-            <Field label="Full name" htmlFor="staff-name">
+            <Field label={t`Full name`} htmlFor="staff-name">
               <input
                 id="staff-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addStaff()}
-                placeholder="e.g. Anong Srisuk…"
+                placeholder={t`e.g. Anong Srisuk…`}
               />
             </Field>
-            <Field label="Role" htmlFor="staff-role">
+            <Field label={t`Role`} htmlFor="staff-role">
               <select id="staff-role" value={role} onChange={(e) => setRole(e.target.value as StaffUser['role'])}>
                 {ROLES.map((r) => (
                   <option key={r} value={r}>
@@ -331,16 +363,19 @@ export const StaffView = () => {
             </Field>
           </div>
           <button className="button primary" onClick={addStaff} disabled={!name.trim()}>
-            Add member
+            <Trans>Add member</Trans>
           </button>
         </Panel>
       )}
-      <Panel title={`${data.users.filter((u) => u.active).length} active staff members`} description="Current clinic team">
+      <Panel
+        title={plural(data.users.filter((u) => u.active).length, { one: '# active staff member', other: '# active staff members' })}
+        description={t`Current clinic team`}
+      >
         <div className="records-table table-wide staff-table">
           <div className="table-head">
-            <span>Member</span>
-            <span>Role</span>
-            <span>Permissions</span>
+            <span><Trans>Member</Trans></span>
+            <span><Trans>Role</Trans></span>
+            <span><Trans>Permissions</Trans></span>
             <span />
             <span />
           </div>
@@ -353,16 +388,22 @@ export const StaffView = () => {
                   <div>
                     <strong>{user.name}</strong>
                     <span>
-                      {isSelf ? 'Signed in on this device' : user.active ? 'Team member' : 'Deactivated'}
+                      {isSelf ? (
+                        <Trans>Signed in on this device</Trans>
+                      ) : user.active ? (
+                        <Trans>Team member</Trans>
+                      ) : (
+                        <Trans>Deactivated</Trans>
+                      )}
                       {' · '}
-                      {hasPin(user) ? 'PIN set' : 'no PIN'}
+                      {hasPin(user) ? <Trans>PIN set</Trans> : <Trans>no PIN</Trans>}
                     </span>
                   </div>
                 </div>
                 <span>
                   {manage.allowed ? (
                     <select
-                      aria-label={`Role for ${user.name}`}
+                      aria-label={t`Role for ${user.name}`}
                       value={user.role}
                       onChange={(e) => dispatch({ type: 'updateStaff', id: user.id, role: e.target.value as StaffUser['role'] })}
                     >
@@ -386,25 +427,29 @@ export const StaffView = () => {
                 <span>
                   {!isSelf && user.active && (
                     <button className="small-button" onClick={() => signInAs(user)}>
-                      Sign in as
+                      <Trans>Sign in as</Trans>
                     </button>
                   )}
                 </span>
                 <span style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                   {(manage.allowed || isSelf) && user.active && (
-                    <button className="small-button" onClick={() => setPinFor(user)} aria-label={`${hasPin(user) ? 'Change' : 'Set'} PIN for ${user.name}`}>
-                      {hasPin(user) ? 'Change PIN' : 'Set PIN'}
+                    <button
+                      className="small-button"
+                      onClick={() => setPinFor(user)}
+                      aria-label={hasPin(user) ? t`Change PIN for ${user.name}` : t`Set PIN for ${user.name}`}
+                    >
+                      {hasPin(user) ? <Trans>Change PIN</Trans> : <Trans>Set PIN</Trans>}
                     </button>
                   )}
                   {manage.allowed &&
                     !isSelf &&
                     (user.active ? (
                       <button className="small-button" onClick={() => dispatch({ type: 'setStaffActive', id: user.id, active: false })}>
-                        Deactivate
+                        <Trans>Deactivate</Trans>
                       </button>
                     ) : (
                       <button className="small-button" onClick={() => dispatch({ type: 'setStaffActive', id: user.id, active: true })}>
-                        Reactivate
+                        <Trans>Reactivate</Trans>
                       </button>
                     ))}
                 </span>
@@ -414,12 +459,12 @@ export const StaffView = () => {
         </div>
       </Panel>
       <Panel
-        title="Audit trail"
-        description="Every write lands here with actor and timestamp"
+        title={t`Audit trail`}
+        description={t`Every write lands here with actor and timestamp`}
         action={
           data.audit.length > 12 ? (
             <button className="small-button" onClick={() => setShowAllAudit((v) => !v)}>
-              {showAllAudit ? 'Show recent' : `Show all ${data.audit.length}`}
+              {showAllAudit ? <Trans>Show recent</Trans> : <Trans>Show all {data.audit.length}</Trans>}
             </button>
           ) : undefined
         }
@@ -438,7 +483,7 @@ export const StaffView = () => {
               </div>
             </div>
           ))}
-          {data.audit.length === 0 && <p className="empty-state">No activity recorded yet.</p>}
+          {data.audit.length === 0 && <p className="empty-state"><Trans>No activity recorded yet.</Trans></p>}
         </div>
       </Panel>
       {pinFor && <PinDialog member={pinFor} onClose={() => setPinFor(null)} />}
@@ -450,6 +495,7 @@ export const StaffView = () => {
 
 export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }) => {
   const { data, session, dispatch } = useClinic()
+  const { t } = useLingui()
   const sync = useSyncState()
   const dataExport = usePermission('data.export')
   const restoreInput = useRef<HTMLInputElement>(null)
@@ -473,9 +519,9 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
       action: 'data.export',
       entityType: 'clinic',
       entityId: data.clinic.id,
-      summary: `Exported the clinic archive — ${data.patients.length} patients, ${data.invoices.length} invoices`,
+      summary: t`Exported the clinic archive — ${plural(data.patients.length, { one: '# patient', other: '# patients' })}, ${plural(data.invoices.length, { one: '# invoice', other: '# invoices' })}`,
     })
-    setNotice(`Clinic archive exported (${data.patients.length} patients, ${data.invoices.length} invoices).`)
+    setNotice(t`Clinic archive exported (${plural(data.patients.length, { one: '# patient', other: '# patients' })}, ${plural(data.invoices.length, { one: '# invoice', other: '# invoices' })}).`)
   }
 
   const createBackup = () => {
@@ -486,9 +532,9 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
       action: 'backup.create',
       entityType: 'clinic',
       entityId: data.clinic.id,
-      summary: `Created a clinic backup — ${data.patients.length} patients, ${data.encounters.length} encounters`,
+      summary: t`Created a clinic backup — ${plural(data.patients.length, { one: '# patient', other: '# patients' })}, ${plural(data.encounters.length, { one: '# encounter', other: '# encounters' })}`,
     })
-    setNotice('Backup downloaded. Keep it somewhere outside this computer.')
+    setNotice(t`Backup downloaded. Keep it somewhere outside this computer.`)
   }
 
   const chooseBackup = async (file: File | undefined) => {
@@ -509,22 +555,22 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
     dispatch({ type: 'restoreBackup', backup: restorePreview.backup })
     setRestorePreview(null)
     if (restoreInput.current) restoreInput.current.value = ''
-    setNotice(`Restored ${summary.patients} patients and ${summary.encounters} encounters from the backup.`)
+    setNotice(t`Restored ${plural(summary.patients, { one: '# patient', other: '# patients' })} and ${plural(summary.encounters, { one: '# encounter', other: '# encounters' })} from the backup.`)
   }
 
   return (
     <>
       <PageHeader
-        title="Settings"
-        description="Clinic identity, data portability and plan."
+        title={t`Settings`}
+        description={t`Clinic identity, data portability and plan.`}
         action={
           <Pill tone={session.plan === 'cloud' ? 'ok' : 'info'} dot>
-            {session.plan === 'cloud' ? 'Cloud plan' : 'Local plan'}
+            {session.plan === 'cloud' ? <Trans>Cloud plan</Trans> : <Trans>Local plan</Trans>}
           </Pill>
         }
       />
       <div className="data-grid">
-        <Panel title="Clinic" description="Shown across the workspace and on printed documents.">
+        <Panel title={t`Clinic`} description={t`Shown across the workspace and on printed documents.`}>
           <div className="status-stack">
             <div className="status-line">
               <span className="status-icon">
@@ -533,37 +579,47 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
               <div>
                 <strong>{data.clinic.name}</strong>
                 <span>
-                  {data.clinic.timezone} · currency {data.clinic.currency} · VAT {Math.round(data.clinic.vatRate * 100)}%
+                  {data.clinic.timezone} · <Trans>currency {data.clinic.currency}</Trans> · <Trans>VAT {Math.round(data.clinic.vatRate * 100)}%</Trans>
                 </span>
               </div>
-              <Pill tone="muted">Local</Pill>
+              <Pill tone="muted"><Trans>Local</Trans></Pill>
             </div>
             <div className="status-line">
               <span className="status-icon">
                 <Database size={17} />
               </span>
               <div>
-                <strong>Connection</strong>
-                <span>{session.lanOnline ? 'Clinic server connected · writes are enabled' : 'Offline · read-only mode'}</span>
-              </div>
-              <Pill tone={session.lanOnline ? 'ok' : 'bad'}>{session.lanOnline ? 'Connected' : 'Offline'}</Pill>
-            </div>
-            <div className="status-line">
-              <span className="status-icon">
-                <Database size={17} />
-              </span>
-              <div>
-                <strong>Cloud synchronization</strong>
+                <strong><Trans>Connection</Trans></strong>
                 <span>
-                  {session.plan === 'local'
-                    ? 'Available on Cloud plan'
-                    : sync.state === 'cloud_offline'
-                      ? 'Internet unavailable'
-                      : `${sync.pending} changes waiting`}
+                  {session.lanOnline ? (
+                    <Trans>Clinic server connected · writes are enabled</Trans>
+                  ) : (
+                    <Trans>Offline · read-only mode</Trans>
+                  )}
+                </span>
+              </div>
+              <Pill tone={session.lanOnline ? 'ok' : 'bad'}>
+                {session.lanOnline ? <Trans>Connected</Trans> : <Trans>Offline</Trans>}
+              </Pill>
+            </div>
+            <div className="status-line">
+              <span className="status-icon">
+                <Database size={17} />
+              </span>
+              <div>
+                <strong><Trans>Cloud synchronization</Trans></strong>
+                <span>
+                  {session.plan === 'local' ? (
+                    <Trans>Available on Cloud plan</Trans>
+                  ) : sync.state === 'cloud_offline' ? (
+                    <Trans>Internet unavailable</Trans>
+                  ) : (
+                    plural(sync.pending, { one: '# change waiting', other: '# changes waiting' })
+                  )}
                 </span>
               </div>
               <Pill tone={session.plan === 'local' ? 'muted' : sync.state === 'synced' ? 'ok' : 'warn'}>
-                {session.plan === 'local' ? 'Local only' : sync.state}
+                {session.plan === 'local' ? <Trans>Local only</Trans> : statusLabel(sync.state)}
               </Pill>
             </div>
             {session.lastSyncError && (
@@ -572,29 +628,29 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
                   <AlertTriangle size={17} />
                 </span>
                 <div>
-                  <strong>Last sync attempt failed</strong>
+                  <strong><Trans>Last sync attempt failed</Trans></strong>
                   <span>{session.lastSyncError}</span>
                 </div>
-                <Pill tone="bad">Sync error</Pill>
+                <Pill tone="bad"><Trans>Sync error</Trans></Pill>
               </div>
             )}
           </div>
           <div className="data-actions">
             <button className="button primary" onClick={onManageClinic} disabled={!onManageClinic}>
-              Manage clinic &amp; account
+              <Trans>Manage clinic & account</Trans>
             </button>
             <button className="button secondary" onClick={() => dispatch({ type: 'session', patch: { lanOnline: !session.lanOnline } })}>
-              {session.lanOnline ? 'Simulate server offline' : 'Reconnect server'}
+              {session.lanOnline ? <Trans>Simulate server offline</Trans> : <Trans>Reconnect server</Trans>}
             </button>
             <button
               className="button secondary"
               onClick={() => dispatch({ type: 'session', patch: { plan: session.plan === 'local' ? 'cloud' : 'local' } })}
             >
-              {session.plan === 'local' ? 'Preview Cloud plan' : 'Switch to Local plan'}
+              {session.plan === 'local' ? <Trans>Preview Cloud plan</Trans> : <Trans>Switch to Local plan</Trans>}
             </button>
           </div>
         </Panel>
-        <Panel title="Portability & recovery" description="Export and manual backup are included in the free Local plan.">
+        <Panel title={t`Portability & recovery`} description={t`Export and manual backup are included in the free Local plan.`}>
           {notice && (
             <p className="form-hint" role="status">
               {notice}
@@ -605,11 +661,11 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
               <Database size={20} />
             </div>
             <div>
-              <strong>Clinic export archive</strong>
-              <span>Versioned JSON snapshot of every clinic record, for reporting and hand-off.</span>
+              <strong><Trans>Clinic export archive</Trans></strong>
+              <span><Trans>Versioned JSON snapshot of every clinic record, for reporting and hand-off.</Trans></span>
             </div>
             <button className="button primary" onClick={exportData} disabled={!dataExport.allowed} title={dataExport.reason || undefined}>
-              Export data
+              <Trans>Export data</Trans>
             </button>
           </div>
           <div className="export-card">
@@ -617,11 +673,11 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
               <ShieldCheck size={20} />
             </div>
             <div>
-              <strong>Clinic backup file</strong>
-              <span>A restorable copy of this installation — patients, visits, billing and settings.</span>
+              <strong><Trans>Clinic backup file</Trans></strong>
+              <span><Trans>A restorable copy of this installation — patients, visits, billing and settings.</Trans></span>
             </div>
             <button className="button secondary" onClick={createBackup} disabled={!dataExport.allowed} title={dataExport.reason || undefined}>
-              Create backup
+              <Trans>Create backup</Trans>
             </button>
           </div>
           <div className="export-card">
@@ -629,15 +685,15 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
               <RotateCcw size={20} />
             </div>
             <div>
-              <strong>Restore from backup</strong>
-              <span>Replaces this installation's records with the backup after a preview.</span>
+              <strong><Trans>Restore from backup</Trans></strong>
+              <span><Trans>Replaces this installation's records with the backup after a preview.</Trans></span>
             </div>
             <input
               ref={restoreInput}
               type="file"
               accept="application/json,.json"
               className="sr-only"
-              aria-label="Choose a backup file"
+              aria-label={t`Choose a backup file`}
               onChange={(e) => void chooseBackup(e.target.files?.[0])}
             />
             <button
@@ -646,7 +702,7 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
               disabled={!dataExport.allowed}
               title={dataExport.reason || undefined}
             >
-              Choose backup…
+              <Trans>Choose backup…</Trans>
             </button>
           </div>
           {restoreError && (
@@ -664,15 +720,15 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
             if (e.target === e.currentTarget) setRestorePreview(null)
           }}
         >
-          <div className="modal" role="dialog" aria-modal="true" aria-label="Restore clinic backup">
+          <div className="modal" role="dialog" aria-modal="true" aria-label={t`Restore clinic backup`}>
             <div className="form-heading">
               <div>
-                <strong>Restore clinic backup</strong>
+                <strong><Trans>Restore clinic backup</Trans></strong>
                 <span>
-                  {restorePreview.summary.clinicName} · created {formatDate(restorePreview.backup.createdAt)}
+                  {restorePreview.summary.clinicName} · <Trans>created {formatDate(restorePreview.backup.createdAt)}</Trans>
                 </span>
               </div>
-              <button className="icon-button" onClick={() => setRestorePreview(null)} aria-label="Close dialog">
+              <button className="icon-button" onClick={() => setRestorePreview(null)} aria-label={t`Close dialog`}>
                 <X size={17} />
               </button>
             </div>
@@ -683,11 +739,13 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
                 </span>
                 <div>
                   <strong>
-                    {restorePreview.summary.patients} patients · {restorePreview.summary.owners} owners
+                    <Plural value={restorePreview.summary.patients} one="# patient" other="# patients" /> ·{' '}
+                    <Plural value={restorePreview.summary.owners} one="# owner" other="# owners" />
                   </strong>
                   <span>
-                    {restorePreview.summary.encounters} encounters · {restorePreview.summary.appointments} appointments ·{' '}
-                    {restorePreview.summary.invoices} invoices
+                    <Plural value={restorePreview.summary.encounters} one="# encounter" other="# encounters" /> ·{' '}
+                    <Plural value={restorePreview.summary.appointments} one="# appointment" other="# appointments" /> ·{' '}
+                    <Plural value={restorePreview.summary.invoices} one="# invoice" other="# invoices" />
                   </span>
                 </div>
               </div>
@@ -696,26 +754,30 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
                   <ShieldCheck size={17} />
                 </span>
                 <div>
-                  <strong>{restorePreview.summary.staff} staff accounts</strong>
-                  <span>Includes roles and PIN credentials as they were when the backup was taken.</span>
+                  <strong>
+                    <Plural value={restorePreview.summary.staff} one="# staff account" other="# staff accounts" />
+                  </strong>
+                  <span><Trans>Includes roles and PIN credentials as they were when the backup was taken.</Trans></span>
                 </div>
               </div>
             </div>
             {restorePreview.backup.state.clinic.id !== data.clinic.id && (
               <p className="form-hint is-bad">
-                This backup belongs to a different clinic ({restorePreview.backup.state.clinic.name}). Restoring it will replace
-                this clinic's records.
+                <Trans>
+                  This backup belongs to a different clinic ({restorePreview.backup.state.clinic.name}). Restoring it will replace
+                  this clinic's records.
+                </Trans>
               </p>
             )}
             <p className="form-hint">
-              Everything currently on this computer will be replaced. Export a fresh archive first if you are unsure.
+              <Trans>Everything currently on this computer will be replaced. Export a fresh archive first if you are unsure.</Trans>
             </p>
             <div className="panel-footer">
               <button className="button secondary" onClick={() => setRestorePreview(null)}>
-                Cancel
+                <Trans>Cancel</Trans>
               </button>
               <button className="button primary" onClick={restoreBackup}>
-                Restore backup
+                <Trans>Restore backup</Trans>
               </button>
             </div>
           </div>

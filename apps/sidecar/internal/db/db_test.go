@@ -13,7 +13,7 @@ func TestOpenInMemoryAppliesAllMigrations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []int64{1, 2, 3, 4}
+	want := []int64{1, 2, 3, 4, 5}
 	if len(versions) != len(want) {
 		t.Fatalf("expected %d migrations, got %v", len(want), versions)
 	}
@@ -26,5 +26,16 @@ func TestOpenInMemoryAppliesAllMigrations(t *testing.T) {
 	var name string
 	if err := database.Conn.QueryRow("SELECT name FROM sqlite_master WHERE type='table' AND name='sync_meta'").Scan(&name); err != nil {
 		t.Fatalf("sync_meta table missing: %v", err)
+	}
+
+	// 0005 removes the unused VetDesk tables from 0002.
+	var dead int
+	if err := database.Conn.QueryRow(
+		"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('patients','appointments','medical_records','clinic_settings')",
+	).Scan(&dead); err != nil {
+		t.Fatal(err)
+	}
+	if dead != 0 {
+		t.Fatalf("expected dead tables dropped, %d still exist", dead)
 	}
 }

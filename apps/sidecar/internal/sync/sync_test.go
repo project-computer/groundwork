@@ -36,8 +36,12 @@ func sampleState() map[string]any {
 		},
 		"products":       []any{},
 		"stockMovements": []any{},
+		"suppliers":      []any{},
+		"inventoryItems": []any{},
+		"inventoryLots":  []any{},
 		"invoices":       []any{},
 		"payments":       []any{},
+		"caseTransfers":  []any{},
 		"vaccinations": []any{
 			map[string]any{"id": "vac-1", "patientId": "patient-1", "vaccineName": "Rabies vaccine", "administeredAt": "2026-10-25T10:00:00Z", "nextDueAt": "2027-10-25", "vetId": "u-pim", "version": json.Number("1")},
 		},

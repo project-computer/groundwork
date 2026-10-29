@@ -37,13 +37,21 @@ Store API (src/lib/vet/store.tsx — same API on every platform)
   audit event and its outbox entry in one state transition.
 - The clinic document is a single JSON blob in `clinic_state`; rich
   sub-documents (SOAP notes, vitals, diagnosis lists) live inside it.
+- Document shape has one home: `fixtures/clinic-document.json`. The guards in
+  `isClinicState` (TS), `store.Validate` (Go sidecar) and `validate_state`
+  (Rust) are pinned to it by tests — add a collection to
+  `CLINIC_STATE_COLLECTIONS` and the fixture in the same change or CI fails.
+- The sync entity registry has one home: `fixtures/sync-entities.json`. The
+  sidecar (`entities.go`) and cloud (`sync_service.go`) registries are pinned
+  to it by tests on both sides.
 - The Go sidecar (`apps/sidecar/`) validates the document and persists atomically.
   It also owns push/pull; the Rust commands are a degraded fallback only.
 - `src/platform/` detects Tauri vs browser (`isTauri`).
-- Schema lives in two places and must stay in sync for migrations 0001–0003:
-  `apps/clinic/src-tauri/migrations/` (Rust fallback) and
+- Schema lives in two places and must stay in sync for the shared migrations
+  0001–0003 and 0005: `apps/clinic/src-tauri/migrations/` (Rust fallback) and
   `apps/sidecar/migrations/` (sidecar, embedded in the binary). Migration 0004
-  (`sync_meta`) is sidecar-only.
+  (`sync_meta`) is sidecar-only. The Rust runner lists migrations explicitly in
+  `src-tauri/src/db.rs`; the Go runner discovers `*.sql` files.
 - Sync unit is an entity (`entityType` + `entityId`), not a table row.
   Conflicts resolve last-write-wins on `occurredAt`, with `version` used for
   merged top-level entities.
@@ -51,7 +59,8 @@ Store API (src/lib/vet/store.tsx — same API on every platform)
 ## Migration history
 
 - 0001: initial normalized schema (owners/pets/visits/…) — superseded.
-- 0002: drops 0001 tables, creates VetDesk model (see docs/data-model.md).
+- 0002: drops 0001 tables, creates VetDesk model — superseded by 0003.
 - 0003: `clinic_state` document store (current persistence).
 - 0004: `sync_meta` pull cursor (sidecar).
+- 0005: drops the unused 0002 VetDesk tables (shared by both runners).
 - Backend 000002: `sync_entities` + `sync_version_seq` (cloud).

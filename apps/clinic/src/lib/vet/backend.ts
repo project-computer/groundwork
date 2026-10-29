@@ -11,25 +11,29 @@ import type { ClinicState } from './types'
 let resolved: Promise<string | null> | null = null
 
 const discover = async (): Promise<string | null> => {
+  // Discovery polls the sidecar until it answers; retries are inherently
+  // sequential and must not run in parallel.
   for (let attempt = 0; attempt < 10; attempt += 1) {
     try {
+      // oxlint-disable-next-line no-await-in-loop
       const url = await invoke<string | null>('backend_url')
       if (url) return url.replace(/\/$/, '')
     } catch {
       return null
     }
+    // oxlint-disable-next-line no-await-in-loop
     await new Promise((resolve) => setTimeout(resolve, 500))
   }
   return null
 }
 
-export const backendUrl = (): Promise<string | null> => {
+const backendUrl = (): Promise<string | null> => {
   if (!isTauri()) return Promise.resolve(null)
   if (!resolved) resolved = discover()
   return resolved
 }
 
-export class SyncNotConfiguredError extends Error {
+class SyncNotConfiguredError extends Error {
   constructor(message = 'Cloud sync is not configured') {
     super(message)
     this.name = 'SyncNotConfiguredError'

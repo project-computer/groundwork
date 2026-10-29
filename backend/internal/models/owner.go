@@ -8,37 +8,37 @@ type SecondaryContact struct {
 }
 
 type Owner struct {
-	ID               int              `json:"id"`
-	ClinicID         int              `json:"clinicId"`
-	Name             string           `json:"name"`
-	Phone            string           `json:"phone"`
-	Email            NullString       `json:"email,omitempty"`
-	NationalID       NullString       `json:"nationalId,omitempty"`
-	Notes            NullString       `json:"notes,omitempty"`
+	ID               int               `json:"id"`
+	ClinicID         int               `json:"clinicId"`
+	Name             string            `json:"name"`
+	Phone            string            `json:"phone"`
+	Email            NullString        `json:"email,omitempty"`
+	NationalID       NullString        `json:"nationalId,omitempty"`
+	Notes            NullString        `json:"notes,omitempty"`
 	SecondaryContact *SecondaryContact `json:"secondaryContact,omitempty"`
 	// Notification prefs (slice 0010)
 	PreferredChannel NullString `json:"preferredChannel,omitempty"` // line | sms | email
 	NotifyOptOut     bool       `json:"notifyOptOut"`
 	LineUserID       NullString `json:"lineUserId,omitempty"`
-	CreatedAt        time.Time        `json:"createdAt"`
-	UpdatedAt        time.Time        `json:"updatedAt"`
+	CreatedAt        time.Time  `json:"createdAt"`
+	UpdatedAt        time.Time  `json:"updatedAt"`
 }
 
 type CreateOwnerRequest struct {
-	Name             string           `json:"name" validate:"required"`
-	Phone            string           `json:"phone" validate:"required"`
-	Email            string           `json:"email,omitempty"`
-	NationalID       string           `json:"nationalId,omitempty"`
-	Notes            string           `json:"notes,omitempty"`
+	Name             string            `json:"name" validate:"required"`
+	Phone            string            `json:"phone" validate:"required"`
+	Email            string            `json:"email,omitempty"`
+	NationalID       string            `json:"nationalId,omitempty"`
+	Notes            string            `json:"notes,omitempty"`
 	SecondaryContact *SecondaryContact `json:"secondaryContact,omitempty"`
 }
 
 type UpdateOwnerRequest struct {
-	Name             string           `json:"name,omitempty"`
-	Phone            string           `json:"phone,omitempty"`
-	Email            string           `json:"email,omitempty"`
-	NationalID       string           `json:"nationalId,omitempty"`
-	Notes            string           `json:"notes,omitempty"`
+	Name             string            `json:"name,omitempty"`
+	Phone            string            `json:"phone,omitempty"`
+	Email            string            `json:"email,omitempty"`
+	NationalID       string            `json:"nationalId,omitempty"`
+	Notes            string            `json:"notes,omitempty"`
 	SecondaryContact *SecondaryContact `json:"secondaryContact,omitempty"`
 }
 

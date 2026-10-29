@@ -34,10 +34,10 @@ type PrefsRepo interface {
 // entirely and NO log row is written. Documented choice — absence of a log row IS
 // the opt-out signal; logging a "skipped" row was rejected as noise.
 type NotificationService struct {
-	logs      NotificationLogRepo
-	owners    ContactLookup
-	prefs     PrefsRepo
-	adapters  []notifications.Notifier
+	logs     NotificationLogRepo
+	owners   ContactLookup
+	prefs    PrefsRepo
+	adapters []notifications.Notifier
 }
 
 func NewNotificationService(logs NotificationLogRepo, owners ContactLookup, prefs PrefsRepo, adapters []notifications.Notifier) *NotificationService {
@@ -130,9 +130,8 @@ func (s *NotificationService) SendToOwner(ctx context.Context, clinicID, ownerID
 	if err := s.logs.Create(ctx, clinicID, logRow); err != nil {
 		return nil, err
 	}
-	if err := s.deliver(ctx, clinicID, logRow, contact, message); err != nil {
-		// failure captured in the log row; return the row, not the error
-	}
+	// deliver failure is captured in the log row; return the row, not the error
+	_ = s.deliver(ctx, clinicID, logRow, contact, message)
 	return s.logs.GetByID(ctx, clinicID, logRow.ID)
 }
 

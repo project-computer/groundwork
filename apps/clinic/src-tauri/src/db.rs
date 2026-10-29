@@ -8,6 +8,8 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (1, include_str!("../migrations/0001_init.sql")),
     (2, include_str!("../migrations/0002_vetdesk_model.sql")),
     (3, include_str!("../migrations/0003_clinic_state.sql")),
+    // 0004 (sync_meta) is sidecar-only; 0005 is shared with apps/sidecar.
+    (5, include_str!("../migrations/0005_drop_dead_tables.sql")),
 ];
 
 pub struct Db {

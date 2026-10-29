@@ -18,7 +18,7 @@ export const getTheme = (): ThemeChoice => {
   return 'system'
 }
 
-export const resolvedTheme = (choice: ThemeChoice = getTheme()): 'light' | 'dark' => {
+const resolvedTheme = (choice: ThemeChoice = getTheme()): 'light' | 'dark' => {
   return choice === 'dark' || (choice === 'system' && systemPrefersDark()) ? 'dark' : 'light'
 }
 
@@ -39,10 +39,11 @@ export const setTheme = (choice: ThemeChoice) => {
 }
 
 /** Re-applies the theme when the OS preference changes while on "system". */
+const onSystemThemeChange = () => applyTheme()
+
 export const watchSystemTheme = (): () => void => {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return () => {}
   const query = window.matchMedia('(prefers-color-scheme: dark)')
-  const onChange = () => applyTheme()
-  query.addEventListener('change', onChange)
-  return () => query.removeEventListener('change', onChange)
+  query.addEventListener('change', onSystemThemeChange)
+  return () => query.removeEventListener('change', onSystemThemeChange)
 }

@@ -11,8 +11,8 @@ import (
 )
 
 type AppointmentService struct {
-	repo        *repository.AppointmentRepository
-	visitRepo   *repository.VisitRepository
+	repo      *repository.AppointmentRepository
+	visitRepo *repository.VisitRepository
 }
 
 func NewAppointmentService(repo *repository.AppointmentRepository, visitRepo *repository.VisitRepository) *AppointmentService {
@@ -178,14 +178,14 @@ func (s *AppointmentService) CheckIn(ctx context.Context, id int) error {
 	}
 
 	visit := &models.Visit{
-		PetID:        apt.PatientID,
-		PetName:      apt.PatientName,
-		OwnerName:    apt.OwnerName,
-		Type:         "OPD",
-		Purpose:      "Appointment Only",
-		Steps:        []byte("[]"),
-		Vitals:       []byte("{}"),
-		Medications:  []byte("[]"),
+		PetID:       apt.PatientID,
+		PetName:     apt.PatientName,
+		OwnerName:   apt.OwnerName,
+		Type:        "OPD",
+		Purpose:     "Appointment Only",
+		Steps:       []byte("[]"),
+		Vitals:      []byte("{}"),
+		Medications: []byte("[]"),
 	}
 	if apt.VeterinarianID.Valid {
 		visit.AssignedVetID = apt.VeterinarianID

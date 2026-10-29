@@ -1,7 +1,7 @@
 import { todayKey } from './format'
 import type { ClinicState } from './types'
 
-export const TODAY = todayKey()
+const TODAY = todayKey()
 const at = (time: string) => `${TODAY}T${time}:00+07:00`
 
 export const seedState: ClinicState = {

@@ -30,6 +30,8 @@ var syncEntityTypes = map[string]bool{
 	"invoice":        true,
 	"payment":        true,
 	"user":           true,
+	"vaccination":    true,
+	"case_transfer":  true,
 	"clinical_note":  true,
 	"diagnosis":      true,
 	"prescription":   true,

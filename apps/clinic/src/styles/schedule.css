@@ -1,0 +1,390 @@
+/* Split from index.css — lines 1336-1621. Order of these files is cascade-significant: see index.css. */
+.date-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+.date-nav strong {
+  font-size: 12px;
+  min-width: 190px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.today-button {
+  margin-left: 4px;
+}
+.seg {
+  display: inline-flex;
+  background: var(--tile-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+}
+.seg button {
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.seg button.active {
+  background: var(--paper);
+  color: var(--teal-dark);
+  font-weight: 650;
+  box-shadow: var(--shadow);
+}
+.side-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.cal-day {
+  display: flex;
+  flex-direction: column;
+}
+.cal-row {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 10px;
+  border-top: 1px solid var(--row-border);
+  min-height: 52px;
+}
+.cal-row:first-child {
+  border-top: 0;
+}
+.cal-row time {
+  color: var(--ink-muted);
+  font-size: 11px;
+  padding-top: 10px;
+  text-align: right;
+}
+.cal-cells {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 0;
+  cursor: crosshair;
+}
+.cal-slot-ghost {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  border: 1px dashed var(--teal);
+  border-radius: 8px;
+  background: var(--teal-soft);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--teal-dark);
+  pointer-events: none;
+  overflow: hidden;
+  min-height: 4px;
+}
+.cal-appt[draggable='true'] {
+  cursor: grab;
+}
+.cal-appt.dragging {
+  opacity: 0.45;
+}
+.cal-cells.drop-target,
+.week-slot.drop-target {
+  outline: 2px dashed var(--teal);
+  outline-offset: -4px;
+  border-radius: 8px;
+  background: var(--teal-soft);
+}
+.cal-appt {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--tile-bg);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--teal);
+  border-radius: 8px;
+  padding: 8px 10px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  flex-wrap: wrap;
+  cursor: default;
+}
+.cal-appt.status-checked_in {
+  border-left-color: var(--amber);
+}
+.cal-appt.status-in_consult {
+  border-left-color: var(--violet);
+}
+.cal-appt.status-completed {
+  border-left-color: var(--teal);
+}
+.cal-appt.status-booked {
+  border-left-color: var(--blue);
+}
+.cal-appt.status-cancelled,
+.cal-appt.status-no_show {
+  border-left-color: var(--ink-muted);
+  opacity: 0.75;
+}
+.cal-appt.compact {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 7px 8px;
+  width: 100%;
+}
+.cal-appt.compact strong {
+  font-size: 10px;
+  color: var(--teal-dark);
+}
+.cal-appt.compact span {
+  font-size: 11px;
+  color: var(--ink);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cal-appt .cal-time-chip {
+  font-weight: 400;
+  color: var(--ink-muted);
+  font-size: 10px;
+}
+.cal-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+.week-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.week-col > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--ink-muted);
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--tile-bg);
+}
+.week-col > header.today {
+  background: var(--teal-soft);
+  color: var(--teal-dark);
+}
+.week-cells {
+  display: flex;
+  flex-direction: column;
+}
+.week-slot {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 4px;
+  /* Fixed height keeps the hour lines aligned across all seven columns. */
+  height: 52px;
+  padding: 3px;
+  border-top: 1px solid var(--row-border);
+  cursor: crosshair;
+  overflow: hidden;
+}
+.week-slot:first-child {
+  border-top: 0;
+}
+.week-slot .cal-appt.compact {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  height: 100%;
+  justify-content: center;
+}
+/* When several bookings share an hour, keep only the times visible. */
+.week-slot:has(.cal-appt ~ .cal-appt) .cal-appt.compact span {
+  display: none;
+}
+.week-slot:hover::after {
+  content: attr(data-hour-label);
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: var(--ink-muted);
+  pointer-events: none;
+  opacity: 0.7;
+}
+.walkin-form {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+.walkin-form select {
+  flex: 1;
+  min-width: 120px;
+}
+.walkin-form input {
+  flex: 1;
+  min-width: 110px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 7px;
+  padding: 8px 9px;
+  font-size: 12px;
+  outline: 0;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--backdrop);
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+.modal {
+  width: min(560px, 100%);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+  max-height: 90vh;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.modal .form-grid {
+  margin-top: 6px;
+}
+.modal .panel-footer {
+  padding: 14px 0 0;
+  justify-content: flex-end;
+}
+
+/* Clinic & account management */
+
+/* ---------- date picker ---------- */
+.date-picker {
+  position: relative;
+}
+.date-picker-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 9px 10px;
+  font-size: 12px;
+  text-align: left;
+}
+.date-picker-trigger:hover,
+.date-picker-trigger[aria-expanded='true'] {
+  border-color: var(--teal);
+}
+.date-picker-trigger svg {
+  color: var(--ink-muted);
+  flex-shrink: 0;
+}
+.date-picker-trigger span {
+  flex: 1;
+  white-space: nowrap;
+}
+.date-picker-inline .date-picker-trigger {
+  width: auto;
+  padding: 7px 10px;
+}
+.date-picker-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  width: 252px;
+  padding: 10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.date-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.date-picker-head strong {
+  font-size: 12px;
+}
+.date-picker-weekdays,
+.date-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.date-picker-weekdays {
+  margin-bottom: 4px;
+}
+.date-picker-weekdays span {
+  font-size: 10px;
+  color: var(--ink-muted);
+  text-align: center;
+  padding: 2px 0;
+}
+.date-picker-grid button {
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  min-height: 28px;
+  padding: 0;
+  font-size: 12px;
+  color: var(--ink);
+}
+.date-picker-grid button:hover {
+  background: var(--teal-soft);
+}
+.date-picker-grid button[data-outside] {
+  color: var(--ink-muted);
+  opacity: 0.6;
+}
+.date-picker-grid button[data-today] {
+  border-color: var(--teal);
+}
+.date-picker-grid button[data-selected] {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #fff;
+  font-weight: 650;
+}
+.date-picker-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+  border-top: 1px solid var(--row-border);
+  padding-top: 8px;
+}
