@@ -16,7 +16,7 @@ it("edits patient identity and owner contact details from the profile dialog", a
   await page.viewport(1280, 900)
   seed(seedState)
   await renderApp()
-  await page.getByRole("button", { name: "Owners & Pets" }).click()
+  await page.getByRole("button", { name: "Owners & Patients" }).click()
 
   // Tiger (p-3) belongs to Somchai Prasert (o-2).
   await rowButton("Tiger", "View")
@@ -46,7 +46,7 @@ it("blocks saving when the patient name is blank", async () => {
   await page.viewport(1280, 900)
   seed(seedState)
   await renderApp()
-  await page.getByRole("button", { name: "Owners & Pets" }).click()
+  await page.getByRole("button", { name: "Owners & Patients" }).click()
 
   await rowButton("Tiger", "View")
   await page.getByLabelText("Patient name").fill("")

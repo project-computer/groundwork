@@ -16,8 +16,8 @@ test('app shell boots with dashboard', async ({ page }) => {
 test('nav mounts each view', async ({ page }) => {
   await page.goto('/')
 
-  await page.getByRole('button', { name: 'Owners & Pets' }).click()
-  await expect(page.getByRole('heading', { name: 'Owners & pets' })).toBeVisible()
+  await page.getByRole('button', { name: 'Owners & Patients' }).click()
+  await expect(page.getByRole('heading', { name: 'Owners & patients' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Appointments & Queue' }).click()
   await expect(page.getByRole('heading', { name: 'Appointments & Queue' })).toBeVisible()

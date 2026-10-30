@@ -51,9 +51,9 @@ it("imports a case bundle as a provenance-stamped copy and blocks double-import"
   const status = document.querySelector("[role='status']")
   expect(status?.textContent).toContain("Received Tiger from Riverside Vet")
 
-  // The copy appears under Owners & Pets with a new MRN and provenance pill.
+  // The copy appears under Owners & Patients with a new MRN and provenance pill.
   await page.getByRole("button", { name: "Done" }).click()
-  await page.getByRole("button", { name: "Owners & Pets" }).click()
+  await page.getByRole("button", { name: "Owners & Patients" }).click()
   const search = document.querySelector<HTMLInputElement>("input[aria-label='Search owners or patients']")
   if (!search) throw new Error("search box not found")
   typeInto(search, "Tiger")

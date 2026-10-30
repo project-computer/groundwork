@@ -120,7 +120,7 @@ describe("App", () => {
     for (const section of [
       "Dashboard",
       "Appointments & Queue",
-      "Owners & Pets",
+      "Owners & Patients",
       "Medical Records",
       "Pharmacy & Inventory",
       "Billing & Payments",
@@ -252,18 +252,18 @@ describe("App", () => {
     await flush();
 
     expect(document.getElementById("owner")).toBeTruthy();
-    expect(document.getElementById("pet")).toBeTruthy();
+    expect(document.getElementById("patient")).toBeTruthy();
   });
 
   it("registers a patient with a microchip and edits the clinical profile", async () => {
     renderApp();
     await flush();
-    click(findButton("Owners & Pets"));
+    click(findButton("Owners & Patients"));
     await flush();
 
     click(findButton("Register Patient"));
     setValue(document.getElementById("owner") as HTMLInputElement, "Anong Srisuk");
-    setValue(document.getElementById("pet") as HTMLInputElement, "Milo");
+    setValue(document.getElementById("patient") as HTMLInputElement, "Milo");
     setValue(document.getElementById("microchip") as HTMLInputElement, "988100011122333");
     click(findButton("Save Records"));
     await flush();
@@ -493,15 +493,15 @@ describe("App", () => {
   it("adds a patient to an existing owner and finds it by owner phone", async () => {
     renderApp();
     await flush();
-    click(findButton("Owners & Pets"));
+    click(findButton("Owners & Patients"));
     await flush();
 
     click(findButton("Register Patient"));
     click(findButton("Existing owner"));
     setValue(document.getElementById("owner-select") as HTMLSelectElement, "o-1");
-    setValue(document.getElementById("pet") as HTMLInputElement, "Thong Dee");
-    setValue(document.getElementById("pet-species") as HTMLSelectElement, "Cat");
-    pickDate("pet-dob", "2024-06-01");
+    setValue(document.getElementById("patient") as HTMLInputElement, "Thong Dee");
+    setValue(document.getElementById("patient-species") as HTMLSelectElement, "Cat");
+    pickDate("patient-dob", "2024-06-01");
     click(findButton("Save Records"));
     await flush();
 
