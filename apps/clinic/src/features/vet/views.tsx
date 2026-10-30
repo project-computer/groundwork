@@ -136,8 +136,6 @@ const ImportCaseDialog = ({ onClose }: { onClose: () => void }) => {
       return
     }
     dispatch({ type: 'importCaseBundle', bundle })
-    const received = data.patients.length // captured before; summary uses bundle content
-    void received
     setOutcome({
       state: 'done',
       message: t`Received ${bundle.patient.name} from ${bundle.fromClinic.name}: ${plural(bundle.encounters.length, { one: '# visit', other: '# visits' })} and ${plural(bundle.vaccinations.length, { one: '# vaccination', other: '# vaccinations' })} copied into this clinic with a new MRN.`,

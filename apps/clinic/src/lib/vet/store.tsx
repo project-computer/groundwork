@@ -98,7 +98,6 @@ type Action =
   | { type: 'recordPayment'; payment: Omit<Payment, 'id' | 'receivedAt'>; settles: boolean }
   | { type: 'refundPayment'; invoiceId: string; paymentId: string; amount: number; note: string }
   | { type: 'voidInvoice'; invoiceId: string }
-  | { type: 'receiveStock'; productId: string; quantity: number }
   | { type: 'addSupplier'; supplier: Omit<Supplier, 'id'> }
   | { type: 'addInventoryItem'; item: Omit<InventoryItem, 'id'> }
   | { type: 'receiveLot'; lot: Omit<InventoryLot, 'id' | 'quantity'>; quantity: number }
@@ -782,17 +781,6 @@ export const reducer = (store: Store, action: Action): Store => {
         { ...data, invoices: data.invoices.map((i) => (i.id === inv.id ? { ...i, status: 'void' as const, version: i.version + 1 } : i)) },
         { action: 'invoice.void', entityType: 'invoice', entityId: inv.id, summary: `Voided ${inv.number}` },
       )
-    }
-    case 'receiveStock': {
-      const movement = { id: uid(), productId: action.productId, delta: action.quantity, reason: 'receipt' as const, createdAt: now() }
-      const product = data.products.find((p) => p.id === action.productId)
-      return commit(store, { ...data, stockMovements: [...data.stockMovements, movement] }, {
-        action: 'stock.receive',
-        entityType: 'stock_movement',
-        entityId: movement.id,
-        summary: `Received ${action.quantity} × ${product?.name ?? 'item'}`,
-        operation: 'append',
-      })
     }
     case 'addSupplier': {
       if (!action.supplier.name.trim()) return store

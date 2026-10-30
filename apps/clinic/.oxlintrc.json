@@ -44,8 +44,42 @@
                 "message": "UI must not touch Tauri APIs. Go through @/lib/vet/store."
               },
               {
-                "group": ["@/lib/vet/backend", "@/lib/vet/persistence"],
+                "group": ["@/lib/vet/backend", "@/lib/vet/persistence", "@/lib/vet/seed"],
                 "message": "UI reads and writes through @/lib/vet/store only."
+              },
+              {
+                "group": ["@/platform"],
+                "message": "UI must not detect the platform. Go through @/lib/vet/store."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/**/*.test.tsx", "src/components/**/*.test.tsx", "src/app/**/*.test.tsx"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@tauri-apps/api/core",
+                "message": "UI must not call invoke(). Go through @/lib/vet/store."
+              },
+              {
+                "name": "@tauri-apps/api",
+                "message": "UI must not touch Tauri APIs. Go through @/lib/vet/store."
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["@tauri-apps/*"],
+                "message": "UI must not touch Tauri APIs. Go through @/lib/vet/store."
+              },
+              {
+                "group": ["@/lib/vet/backend", "@/lib/vet/persistence"],
+                "message": "Tests drive the app through the store; only seed data is allowed."
               },
               {
                 "group": ["@/platform"],
