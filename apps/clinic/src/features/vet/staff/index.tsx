@@ -90,7 +90,7 @@ export const StaffView = () => {
             return (
               <div className="table-row" key={user.id} style={!user.active ? { opacity: 0.5 } : undefined}>
                 <div className="patient-cell">
-                  <div className="pet-avatar">{user.name.slice(0, 1)}</div>
+                  <div className="member-avatar">{user.name.slice(0, 1)}</div>
                   <div>
                     <strong>{user.name}</strong>
                     <span>

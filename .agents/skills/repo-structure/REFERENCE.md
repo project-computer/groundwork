@@ -76,7 +76,9 @@ migration — new UI should use Tailwind utilities with token classes
 
 ## Target deltas (in-flight refactoring candidates)
 
-Plan of record: `docs/plans/2026-10-29-frontend-refactor.md`. Each phase
+Plan of record: `docs/plans/2026-10-29-frontend-refactor.md`. Phases 0, 1,
+2, 5 and 6 are done; phase 3 is partially done (see below); phase 4 (deep
+UI primitives — modal/data-table/stat-card) is still planned. Each phase
 marks its delta **done** in the same PR that lands it — these docs never
 trail the code they describe.
 
@@ -95,7 +97,8 @@ trail the code they describe.
   staff/, settings/, workspace/ — with dialogs and tests beside. StaffView
   and TeamPanel are colocated in staff/ (deep dedup of their shared member
   form is still open). pet→patient / encounter→Visit renames rode the
-  moves; CSS `pet-*` classes remain for the phase 6 sweep.
+  moves; CSS `pet-*` classes became `patient-*`/`member-avatar` (phase 6
+  sweep, screenshots unchanged).
 - Write-path invariants enforced in the reducer — **done (ADR-0015)**:
   stock floor in `addPrescription` (inventory items only; free-text meds
   pass), `recordPayment` computes the paid flip from the ledger and rejects
@@ -104,10 +107,15 @@ trail the code they describe.
   (code + message, rendered by shell/rejection-banner.tsx), and one role
   matrix — `format.can()` — behind both the reducer and `usePermission`
   (veterinarian no longer holds inventory.write).
-- Read model — **planned (phase 3)**: `lib/vet/catalog.ts` (prescribable/
-  billable items) + `lib/vet/selectors.ts` (outstanding balance, overdue
-  vaccinations, low stock — one home each) + `lib/vet/report.ts`
-  (translation-free, leaves the view file).
+- Read model — **partially done**: `lib/vet/catalog.ts` (billable +
+  dispensable catalogs) and `lib/vet/selectors.ts` (outstandingBalance,
+  lowStockItems with the reorderLevel>0 guard, vaccinationOverdue,
+  latestDueByPatient) are live and unit-tested; Billing, Dashboard,
+  Inventory, Reports, Records and NotificationCenter consume them.
+  **Open**: `lib/vet/report.ts` (move the reports model out of the view,
+  translation-free), schedule slot math into `lib/vet/schedule.ts`, and a
+  translation-free worklist FACTS selector so NotificationCenter drops its
+  i18n-in-memo workaround.
 - Deep UI primitives — **planned (phase 4)**: `components/ui/modal|data-table|
   stat-card` replace 9 hand-rolled dialogs, 6 tables, 3 stat cards
   (per decision 0008).

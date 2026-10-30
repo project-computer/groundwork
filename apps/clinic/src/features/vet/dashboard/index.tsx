@@ -134,7 +134,7 @@ export const Dashboard = ({
                 <div className="appointment-row" key={a.id}>
                   <time>{formatTime(a.startsAt)}</time>
                   <div className="appointment-bar">
-                    <div className="pet-mini">{patient?.name.slice(0, 1)}</div>
+                    <div className="patient-mini">{patient?.name.slice(0, 1)}</div>
                     <div className="appointment-main">
                       <strong>{patient?.name}</strong>
                       <span>

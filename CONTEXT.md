@@ -8,7 +8,7 @@ A veterinary clinic management system covering patient medical records, appointm
 
 **Patient**:
 An animal receiving care at a clinic. Identified by a unique Medical Record Number (MRN).
-_Avoid_: Pet (legacy, being renamed in code), animal.
+_Avoid_: Pet, animal.
 
 **Owner**:
 The person responsible for one or more Patients. Primary recipient of reminders and the contact for clinical communication. An Owner may carry an optional secondary contact (e.g. a partner) for joint-custody cases without becoming a many-to-many relationship.

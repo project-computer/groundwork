@@ -463,7 +463,7 @@ button,
 .patients-table .table-row:hover {
   background: var(--tile-bg);
 }
-.patients-table .patient-cell .pet-avatar {
+.patients-table .patient-cell .patient-avatar {
   width: 38px;
   height: 38px;
   border-radius: 12px;

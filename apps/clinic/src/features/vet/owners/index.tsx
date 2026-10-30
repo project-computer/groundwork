@@ -268,7 +268,7 @@ export const Owners = ({
             return (
               <div className="table-row" key={patient.id}>
                 <div className="patient-cell">
-                  <div className="pet-avatar">{patient.name.slice(0, 1)}</div>
+                  <div className="patient-avatar">{patient.name.slice(0, 1)}</div>
                   <div>
                     <strong>{patient.name}</strong>
                     <span>

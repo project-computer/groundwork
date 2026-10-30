@@ -116,7 +116,7 @@ export const Consultations = ({ onOpen }: { onOpen: (encounterId: string) => voi
           <div className="side-stack">
             <Panel title={t`Patient snapshot`} description={t`Current patient details`}>
               <div className="patient-profile">
-                <div className="large-pet-avatar">{patient.name.slice(0, 1)}</div>
+                <div className="large-patient-avatar">{patient.name.slice(0, 1)}</div>
                 <div>
                   <h3>{patient.name}</h3>
                   <span>{patient.mrn} · {sexLabel[patient.sex]} · {patient.breed}</span>
@@ -307,7 +307,7 @@ export const Consultations = ({ onOpen }: { onOpen: (encounterId: string) => voi
         <div className="side-stack">
           <Panel title={t`Patient snapshot`} description={t`Current patient details`}>
             <div className="patient-profile">
-              <div className="large-pet-avatar">{patient.name.slice(0, 1)}</div>
+              <div className="large-patient-avatar">{patient.name.slice(0, 1)}</div>
               <div>
                 <h3>{patient.name}</h3>
                 <span>

@@ -61,7 +61,7 @@ export const RecordsView = ({ onOpenConsult }: { onOpenConsult: (encounterId: st
             return (
               <div className="table-row" key={encounter.id}>
                 <div className="patient-cell">
-                  <div className="pet-avatar">{patient?.name.slice(0, 1)}</div>
+                  <div className="patient-avatar">{patient?.name.slice(0, 1)}</div>
                   <div>
                     <strong>{patient?.name}</strong>
                     <span>
@@ -173,7 +173,7 @@ const Vaccinations = () => {
         {rows.map(({ patient, vet, overdue, ...v }) => (
           <div className="table-row" key={v.id}>
             <div className="patient-cell">
-              <div className="pet-avatar">{patient?.name.slice(0, 1) ?? '?'}</div>
+              <div className="patient-avatar">{patient?.name.slice(0, 1) ?? '?'}</div>
               <div>
                 <strong>{patient?.name ?? <Trans>Unknown</Trans>}</strong>
                 <span>{patient?.mrn}</span>

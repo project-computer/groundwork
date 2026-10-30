@@ -499,7 +499,7 @@ export const ScheduleView = () => {
                   const patient = data.patients.find((p) => p.id === a.patientId)
                   return (
                     <div className="appointment-row" key={a.id}>
-                      <div className="pet-mini">{patient?.name.slice(0, 1)}</div>
+                      <div className="patient-mini">{patient?.name.slice(0, 1)}</div>
                       <div className="appointment-main">
                         <strong>{patient?.name}</strong>
                         <span><Trans>Since {formatTime(a.startsAt)}</Trans></span>
