@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ClinicApp } from "@/features/vet/clinic-shell";
+import { ClinicApp } from "@/features/vet/shell";
 import { ErrorBoundary } from "@/features/vet/error-boundary";
 import { ClinicProvider } from "@/lib/vet/store";
 import { LocaleProvider } from "@/lib/i18n";
