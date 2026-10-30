@@ -4,7 +4,11 @@
 - Source: architecture review of `apps/clinic/src` (exploration report + design
   grilling), aligned with the target deltas already recorded in
   `.agents/skills/repo-structure/REFERENCE.md`
-- Status: plan accepted — phases land in order, each shippable on its own
+- Status: executed 2026-10-29/30 — phases 0, 1, 2, 5 and 6 are done;
+  phase 3 is partially done (catalog + selectors landed; `report.ts`,
+  schedule slot math and the worklist FACTS selector remain); phase 4
+  (deep UI primitives) is pending. See the target deltas in
+  `.agents/skills/repo-structure/REFERENCE.md` for the live state.
 
 ## Decisions locked at planning time
 
