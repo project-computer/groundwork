@@ -1,8 +1,8 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
 import { i18n } from '@lingui/core'
 import { msg } from '@lingui/core/macro'
-import { runSync } from './backend'
-import { isClinicState, loadPlanPref, loadState, parseClinicState, savePlanPref, saveState } from './persistence'
+import { loadPlanPref, loadState, parseClinicState, savePlanPref, saveState } from './persistence'
+import { useSyncWorker } from './sync'
 import { can, formatMoney, formatMrn, invoiceTotals, roleLabel } from './format'
 import { seedState } from './seed'
 import type {
@@ -81,7 +81,8 @@ export interface Store {
 const uid = () => crypto.randomUUID()
 const now = () => new Date().toISOString()
 
-type Action =
+/** Every store mutation. Consumed by the sync seam (lib/vet/sync.ts) too. */
+export type Action =
   | { type: 'session'; patch: Partial<Session> }
   | { type: 'registerOwner'; owner: Omit<Owner, 'id' | 'version'>; patient: Omit<Patient, 'id' | 'ownerId' | 'mrn' | 'version'> }
   | { type: 'addPatient'; patient: Omit<Patient, 'id' | 'mrn' | 'version'> }
@@ -1078,77 +1079,23 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
   }, [plan, hydrated])
 
   // Keep the latest document reachable from the sync worker without making it
-  // a dependency of the sync effect.
+  // a dependency of the sync effects.
   const dataRef = useRef(store.data)
   useEffect(() => {
     dataRef.current = store.data
   }, [store.data])
 
-  // Cloud sync worker: hands the document to the Go sidecar which pushes the
-  // outbox and pulls remote entities. The returned document is authoritative,
-  // so business mutations are refused while a pass is in flight; otherwise a
-  // syncResult could overwrite an edit made after the sync snapshot.
-  const inFlight = useRef(false)
-  const guardedDispatch = useCallback((action: Action) => {
-    if (inFlight.current && action.type !== 'session' && action.type !== 'syncResult' && action.type !== 'syncComplete' && action.type !== 'restore') {
-      return
-    }
-    dispatch(action)
-  }, [])
-
-  const syncNow = useCallback(async () => {
-    if (inFlight.current) return
-    inFlight.current = true
-    dispatch({ type: 'session', patch: { syncing: true } })
-    try {
-      const result = await runSync(dataRef.current)
-      if (result && isClinicState(result.state)) {
-        if (result.pushed > 0 || result.pulled > 0 || result.ackedChangeIds.length > 0) {
-          dispatch({ type: 'syncResult', data: result.state })
-        } else {
-          dispatch({ type: 'session', patch: { syncing: false, lastSyncError: undefined } })
-        }
-        return
-      }
-      // No cloud configured (browser demo): acknowledge a bounded batch so the
-      // pending indicator behaves as before.
-      const batch = dataRef.current.outbox.slice(0, 25).map((c) => c.changeId)
-      if (batch.length > 0) dispatch({ type: 'syncComplete', changeIds: batch })
-      else dispatch({ type: 'session', patch: { syncing: false } })
-    } catch (error) {
-      dispatch({
-        type: 'session',
-        patch: { syncing: false, lastSyncError: error instanceof Error ? error.message : String(error) },
-      })
-    } finally {
-      inFlight.current = false
-    }
-  }, [])
-
-  useEffect(() => {
-    if (plan !== 'cloud' || !internetOnline || !lanOnline) return
-    if (pending.length === 0) return
-    const timer = setTimeout(() => {
-      void syncNow()
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [plan, internetOnline, lanOnline, pending, syncNow])
-
-  // Periodic pull so remote edits arrive even when there is nothing to push.
-  useEffect(() => {
-    if (plan !== 'cloud' || !internetOnline || !lanOnline) return
-    const timer = setInterval(() => {
-      void syncNow()
-    }, 60_000)
-    return () => clearInterval(timer)
-  }, [plan, internetOnline, lanOnline, syncNow])
-
-  // If connectivity drops mid-push, the batch was never acknowledged and stays queued.
-  useEffect(() => {
-    if (syncing && (!internetOnline || plan !== 'cloud' || !lanOnline)) {
-      dispatch({ type: 'session', patch: { syncing: false } })
-    }
-  }, [syncing, internetOnline, plan, lanOnline])
+  // Sync orchestration lives behind the lib/vet/sync seam (phase 5): debounced
+  // push, periodic pull, connectivity resets and the in-flight mutation lock.
+  const { guardedDispatch } = useSyncWorker({
+    plan,
+    internetOnline,
+    lanOnline,
+    syncing,
+    pending: pending.length,
+    dataRef,
+    dispatch,
+  })
 
   const value = useMemo(() => ({ store, dispatch: guardedDispatch }), [store, guardedDispatch])
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

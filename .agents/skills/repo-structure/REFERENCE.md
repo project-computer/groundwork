@@ -111,8 +111,10 @@ trail the code they describe.
 - Deep UI primitives — **planned (phase 4)**: `components/ui/modal|data-table|
   stat-card` replace 9 hand-rolled dialogs, 6 tables, 3 stat cards
   (per decision 0008).
-- `lib/vet/sync.ts` seam — **planned (phase 5)**: sync orchestration leaves
-  the ClinicProvider; transports reached via persistence only.
+- `lib/vet/sync.ts` seam — **done**: useSyncWorker owns the debounced push,
+  periodic pull, connectivity reset and in-flight mutation lock; the
+  ClinicProvider consumes it. store.tsx imports no transport (oxlint now
+  denies @/lib/vet/backend there); backend.ts has interface tests.
 - Sidecar `store.Validate` becomes the single document validator — partially
   superseded: the three guards are now aligned and fixture-pinned; full
   consolidation behind the sidecar remains optional.

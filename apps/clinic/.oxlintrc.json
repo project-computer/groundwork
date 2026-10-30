@@ -1,18 +1,38 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "react", "import", "unicorn", "oxc"],
-  "ignorePatterns": ["dist", "src-tauri/target", "node_modules"],
+  "plugins": [
+    "typescript",
+    "react",
+    "import",
+    "unicorn",
+    "oxc"
+  ],
+  "ignorePatterns": [
+    "dist",
+    "src-tauri/target",
+    "node_modules"
+  ],
   "categories": {
     "correctness": "error",
     "suspicious": "warn",
     "perf": "warn"
   },
   "rules": {
-    "func-style": ["error", "expression"],
+    "func-style": [
+      "error",
+      "expression"
+    ],
     "prefer-arrow-callback": "error",
     "react/react-in-jsx-scope": "off",
     "import/no-unassigned-import": "off",
-    "no-underscore-dangle": ["error", { "allow": ["__TAURI_INTERNALS__"] }],
+    "no-underscore-dangle": [
+      "error",
+      {
+        "allow": [
+          "__TAURI_INTERNALS__"
+        ]
+      }
+    ],
     "unicorn/no-array-sort": "warn",
     "unicorn/consistent-function-scoping": "warn",
     "react/purity": "warn",
@@ -23,7 +43,11 @@
   },
   "overrides": [
     {
-      "files": ["src/features/**", "src/components/**", "src/app/**"],
+      "files": [
+        "src/features/**",
+        "src/components/**",
+        "src/app/**"
+      ],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -40,15 +64,23 @@
             ],
             "patterns": [
               {
-                "group": ["@tauri-apps/*"],
+                "group": [
+                  "@tauri-apps/*"
+                ],
                 "message": "UI must not touch Tauri APIs. Go through @/lib/vet/store."
               },
               {
-                "group": ["@/lib/vet/backend", "@/lib/vet/persistence", "@/lib/vet/seed"],
+                "group": [
+                  "@/lib/vet/backend",
+                  "@/lib/vet/persistence",
+                  "@/lib/vet/seed"
+                ],
                 "message": "UI reads and writes through @/lib/vet/store only."
               },
               {
-                "group": ["@/platform"],
+                "group": [
+                  "@/platform"
+                ],
                 "message": "UI must not detect the platform. Go through @/lib/vet/store."
               }
             ]
@@ -57,7 +89,11 @@
       }
     },
     {
-      "files": ["src/features/**/*.test.tsx", "src/components/**/*.test.tsx", "src/app/**/*.test.tsx"],
+      "files": [
+        "src/features/**/*.test.tsx",
+        "src/components/**/*.test.tsx",
+        "src/app/**/*.test.tsx"
+      ],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -74,15 +110,22 @@
             ],
             "patterns": [
               {
-                "group": ["@tauri-apps/*"],
+                "group": [
+                  "@tauri-apps/*"
+                ],
                 "message": "UI must not touch Tauri APIs. Go through @/lib/vet/store."
               },
               {
-                "group": ["@/lib/vet/backend", "@/lib/vet/persistence"],
+                "group": [
+                  "@/lib/vet/backend",
+                  "@/lib/vet/persistence"
+                ],
                 "message": "Tests drive the app through the store; only seed data is allowed."
               },
               {
-                "group": ["@/platform"],
+                "group": [
+                  "@/platform"
+                ],
                 "message": "UI must not detect the platform. Go through @/lib/vet/store."
               }
             ]
@@ -91,13 +134,18 @@
       }
     },
     {
-      "files": ["src/lib/vet/backend.ts", "src/lib/vet/persistence.ts"],
+      "files": [
+        "src/lib/vet/backend.ts",
+        "src/lib/vet/persistence.ts"
+      ],
       "rules": {
         "no-restricted-imports": "off"
       }
     },
     {
-      "files": ["src/lib/vet/store.tsx"],
+      "files": [
+        "src/lib/vet/store.tsx"
+      ],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -106,11 +154,18 @@
               {
                 "name": "@tauri-apps/api/core",
                 "message": "Persistence adapters live in @/lib/vet/persistence."
+              },
+              {
+                "name": "@/lib/vet/backend",
+                "message": "Sync orchestration lives in @/lib/vet/sync."
               }
             ],
             "patterns": [
               {
-                "group": ["@tauri-apps/*", "@/platform"],
+                "group": [
+                  "@tauri-apps/*",
+                  "@/platform"
+                ],
                 "message": "Persistence adapters live in @/lib/vet/persistence."
               }
             ]
