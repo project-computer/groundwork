@@ -14,7 +14,9 @@ Domain vocabulary lives in `CONTEXT.md`; folder details in
 ```
 src/features/** · src/components/** · src/app/**     (UI)
         │  may import only: @/lib/vet/store, @/lib/vet/types,
-        │  @/lib/vet/format, @/lib/i18n, ui primitives
+        │  @/lib/vet/format, @/lib/i18n, ui primitives, and the pure
+        │  read-model modules (@/lib/vet/{catalog,selectors,report,
+        │  worklist,schedule,backup,case-transfer,auth})
         ▼
 src/lib/vet/store.tsx                                 (domain + orchestration)
         │  document I/O only through ↓
@@ -79,6 +81,26 @@ never duplicated in components — disabled buttons are presentation only.
 The role matrix lives in `format.ts` (`can`/`permissionsFor`) and the
 reducer checks it through `can()` — one source for `usePermission` too.
 
+## UI primitives — one shell per shape
+
+Dialogs, tables and stat tiles go through `components/vet/`:
+
+- `Modal` (`modal.tsx`) owns the backdrop, Escape, heading, close button and
+  the accessible name. Dialogs describe content only. Pass
+  `closeOnEscape={false}` when a nested dialog owns Escape (the workspace
+  dialog and its PIN dialog). The receipt surface passes no `title` because
+  its own header is the heading.
+- `DataTable` (`data-table.tsx`) owns `records-table` / `table-head` /
+  `empty-state`; `columns` and `isEmpty`/`empty` replace the hand-rolled
+  markup. Per-table grid templates still live in the stylesheets, keyed by
+  the `className` you pass (`patients-table`, `staff-table`, …).
+- `StatCard` owns `stat-card` / `stat-icon <tone>` / `stat-note`. Tones are
+  the closed union `teal | blue | violet | amber | red`.
+
+Keep the existing class hooks (`.modal-backdrop`, `.modal`, `.form-heading`,
+`.table-row`, `.stat-*`) — stylesheets and query-based tests target them.
+Don't add a new one-off dialog or table wrapper; extend the primitive.
+
 ## Tests — through the interface
 
 | Area | Location |
@@ -108,4 +130,5 @@ A test that needs many mocks is a signal the seam is in the wrong place.
 - [ ] Migrations identical across both dirs and listed in `db.rs`
 - [ ] Document shape / entity type updated in **all** copies
 - [ ] New invariant lives in the reducer, not the UI
+- [ ] Dialogs/tables/stats use `Modal`/`DataTable`/`StatCard`, not new markup
 - [ ] Test placed per the table above; `pnpm lint` passes

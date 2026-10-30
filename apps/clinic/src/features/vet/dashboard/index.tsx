@@ -1,6 +1,7 @@
 import { msg } from '@lingui/core/macro'
 import { Plural, Trans, useLingui } from '@lingui/react/macro'
 import { CalendarDays, ClipboardList, CreditCard, Package, Plus, ShieldCheck, Stethoscope, Wifi } from 'lucide-react'
+import { StatCard } from '@/components/vet/data-table'
 import { Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, type View } from '@/lib/vet/store'
 import { formatMoney as formatCurrency, formatDate, formatTime, lotsExpiringWithin, mostUsedItems, statusLabel, statusTone, todayKey, vaccinationsDue } from '@/lib/vet/format'
@@ -50,68 +51,51 @@ export const Dashboard = ({
         }
       />
       <div className="stat-grid">
-        <div className="stat-card">
-          <span className="stat-icon teal">
-            <CalendarDays size={19} />
-          </span>
-          <div>
-            <small><Trans>Today’s appointments</Trans></small>
-            <strong>{todaysAppointments.length}</strong>
-            <span className="stat-note">
-              <Trans>{todaysAppointments.filter((a) => a.status === 'completed').length} completed</Trans>
-            </span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <span className="stat-icon violet">
-            <ClipboardList size={19} />
-          </span>
-          <div>
-            <small><Trans>Open consultations</Trans></small>
-            <strong>{data.encounters.filter((e) => e.status === 'open').length}</strong>
-            <span className="stat-note"><Trans>Ready for notes</Trans></span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <span className="stat-icon amber">
-            <CreditCard size={19} />
-          </span>
-          <div>
-            <small><Trans>Outstanding</Trans></small>
-            <strong>{formatCurrency(outstanding)}</strong>
-            <span className="stat-note">
-              <Plural
-                value={data.invoices.filter((i) => i.status !== 'paid' && i.status !== 'void').length}
-                one="# invoice"
-                other="# invoices"
-              />
-            </span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <span className="stat-icon amber">
-            <Stethoscope size={19} />
-          </span>
-          <div>
-            <small><Trans>Vaccinations due (30d)</Trans></small>
-            <strong>{dueVaccinations.length}</strong>
-            <span className="stat-note">
-              {dueVaccinations.length > 0
-                ? <Trans>Next: {data.patients.find((p) => p.id === dueVaccinations[0].patientId)?.name ?? '—'}</Trans>
-                : <Trans>None upcoming</Trans>}
-            </span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <span className="stat-icon blue">
-            <Wifi size={19} />
-          </span>
-          <div>
-            <small><Trans>Data status</Trans></small>
-            <strong><Trans>Local</Trans></strong>
-            <span className="stat-note"><Trans>All changes saved</Trans></span>
-          </div>
-        </div>
+        <StatCard
+          label={<Trans>Today’s appointments</Trans>}
+          value={todaysAppointments.length}
+          note={<Trans>{todaysAppointments.filter((a) => a.status === 'completed').length} completed</Trans>}
+          icon={<CalendarDays size={19} />}
+          tone="teal"
+        />
+        <StatCard
+          label={<Trans>Open consultations</Trans>}
+          value={data.encounters.filter((e) => e.status === 'open').length}
+          note={<Trans>Ready for notes</Trans>}
+          icon={<ClipboardList size={19} />}
+          tone="violet"
+        />
+        <StatCard
+          label={<Trans>Outstanding</Trans>}
+          value={formatCurrency(outstanding)}
+          note={
+            <Plural
+              value={data.invoices.filter((i) => i.status !== 'paid' && i.status !== 'void').length}
+              one="# invoice"
+              other="# invoices"
+            />
+          }
+          icon={<CreditCard size={19} />}
+          tone="amber"
+        />
+        <StatCard
+          label={<Trans>Vaccinations due (30d)</Trans>}
+          value={dueVaccinations.length}
+          note={
+            dueVaccinations.length > 0
+              ? <Trans>Next: {data.patients.find((p) => p.id === dueVaccinations[0].patientId)?.name ?? '—'}</Trans>
+              : <Trans>None upcoming</Trans>
+          }
+          icon={<Stethoscope size={19} />}
+          tone="amber"
+        />
+        <StatCard
+          label={<Trans>Data status</Trans>}
+          value={<Trans>Local</Trans>}
+          note={<Trans>All changes saved</Trans>}
+          icon={<Wifi size={19} />}
+          tone="blue"
+        />
       </div>
       <div className="dashboard-grid">
         <Panel

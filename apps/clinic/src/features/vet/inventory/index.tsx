@@ -5,6 +5,7 @@ import { Plural, Trans, useLingui } from '@lingui/react/macro'
 import { Package, Plus, X } from 'lucide-react'
 import { DatePicker } from '@/components/vet/date-picker'
 import { Field, Panel, PageHeader, Pill } from '@/components/vet/fields'
+import { DataTable } from '@/components/vet/data-table'
 import { useClinic, usePermission } from '@/lib/vet/store'
 import { formatMoney as formatCurrency, itemOnHand, todayKey } from '@/lib/vet/format'
 import type { InventoryCategory } from '@/lib/vet/types'
@@ -188,14 +189,18 @@ export const Inventory = () => {
         title={items.length === 1 ? t`1 item` : t`${items.length} items`}
         description={t`Quantity-on-hand is derived from lot quantities`}
       >
-        <div className="records-table table-wide">
-          <div className="table-head">
-            <span><Trans>Item</Trans></span>
-            <span><Trans>Category</Trans></span>
-            <span><Trans>On hand</Trans></span>
-            <span><Trans>Stock</Trans></span>
-            <span />
-          </div>
+        <DataTable
+          className="table-wide"
+          columns={[
+            <Trans key="item">Item</Trans>,
+            <Trans key="category">Category</Trans>,
+            <Trans key="on-hand">On hand</Trans>,
+            <Trans key="stock">Stock</Trans>,
+            null,
+          ]}
+          isEmpty={items.length === 0}
+          empty={<Trans>No items in this category yet.</Trans>}
+        >
           {items.map((item) => {
             const onHand = itemOnHand(item.id, data.inventoryLots)
             const low = item.reorderLevel > 0 && onHand <= item.reorderLevel
@@ -289,8 +294,7 @@ export const Inventory = () => {
               </div>
             )
           })}
-          {items.length === 0 && <p className="empty-state"><Trans>No items in this category yet.</Trans></p>}
-        </div>
+        </DataTable>
       </Panel>
       <Panel title={t`Suppliers`} description={t`Vendors lots are purchased from`}>
         <div className="activity-list">

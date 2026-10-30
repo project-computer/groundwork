@@ -3,6 +3,7 @@ import { Plural, Trans, useLingui } from '@lingui/react/macro'
 import { Plus, Search, X } from 'lucide-react'
 import { DatePicker } from '@/components/vet/date-picker'
 import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
+import { DataTable } from '@/components/vet/data-table'
 import { useClinic } from '@/lib/vet/store'
 import { buildCaseBundle, downloadCaseBundle, newShareToken } from '@/lib/vet/case-transfer'
 import { formatDate, sexLabel, speciesLabel } from '@/lib/vet/format'
@@ -254,14 +255,19 @@ export const Owners = ({
         title={filtered.length === 1 ? t`1 patient` : t`${filtered.length} patients`}
         description={t`Patient identity and owner contact details`}
       >
-        <div className="records-table patients-table">
-          <div className="table-head">
-            <span><Trans>Patient</Trans></span>
-            <span><Trans>Owner</Trans></span>
-            <span><Trans>Species</Trans></span>
-            <span><Trans>Last visit</Trans></span>
-            <span />
-          </div>
+        <DataTable
+          className="patients-table"
+          columns={[
+            <Trans key="patient">Patient</Trans>,
+            <Trans key="owner">Owner</Trans>,
+            <Trans key="species">Species</Trans>,
+            <Trans key="last-visit">Last visit</Trans>,
+            null,
+          ]}
+          isEmpty={filtered.length === 0}
+          empty={<Trans>No patients match your search.</Trans>}
+          emptyClassName="patients-empty"
+        >
           {filtered.map((patient) => {
             const owner = data.owners.find((o) => o.id === patient.ownerId)
             const flags = [...patient.medicalAlerts, ...patient.allergies]
@@ -323,8 +329,7 @@ export const Owners = ({
               </div>
             )
           })}
-          {filtered.length === 0 && <p className="empty-state patients-empty"><Trans>No patients match your search.</Trans></p>}
-        </div>
+        </DataTable>
       </Panel>
       {detailId && <PatientClinicalDialog patientId={detailId} onClose={() => setDetailId(null)} canWrite={canWrite} />}
     </>

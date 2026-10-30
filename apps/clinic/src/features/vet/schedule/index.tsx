@@ -6,6 +6,7 @@ import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/f
 import { useClinic, usePermission } from '@/lib/vet/store'
 import { compareTime, formatDate, formatTime, monthGrid, shiftDays, shiftMonth, statusLabel, statusTone, todayKey } from '@/lib/vet/format'
 import { DatePicker } from '@/components/vet/date-picker'
+import { Modal } from '@/components/vet/modal'
 import {
   apptDay,
   CLINIC_TZ_SUFFIX,
@@ -590,110 +591,99 @@ export const ScheduleView = () => {
       )}
 
       {dialog && (
-        <div
-          className="modal-backdrop"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setDialog(null)
-          }}
+        <Modal
+          label={dialog.mode === 'book' ? t`Book appointment` : t`Reschedule appointment`}
+          title={dialog.mode === 'book' ? <Trans>Book appointment</Trans> : <Trans>Reschedule appointment</Trans>}
+          subtitle={<Trans>Appointments are saved to the local clinic database.</Trans>}
+          onClose={() => setDialog(null)}
         >
-          <div className="modal" role="dialog" aria-modal="true" aria-label={dialog.mode === 'book' ? t`Book appointment` : t`Reschedule appointment`}>
-            <div className="form-heading">
-              <div>
-                <strong>{dialog.mode === 'book' ? <Trans>Book appointment</Trans> : <Trans>Reschedule appointment</Trans>}</strong>
-                <span><Trans>Appointments are saved to the local clinic database.</Trans></span>
-              </div>
-              <button className="icon-button" onClick={() => setDialog(null)} aria-label={t`Close dialog`}>
-                <X size={17} />
-              </button>
-            </div>
-            <div className="form-grid">
-              <Field label={t`Patient`} htmlFor="bk-patient">
-                <NativeSelect
-                  id="bk-patient"
-                  value={dialog.draft.patientId}
-                  disabled={dialog.mode === 'reschedule'}
-                  onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, patientId: e.target.value } })}
-                >
-                  {data.patients.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} — {data.owners.find((o) => o.id === p.ownerId)?.name}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </Field>
-              <Field label={t`Veterinarian`} htmlFor="bk-vet">
-                <NativeSelect id="bk-vet" value={dialog.draft.vetId} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, vetId: e.target.value } })}>
-                  {vets.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </Field>
-              <Field label={t`Date`} htmlFor="bk-date">
-                <DatePicker
-                  id="bk-date"
-                  label={t`Appointment date`}
-                  value={dialog.draft.date}
-                  onChange={(date) => setDialog({ ...dialog, draft: { ...dialog.draft, date } })}
-                />
-              </Field>
-              <Field label={t`Time`} htmlFor="bk-time">
-                <input id="bk-time" type="time" value={dialog.draft.time} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, time: e.target.value } })} />
-              </Field>
-              <Field label={t`Duration`} htmlFor="bk-duration">
-                <NativeSelect id="bk-duration" value={dialog.draft.durationMin} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, durationMin: Number(e.target.value) } })}>
-                  {[...new Set([15, 20, 30, 45, 60, dialog.draft.durationMin])].toSorted((a, b) => a - b).map((m) => (
-                    <option key={m} value={m}>
-                      <Plural value={m} one="# minute" other="# minutes" />
-                    </option>
-                  ))}
-                </NativeSelect>
-              </Field>
-              <Field label={t`Reason`} htmlFor="bk-reason">
-                <input id="bk-reason" value={dialog.draft.reason} placeholder={t`e.g. Annual vaccination…`} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, reason: e.target.value } })} />
-              </Field>
-            </div>
-            {dialogConflict && (
-              <div className="form-warning" role="alert">
-                <AlertTriangle size={15} />
-                <div>
-                  <strong>
-                    {t`${conflictVetName} is already booked at ${formatTime(dialogConflict.startsAt)}`}
-                  </strong>
-                  <span>
-                    {conflictPatientName} · {dialogConflict.reason} · <Trans>{dialogConflict.durationMin} min</Trans>
-                  </span>
-                  <label className="form-warning-override">
-                    <input
-                      type="checkbox"
-                      checked={dialog.override}
-                      onChange={(e) => setDialog({ ...dialog, override: e.target.checked })}
-                    />
-                    <Trans>Book anyway — double-book this veterinarian</Trans>
-                  </label>
-                </div>
-              </div>
-            )}
-            {dialogInPast && !dialogConflict && (
-              <p className="form-hint">
-                <Trans>This appointment starts in the past. Saving is allowed for record-keeping.</Trans>
-              </p>
-            )}
-            <div className="panel-footer">
-              <button className="button secondary" onClick={() => setDialog(null)}>
-                <Trans>Cancel</Trans>
-              </button>
-              <button
-                className="button primary"
-                onClick={submitDialog}
-                disabled={!dialog.draft.patientId || !dialog.draft.date || !dialog.draft.time || (!!dialogConflict && !dialog.override)}
+          <div className="form-grid">
+            <Field label={t`Patient`} htmlFor="bk-patient">
+              <NativeSelect
+                id="bk-patient"
+                value={dialog.draft.patientId}
+                disabled={dialog.mode === 'reschedule'}
+                onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, patientId: e.target.value } })}
               >
-                {dialog.mode === 'book' ? <Trans>Book appointment</Trans> : <Trans>Save new time</Trans>}
-              </button>
-            </div>
+                {data.patients.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} — {data.owners.find((o) => o.id === p.ownerId)?.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field label={t`Veterinarian`} htmlFor="bk-vet">
+              <NativeSelect id="bk-vet" value={dialog.draft.vetId} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, vetId: e.target.value } })}>
+                {vets.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field label={t`Date`} htmlFor="bk-date">
+              <DatePicker
+                id="bk-date"
+                label={t`Appointment date`}
+                value={dialog.draft.date}
+                onChange={(date) => setDialog({ ...dialog, draft: { ...dialog.draft, date } })}
+              />
+            </Field>
+            <Field label={t`Time`} htmlFor="bk-time">
+              <input id="bk-time" type="time" value={dialog.draft.time} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, time: e.target.value } })} />
+            </Field>
+            <Field label={t`Duration`} htmlFor="bk-duration">
+              <NativeSelect id="bk-duration" value={dialog.draft.durationMin} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, durationMin: Number(e.target.value) } })}>
+                {[...new Set([15, 20, 30, 45, 60, dialog.draft.durationMin])].toSorted((a, b) => a - b).map((m) => (
+                  <option key={m} value={m}>
+                    <Plural value={m} one="# minute" other="# minutes" />
+                  </option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field label={t`Reason`} htmlFor="bk-reason">
+              <input id="bk-reason" value={dialog.draft.reason} placeholder={t`e.g. Annual vaccination…`} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, reason: e.target.value } })} />
+            </Field>
           </div>
-        </div>
+          {dialogConflict && (
+            <div className="form-warning" role="alert">
+              <AlertTriangle size={15} />
+              <div>
+                <strong>
+                  {t`${conflictVetName} is already booked at ${formatTime(dialogConflict.startsAt)}`}
+                </strong>
+                <span>
+                  {conflictPatientName} · {dialogConflict.reason} · <Trans>{dialogConflict.durationMin} min</Trans>
+                </span>
+                <label className="form-warning-override">
+                  <input
+                    type="checkbox"
+                    checked={dialog.override}
+                    onChange={(e) => setDialog({ ...dialog, override: e.target.checked })}
+                  />
+                  <Trans>Book anyway — double-book this veterinarian</Trans>
+                </label>
+              </div>
+            </div>
+          )}
+          {dialogInPast && !dialogConflict && (
+            <p className="form-hint">
+              <Trans>This appointment starts in the past. Saving is allowed for record-keeping.</Trans>
+            </p>
+          )}
+          <div className="panel-footer">
+            <button className="button secondary" onClick={() => setDialog(null)}>
+              <Trans>Cancel</Trans>
+            </button>
+            <button
+              className="button primary"
+              onClick={submitDialog}
+              disabled={!dialog.draft.patientId || !dialog.draft.date || !dialog.draft.time || (!!dialogConflict && !dialog.override)}
+            >
+              {dialog.mode === 'book' ? <Trans>Book appointment</Trans> : <Trans>Save new time</Trans>}
+            </button>
+          </div>
+        </Modal>
       )}
     </>
   )

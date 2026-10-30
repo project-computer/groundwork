@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { plural } from '@lingui/core/macro'
-import { X } from 'lucide-react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { Field } from '@/components/vet/fields'
+import { Modal } from '@/components/vet/modal'
 import { useClinic } from '@/lib/vet/store'
 import { isCaseBundle, type CaseBundle } from '@/lib/vet/types'
 
@@ -45,58 +45,47 @@ export const ImportCaseDialog = ({ onClose }: { onClose: () => void }) => {
   }
 
   return (
-    <div
-      className="modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
+    <Modal
+      label={t`Import a case bundle`}
+      title={<Trans>Import case bundle</Trans>}
+      subtitle={<Trans>Receives a shared case from another clinic. Copies are stamped with the source clinic — nothing is shared in place.</Trans>}
+      onClose={onClose}
     >
-      <div className="modal" role="dialog" aria-modal="true" aria-label={t`Import a case bundle`}>
-        <div className="form-heading">
-          <div>
-            <strong><Trans>Import case bundle</Trans></strong>
-            <span><Trans>Receives a shared case from another clinic. Copies are stamped with the source clinic — nothing is shared in place.</Trans></span>
-          </div>
-          <button className="icon-button" onClick={onClose} aria-label={t`Close dialog`}>
-            <X size={17} />
-          </button>
-        </div>
-        <Field label={t`Bundle file (.json)`} htmlFor="import-file">
-          <input
-            id="import-file"
-            type="file"
-            accept="application/json,.json"
-            onChange={async (e) => {
-              const file = e.target.files?.[0]
-              if (file) receive(await file.text())
-            }}
-          />
-        </Field>
-        <Field label={t`…or paste bundle JSON`} htmlFor="import-paste">
-          <textarea
-            id="import-paste"
-            rows={6}
-            value={paste}
-            onChange={(e) => setPaste(e.target.value)}
-            placeholder='{"format":"vetcare-case-bundle","version":1,…}'
-            spellCheck={false}
-          />
-        </Field>
-        {shown && (
-          <p className={shown.state === 'error' ? 'text-[13px] text-red-700' : 'text-[13px] text-green-700'} role="status">
-            {shown.message}
-          </p>
-        )}
-        <div className="form-actions">
-          <button className="button secondary" onClick={() => receive(paste)} disabled={!paste.trim()}>
-            <Trans>Import pasted bundle</Trans>
-          </button>
-          <button className="button primary" onClick={onClose}>
-            <Trans>Done</Trans>
-          </button>
-        </div>
+      <Field label={t`Bundle file (.json)`} htmlFor="import-file">
+        <input
+          id="import-file"
+          type="file"
+          accept="application/json,.json"
+          onChange={async (e) => {
+            const file = e.target.files?.[0]
+            if (file) receive(await file.text())
+          }}
+        />
+      </Field>
+      <Field label={t`…or paste bundle JSON`} htmlFor="import-paste">
+        <textarea
+          id="import-paste"
+          rows={6}
+          value={paste}
+          onChange={(e) => setPaste(e.target.value)}
+          placeholder='{"format":"vetcare-case-bundle","version":1,…}'
+          spellCheck={false}
+        />
+      </Field>
+      {shown && (
+        <p className={shown.state === 'error' ? 'text-[13px] text-red-700' : 'text-[13px] text-green-700'} role="status">
+          {shown.message}
+        </p>
+      )}
+      <div className="form-actions">
+        <button className="button secondary" onClick={() => receive(paste)} disabled={!paste.trim()}>
+          <Trans>Import pasted bundle</Trans>
+        </button>
+        <button className="button primary" onClick={onClose}>
+          <Trans>Done</Trans>
+        </button>
       </div>
-    </div>
+    </Modal>
   )
 }
 

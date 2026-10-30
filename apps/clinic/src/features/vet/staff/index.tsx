@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { plural } from '@lingui/core/macro'
 import { ShieldCheck } from 'lucide-react'
 import { Trans, useLingui } from '@lingui/react/macro'
+import { DataTable } from '@/components/vet/data-table'
 import { Field, Panel, PageHeader } from '@/components/vet/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
 import { formatDate, permissionsFor, roleLabel, ROLES } from '@/lib/vet/format'
@@ -77,14 +78,16 @@ export const StaffView = () => {
         title={plural(data.users.filter((u) => u.active).length, { one: '# active staff member', other: '# active staff members' })}
         description={t`Current clinic team`}
       >
-        <div className="records-table table-wide staff-table">
-          <div className="table-head">
-            <span><Trans>Member</Trans></span>
-            <span><Trans>Role</Trans></span>
-            <span><Trans>Permissions</Trans></span>
-            <span />
-            <span />
-          </div>
+        <DataTable
+          className="table-wide staff-table"
+          columns={[
+            <Trans key="member">Member</Trans>,
+            <Trans key="role">Role</Trans>,
+            <Trans key="permissions">Permissions</Trans>,
+            null,
+            null,
+          ]}
+        >
           {data.users.map((user) => {
             const isSelf = user.id === session.currentUserId
             return (
@@ -162,7 +165,7 @@ export const StaffView = () => {
               </div>
             )
           })}
-        </div>
+        </DataTable>
       </Panel>
       <Panel
         title={t`Audit trail`}

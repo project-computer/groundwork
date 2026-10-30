@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
 import { plural } from '@lingui/core/macro'
 import { Plural, Trans, useLingui } from '@lingui/react/macro'
-import { Activity, AlertTriangle, Database, RotateCcw, ShieldCheck, X } from 'lucide-react'
+import { Activity, AlertTriangle, Database, RotateCcw, ShieldCheck } from 'lucide-react'
 import { Panel, PageHeader, Pill } from '@/components/vet/fields'
+import { Modal } from '@/components/vet/modal'
 import { useClinic, usePermission, useSyncState } from '@/lib/vet/store'
 import { formatDate, statusLabel, todayKey } from '@/lib/vet/format'
 import { buildBackup, downloadBackup, parseBackup, summarizeBackup, type BackupSummary, type ClinicBackup } from '@/lib/vet/backup'
@@ -233,74 +234,65 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
         </Panel>
       </div>
       {restorePreview && (
-        <div
-          className="modal-backdrop"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setRestorePreview(null)
-          }}
+        <Modal
+          label={t`Restore clinic backup`}
+          title={<Trans>Restore clinic backup</Trans>}
+          subtitle={
+            <>
+              {restorePreview.summary.clinicName} · <Trans>created {formatDate(restorePreview.backup.createdAt)}</Trans>
+            </>
+          }
+          onClose={() => setRestorePreview(null)}
         >
-          <div className="modal" role="dialog" aria-modal="true" aria-label={t`Restore clinic backup`}>
-            <div className="form-heading">
+          <div className="status-stack">
+            <div className="status-line">
+              <span className="status-icon">
+                <Database size={17} />
+              </span>
               <div>
-                <strong><Trans>Restore clinic backup</Trans></strong>
+                <strong>
+                  <Plural value={restorePreview.summary.patients} one="# patient" other="# patients" /> ·{' '}
+                  <Plural value={restorePreview.summary.owners} one="# owner" other="# owners" />
+                </strong>
                 <span>
-                  {restorePreview.summary.clinicName} · <Trans>created {formatDate(restorePreview.backup.createdAt)}</Trans>
+                  <Plural value={restorePreview.summary.encounters} one="# encounter" other="# encounters" /> ·{' '}
+                  <Plural value={restorePreview.summary.appointments} one="# appointment" other="# appointments" /> ·{' '}
+                  <Plural value={restorePreview.summary.invoices} one="# invoice" other="# invoices" />
                 </span>
-              </div>
-              <button className="icon-button" onClick={() => setRestorePreview(null)} aria-label={t`Close dialog`}>
-                <X size={17} />
-              </button>
-            </div>
-            <div className="status-stack">
-              <div className="status-line">
-                <span className="status-icon">
-                  <Database size={17} />
-                </span>
-                <div>
-                  <strong>
-                    <Plural value={restorePreview.summary.patients} one="# patient" other="# patients" /> ·{' '}
-                    <Plural value={restorePreview.summary.owners} one="# owner" other="# owners" />
-                  </strong>
-                  <span>
-                    <Plural value={restorePreview.summary.encounters} one="# encounter" other="# encounters" /> ·{' '}
-                    <Plural value={restorePreview.summary.appointments} one="# appointment" other="# appointments" /> ·{' '}
-                    <Plural value={restorePreview.summary.invoices} one="# invoice" other="# invoices" />
-                  </span>
-                </div>
-              </div>
-              <div className="status-line">
-                <span className="status-icon">
-                  <ShieldCheck size={17} />
-                </span>
-                <div>
-                  <strong>
-                    <Plural value={restorePreview.summary.staff} one="# staff account" other="# staff accounts" />
-                  </strong>
-                  <span><Trans>Includes roles and PIN credentials as they were when the backup was taken.</Trans></span>
-                </div>
               </div>
             </div>
-            {restorePreview.backup.state.clinic.id !== data.clinic.id && (
-              <p className="form-hint is-bad">
-                <Trans>
-                  This backup belongs to a different clinic ({restorePreview.backup.state.clinic.name}). Restoring it will replace
-                  this clinic's records.
-                </Trans>
-              </p>
-            )}
-            <p className="form-hint">
-              <Trans>Everything currently on this computer will be replaced. Export a fresh archive first if you are unsure.</Trans>
-            </p>
-            <div className="panel-footer">
-              <button className="button secondary" onClick={() => setRestorePreview(null)}>
-                <Trans>Cancel</Trans>
-              </button>
-              <button className="button primary" onClick={restoreBackup}>
-                <Trans>Restore backup</Trans>
-              </button>
+            <div className="status-line">
+              <span className="status-icon">
+                <ShieldCheck size={17} />
+              </span>
+              <div>
+                <strong>
+                  <Plural value={restorePreview.summary.staff} one="# staff account" other="# staff accounts" />
+                </strong>
+                <span><Trans>Includes roles and PIN credentials as they were when the backup was taken.</Trans></span>
+              </div>
             </div>
           </div>
-        </div>
+          {restorePreview.backup.state.clinic.id !== data.clinic.id && (
+            <p className="form-hint is-bad">
+              <Trans>
+                This backup belongs to a different clinic ({restorePreview.backup.state.clinic.name}). Restoring it will replace
+                this clinic's records.
+              </Trans>
+            </p>
+          )}
+          <p className="form-hint">
+            <Trans>Everything currently on this computer will be replaced. Export a fresh archive first if you are unsure.</Trans>
+          </p>
+          <div className="panel-footer">
+            <button className="button secondary" onClick={() => setRestorePreview(null)}>
+              <Trans>Cancel</Trans>
+            </button>
+            <button className="button primary" onClick={restoreBackup}>
+              <Trans>Restore backup</Trans>
+            </button>
+          </div>
+        </Modal>
       )}
     </>
   )

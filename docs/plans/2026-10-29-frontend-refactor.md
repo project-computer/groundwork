@@ -4,9 +4,10 @@
 - Source: architecture review of `apps/clinic/src` (exploration report + design
   grilling), aligned with the target deltas already recorded in
   `.agents/skills/repo-structure/REFERENCE.md`
-- Status: executed 2026-10-29/30 — phases 0, 1, 2, 3, 5 and 6 are done;
-  phase 4 (deep UI primitives) is pending. See the target deltas in
-  `.agents/skills/repo-structure/REFERENCE.md` for the live state.
+- Status: executed 2026-10-29/30 — all phases (0–6) are done. Remaining
+  open item: StaffView/TeamPanel form dedup (deliberately deferred). See the
+  target deltas in `.agents/skills/repo-structure/REFERENCE.md` for the live
+  state.
 
 ## Decisions locked at planning time
 
@@ -124,15 +125,24 @@ Doc sync: SKILL.md UI allowlist gains `@/lib/vet/selectors`,
 
 Aligned with [0008-ui-primitives](../decisions/0008-ui-primitives.md).
 
-- `components/ui/modal.tsx` — Escape, focus trap, backdrop close,
-  `role="dialog"` owned once (replaces 9 hand-rolled dialogs).
-- `components/ui/data-table.tsx` — columns + empty state (replaces 6
-  hand-rolled `records-table` blocks).
-- `components/ui/stat-card.tsx` — tone/label/value (replaces 3 copies).
-- Migrate all call sites in one sweep; new primitives use Tailwind token
-  classes per the REFERENCE.md CSS migration note.
+Landed in `components/vet/` rather than `components/ui/`: these shells
+hardcode the clinic's existing `.modal*` / `.records-table` / `.stat-*`
+hooks, so they belong beside `fields.tsx` and `date-picker.tsx`. They can
+graduate to `components/ui/` when that CSS moves to semantic tokens (the
+ADR's end state).
 
-Doc sync: REFERENCE.md `components/ui/` inventory + CSS layout notes.
+- `components/vet/modal.tsx` — backdrop, Escape, heading, close button and
+  accessible name owned once (replaces 10 hand-rolled dialogs).
+  `closeOnEscape={false}` for surfaces with a nested dialog.
+- `components/vet/data-table.tsx` — `DataTable` (wrapper, header, empty
+  state; 6 tables) and `StatCard` (3 surfaces).
+- Call sites migrated in one sweep; markup is byte-identical, so screenshots
+  did not change.
+
+Deferred: StaffView/TeamPanel still duplicate the member form.
+Focus trapping remains a gap — the shell keeps today's behaviour.
+
+Doc sync: SKILL.md "UI primitives" section + REFERENCE.md phase-4 delta.
 
 ## Phase 5 — Sync seam (C5)
 

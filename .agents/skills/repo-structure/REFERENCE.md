@@ -8,7 +8,9 @@ apps/clinic/                  Tauri 2 + React + TS desktop app
 │   ├── app/App.tsx           root component
 │   ├── components/
 │   │   ├── ui/               Base UI primitives (button, card, input, tabs…)
-│   │   └── vet/fields.tsx    shared vet form fields
+│   │   └── vet/              clinic shells + fields: modal.tsx (the one
+│   │                         dialog shell), data-table.tsx (DataTable +
+│   │                         StatCard), fields.tsx, date-picker.tsx
 │   ├── features/vet/         folder per View — shell/, dashboard/, owners/,
 │   │                         consultations/, billing/, inventory/, records/,
 │   │                         schedule/, reports/, staff/, settings/,
@@ -18,8 +20,11 @@ apps/clinic/                  Tauri 2 + React + TS desktop app
 │   │                         error-boundary stay top-level
 │   ├── lib/
 │   │   ├── vet/              domain: store.tsx (reducer + hooks), types.ts,
-│   │   │                     backend.ts (sidecar HTTP), auth, backup, format,
-│   │   │                     schedule, case-transfer, seed + unit tests
+│   │   │                     sync.ts (useSyncWorker), persistence.ts (the
+│   │   │                     I/O seam), backend.ts (sidecar HTTP), auth,
+│   │   │                     backup, format, schedule, report, worklist,
+│   │   │                     catalog, selectors, case-transfer, seed + unit
+│   │   │                     tests
 │   │   ├── i18n.tsx          lingui wrapper
 │   │   └── theme.ts · utils.ts
 │   ├── platform/index.ts     isTauri() — persistence layer only
@@ -76,11 +81,9 @@ migration — new UI should use Tailwind utilities with token classes
 
 ## Target deltas (in-flight refactoring candidates)
 
-Plan of record: `docs/plans/2026-10-29-frontend-refactor.md`. Phases 0, 1,
-2, 3, 5 and 6 are done; phase 4 (deep UI primitives — modal/data-table/
-stat-card) is still planned. Each phase
-marks its delta **done** in the same PR that lands it — these docs never
-trail the code they describe.
+Plan of record: `docs/plans/2026-10-29-frontend-refactor.md`. All phases
+(0–6) are done. Each phase marks its delta **done** in the same PR that
+lands it — these docs never trail the code they describe.
 
 - Document shape: **done** — `fixtures/clinic-document.json` + conformance
   tests pin TS, Go and Rust guards; `parseClinicState` normalises legacy docs.
@@ -120,9 +123,17 @@ trail the code they describe.
   `lib/vet/schedule.ts` with tests; ScheduleView keeps only the DOM-coupled
   pointer helpers. Consumers: Billing, Dashboard, Inventory, Reports,
   Records, NotificationCenter.
-- Deep UI primitives — **planned (phase 4)**: `components/ui/modal|data-table|
-  stat-card` replace 9 hand-rolled dialogs, 6 tables, 3 stat cards
-  (per decision 0008).
+- Deep UI primitives — **done**: `components/vet/modal.tsx` (`Modal`) is the
+  one dialog shell — backdrop, Escape, heading, close button, accessible
+  name — behind the ten dialogs that used to repeat that markup (PIN, case
+  import, patient profile, workspace, restore preview, book/reschedule,
+  payment, refund, void, receipt). `components/vet/data-table.tsx` provides
+  `DataTable` (wrapper + `table-head` + `empty-state`, six tables) and
+  `StatCard` (Dashboard, Billing, Reports). Layout classes stay in the
+  stylesheets, keyed off the passed `className`; existing `.modal*`,
+  `.table-*`, `.stat-*` hooks are preserved, so screenshots are unchanged.
+  **Open (deferred)**: StaffView/TeamPanel still duplicate the member form —
+  they diverge enough that merging them is its own change.
 - `lib/vet/sync.ts` seam — **done**: useSyncWorker owns the debounced push,
   periodic pull, connectivity reset and in-flight mutation lock; the
   ClinicProvider consumes it. store.tsx imports no transport (oxlint now

@@ -3,6 +3,7 @@ import { plural } from '@lingui/core/macro'
 import { Stethoscope } from 'lucide-react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { DatePicker } from '@/components/vet/date-picker'
+import { DataTable } from '@/components/vet/data-table'
 import { Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
 import { compareTime, formatDate, statusTone, todayKey } from '@/lib/vet/format'
@@ -48,14 +49,18 @@ export const RecordsView = ({ onOpenConsult }: { onOpenConsult: (encounterId: st
         title={plural(encounters.length, { one: '# encounter', other: '# encounters' })}
         description={t`Newest first`}
       >
-        <div className="records-table encounters-table">
-          <div className="table-head">
-            <span><Trans>Patient</Trans></span>
-            <span><Trans>Opened</Trans></span>
-            <span><Trans>Diagnoses</Trans></span>
-            <span><Trans>Notes</Trans></span>
-            <span />
-          </div>
+        <DataTable
+          className="encounters-table"
+          columns={[
+            <Trans key="patient">Patient</Trans>,
+            <Trans key="opened">Opened</Trans>,
+            <Trans key="diagnoses">Diagnoses</Trans>,
+            <Trans key="notes">Notes</Trans>,
+            null,
+          ]}
+          isEmpty={encounters.length === 0}
+          empty={<Trans>No encounters match your search.</Trans>}
+        >
           {encounters.map((encounter) => {
             const patient = data.patients.find((p) => p.id === encounter.patientId)
             return (
@@ -93,8 +98,7 @@ export const RecordsView = ({ onOpenConsult }: { onOpenConsult: (encounterId: st
               </div>
             )
           })}
-          {encounters.length === 0 && <p className="empty-state"><Trans>No encounters match your search.</Trans></p>}
-        </div>
+        </DataTable>
       </Panel>
       <Vaccinations />
     </>
@@ -161,15 +165,18 @@ const Vaccinations = () => {
           </button>
         </div>
       )}
-      <div className="records-table vaccinations-table">
-        <div className="table-head">
-          <span><Trans>Patient</Trans></span>
-          <span><Trans>Vaccine</Trans></span>
-          <span><Trans>Given</Trans></span>
-          <span><Trans>Next due</Trans></span>
-          <span><Trans>Vet</Trans></span>
-        </div>
-        {rows.length === 0 && <p className="empty-state"><Trans>No vaccinations recorded yet.</Trans></p>}
+      <DataTable
+        className="vaccinations-table"
+        columns={[
+          <Trans key="patient">Patient</Trans>,
+          <Trans key="vaccine">Vaccine</Trans>,
+          <Trans key="given">Given</Trans>,
+          <Trans key="next-due">Next due</Trans>,
+          <Trans key="vet">Vet</Trans>,
+        ]}
+        isEmpty={rows.length === 0}
+        empty={<Trans>No vaccinations recorded yet.</Trans>}
+      >
         {rows.map(({ patient, vet, overdue, ...v }) => (
           <div className="table-row" key={v.id}>
             <div className="patient-cell">
@@ -201,7 +208,7 @@ const Vaccinations = () => {
             <span data-label={t`Vet`}>{vet?.name ?? '—'}</span>
           </div>
         ))}
-      </div>
+      </DataTable>
     </Panel>
   )
 }

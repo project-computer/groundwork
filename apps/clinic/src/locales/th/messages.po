@@ -868,12 +868,7 @@ msgstr "ปิดหน้าจัดการคลินิกและบั
 msgid "Close consultation"
 msgstr "ปิดการรักษา"
 
-#: src/features/vet/billing/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
-#: src/features/vet/pin-dialog.tsx
-#: src/features/vet/records/import-case-dialog.tsx
-#: src/features/vet/schedule/index.tsx
-#: src/features/vet/settings/index.tsx
+#: src/components/vet/modal.tsx
 msgid "Close dialog"
 msgstr "ปิดหน้าต่าง"
 

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Plural, Trans, useLingui } from '@lingui/react/macro'
-import { X } from 'lucide-react'
 import { DatePicker } from '@/components/vet/date-picker'
 import { Field, NativeSelect, Pill } from '@/components/vet/fields'
+import { Modal } from '@/components/vet/modal'
 import { useClinic } from '@/lib/vet/store'
 import { compareTime, formatDate, sexLabel, speciesLabel } from '@/lib/vet/format'
 import { SPECIES, SEXES, type Patient } from '@/lib/vet/types'
@@ -60,239 +60,231 @@ export const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patien
       })),
   ].toSorted((a, b) => compareTime(b.at, a.at))
   return (
-    <div
-      className="modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
+    <Modal
+      label={t`Clinical profile for ${patient.name}`}
+      title={name || patient.name}
+      subtitle={
+        <>
+          {patient.mrn} · {ownerName || owner?.name || t`No owner`}{ownerPhone ? ` · ${ownerPhone}` : ''} · {speciesLabel[species]} · {breed}
+        </>
+      }
+      wide
+      onClose={onClose}
     >
-      <div className="modal modal-wide" role="dialog" aria-modal="true" aria-label={t`Clinical profile for ${patient.name}`}>
-        <div className="form-heading">
-          <div>
-            <strong>{name || patient.name}</strong>
-            <span>
-              {patient.mrn} · {ownerName || owner?.name || t`No owner`}{ownerPhone ? ` · ${ownerPhone}` : ''} · {speciesLabel[species]} · {breed}
-            </span>
-          </div>
-          <button className="icon-button" onClick={onClose} aria-label={t`Close dialog`}>
-            <X size={17} />
-          </button>
+      <fieldset className="form-section" disabled={!canWrite}>
+        <legend><Trans>Owner</Trans></legend>
+        <div className="form-grid">
+          <Field label={t`Owner name`} htmlFor="pt-owner-name">
+            <input
+              id="pt-owner-name"
+              name="owner-name"
+              autoComplete="off"
+              value={ownerName}
+              onChange={(e) => setOwnerName(e.target.value)}
+              placeholder={t`e.g. Anong Srisuk…`}
+            />
+          </Field>
+          <Field label={t`Phone`} htmlFor="pt-owner-phone">
+            <input
+              id="pt-owner-phone"
+              name="owner-phone"
+              type="tel"
+              autoComplete="off"
+              value={ownerPhone}
+              onChange={(e) => setOwnerPhone(e.target.value)}
+              placeholder={t`e.g. 081 234 5678…`}
+            />
+          </Field>
+          <Field label={t`Email`} htmlFor="pt-owner-email">
+            <input
+              id="pt-owner-email"
+              name="owner-email"
+              type="email"
+              autoComplete="off"
+              value={ownerEmail}
+              onChange={(e) => setOwnerEmail(e.target.value)}
+              placeholder={t`e.g. anong@example.com…`}
+            />
+          </Field>
+          <Field label={t`Address`} htmlFor="pt-owner-address">
+            <input
+              id="pt-owner-address"
+              name="owner-address"
+              autoComplete="off"
+              value={ownerAddress}
+              onChange={(e) => setOwnerAddress(e.target.value)}
+              placeholder={t`Street, city, postcode…`}
+            />
+          </Field>
         </div>
-        <fieldset className="form-section" disabled={!canWrite}>
-          <legend><Trans>Owner</Trans></legend>
-          <div className="form-grid">
-            <Field label={t`Owner name`} htmlFor="pt-owner-name">
-              <input
-                id="pt-owner-name"
-                name="owner-name"
-                autoComplete="off"
-                value={ownerName}
-                onChange={(e) => setOwnerName(e.target.value)}
-                placeholder={t`e.g. Anong Srisuk…`}
-              />
-            </Field>
-            <Field label={t`Phone`} htmlFor="pt-owner-phone">
-              <input
-                id="pt-owner-phone"
-                name="owner-phone"
-                type="tel"
-                autoComplete="off"
-                value={ownerPhone}
-                onChange={(e) => setOwnerPhone(e.target.value)}
-                placeholder={t`e.g. 081 234 5678…`}
-              />
-            </Field>
-            <Field label={t`Email`} htmlFor="pt-owner-email">
-              <input
-                id="pt-owner-email"
-                name="owner-email"
-                type="email"
-                autoComplete="off"
-                value={ownerEmail}
-                onChange={(e) => setOwnerEmail(e.target.value)}
-                placeholder={t`e.g. anong@example.com…`}
-              />
-            </Field>
-            <Field label={t`Address`} htmlFor="pt-owner-address">
-              <input
-                id="pt-owner-address"
-                name="owner-address"
-                autoComplete="off"
-                value={ownerAddress}
-                onChange={(e) => setOwnerAddress(e.target.value)}
-                placeholder={t`Street, city, postcode…`}
-              />
-            </Field>
-          </div>
-        </fieldset>
+      </fieldset>
 
-        <fieldset className="form-section" disabled={!canWrite}>
-          <legend><Trans>Patient</Trans></legend>
-          <div className="form-grid">
-            <Field label={t`Patient name`} htmlFor="pt-name">
-              <input
-                id="pt-name"
-                name="patient-name"
-                autoComplete="off"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t`e.g. Milo…`}
-              />
-            </Field>
-            <Field label={t`Species`} htmlFor="pt-species">
-              <NativeSelect id="pt-species" value={species} onChange={(e) => setSpecies(e.target.value as Patient['species'])}>
-                {SPECIES.map((s) => (
-                  <option key={s} value={s}>{speciesLabel[s]}</option>
-                ))}
-              </NativeSelect>
-            </Field>
-            <Field label={t`Breed`} htmlFor="pt-breed">
-              <input id="pt-breed" autoComplete="off" value={breed} onChange={(e) => setBreed(e.target.value)} placeholder={t`e.g. Golden Retriever…`} />
-            </Field>
-            <Field label={t`Sex`} htmlFor="pt-sex">
-              <NativeSelect id="pt-sex" value={sex} onChange={(e) => setSex(e.target.value as Patient['sex'])}>
-                {SEXES.map((s) => (
-                  <option key={s} value={s}>{sexLabel[s]}</option>
-                ))}
-              </NativeSelect>
-            </Field>
-            <Field label={t`Date of birth`} htmlFor="pt-birth">
-              <DatePicker id="pt-birth" label={t`Date of birth`} value={birthDate} onChange={setBirthDate} />
-            </Field>
-            <Field label={t`Weight (kg)`} htmlFor="pt-weight">
-              <input
-                id="pt-weight"
-                inputMode="decimal"
-                autoComplete="off"
-                value={weightKg}
-                onChange={(e) => setWeightKg(e.target.value)}
-                placeholder={t`e.g. 4.2…`}
-              />
-            </Field>
-          </div>
-        </fieldset>
+      <fieldset className="form-section" disabled={!canWrite}>
+        <legend><Trans>Patient</Trans></legend>
+        <div className="form-grid">
+          <Field label={t`Patient name`} htmlFor="pt-name">
+            <input
+              id="pt-name"
+              name="patient-name"
+              autoComplete="off"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t`e.g. Milo…`}
+            />
+          </Field>
+          <Field label={t`Species`} htmlFor="pt-species">
+            <NativeSelect id="pt-species" value={species} onChange={(e) => setSpecies(e.target.value as Patient['species'])}>
+              {SPECIES.map((s) => (
+                <option key={s} value={s}>{speciesLabel[s]}</option>
+              ))}
+            </NativeSelect>
+          </Field>
+          <Field label={t`Breed`} htmlFor="pt-breed">
+            <input id="pt-breed" autoComplete="off" value={breed} onChange={(e) => setBreed(e.target.value)} placeholder={t`e.g. Golden Retriever…`} />
+          </Field>
+          <Field label={t`Sex`} htmlFor="pt-sex">
+            <NativeSelect id="pt-sex" value={sex} onChange={(e) => setSex(e.target.value as Patient['sex'])}>
+              {SEXES.map((s) => (
+                <option key={s} value={s}>{sexLabel[s]}</option>
+              ))}
+            </NativeSelect>
+          </Field>
+          <Field label={t`Date of birth`} htmlFor="pt-birth">
+            <DatePicker id="pt-birth" label={t`Date of birth`} value={birthDate} onChange={setBirthDate} />
+          </Field>
+          <Field label={t`Weight (kg)`} htmlFor="pt-weight">
+            <input
+              id="pt-weight"
+              inputMode="decimal"
+              autoComplete="off"
+              value={weightKg}
+              onChange={(e) => setWeightKg(e.target.value)}
+              placeholder={t`e.g. 4.2…`}
+            />
+          </Field>
+        </div>
+      </fieldset>
 
-        <fieldset className="form-section" disabled={!canWrite}>
-          <legend><Trans>Clinical</Trans></legend>
-          <div className="form-grid">
-            <Field label={t`Microchip`} htmlFor="pt-microchip">
-              <input
-                id="pt-microchip"
-                name="microchip"
-                autoComplete="off"
-                inputMode="numeric"
-                spellCheck={false}
-                value={microchip}
-                onChange={(e) => setMicrochip(e.target.value)}
-                placeholder={t`e.g. 985141002341238…`}
-              />
-            </Field>
-            <Field label={t`Allergies (comma-separated)`} htmlFor="pt-allergies">
-              <input
-                id="pt-allergies"
-                name="allergies"
-                autoComplete="off"
-                value={allergies}
-                onChange={(e) => setAllergies(e.target.value)}
-                placeholder={t`e.g. Penicillin, Flea topical (pyrethrin)…`}
-              />
-            </Field>
-            <Field label={t`Medical alerts (comma-separated)`} htmlFor="pt-alerts">
-              <input
-                id="pt-alerts"
-                name="medical-alerts"
-                autoComplete="off"
-                value={alerts}
-                onChange={(e) => setAlerts(e.target.value)}
-                placeholder={t`e.g. Aggressive during handling — muzzle first…`}
-              />
-            </Field>
-          </div>
-        </fieldset>
+      <fieldset className="form-section" disabled={!canWrite}>
+        <legend><Trans>Clinical</Trans></legend>
+        <div className="form-grid">
+          <Field label={t`Microchip`} htmlFor="pt-microchip">
+            <input
+              id="pt-microchip"
+              name="microchip"
+              autoComplete="off"
+              inputMode="numeric"
+              spellCheck={false}
+              value={microchip}
+              onChange={(e) => setMicrochip(e.target.value)}
+              placeholder={t`e.g. 985141002341238…`}
+            />
+          </Field>
+          <Field label={t`Allergies (comma-separated)`} htmlFor="pt-allergies">
+            <input
+              id="pt-allergies"
+              name="allergies"
+              autoComplete="off"
+              value={allergies}
+              onChange={(e) => setAllergies(e.target.value)}
+              placeholder={t`e.g. Penicillin, Flea topical (pyrethrin)…`}
+            />
+          </Field>
+          <Field label={t`Medical alerts (comma-separated)`} htmlFor="pt-alerts">
+            <input
+              id="pt-alerts"
+              name="medical-alerts"
+              autoComplete="off"
+              value={alerts}
+              onChange={(e) => setAlerts(e.target.value)}
+              placeholder={t`e.g. Aggressive during handling — muzzle first…`}
+            />
+          </Field>
+        </div>
+      </fieldset>
 
-        <div className="panel-footer">
-          <button className="button secondary" onClick={onClose}>
-            <Trans>Cancel</Trans>
-          </button>
-          <button
-            className="button primary"
-            disabled={!canWrite || !name.trim() || (!!owner && !ownerName.trim())}
-            onClick={() => {
+      <div className="panel-footer">
+        <button className="button secondary" onClick={onClose}>
+          <Trans>Cancel</Trans>
+        </button>
+        <button
+          className="button primary"
+          disabled={!canWrite || !name.trim() || (!!owner && !ownerName.trim())}
+          onClick={() => {
+            dispatch({
+              type: 'updatePatient',
+              id: patient.id,
+              patch: {
+                name: name.trim(),
+                species,
+                breed: breed.trim(),
+                sex,
+                birthDate,
+                weightKg: weightKg.trim() || undefined,
+                microchip: microchip.trim() || undefined,
+                allergies: splitList(allergies),
+                medicalAlerts: splitList(alerts),
+              },
+            })
+            if (owner) {
               dispatch({
-                type: 'updatePatient',
-                id: patient.id,
+                type: 'updateOwner',
+                id: owner.id,
                 patch: {
-                  name: name.trim(),
-                  species,
-                  breed: breed.trim(),
-                  sex,
-                  birthDate,
-                  weightKg: weightKg.trim() || undefined,
-                  microchip: microchip.trim() || undefined,
-                  allergies: splitList(allergies),
-                  medicalAlerts: splitList(alerts),
+                  name: ownerName.trim(),
+                  phone: ownerPhone.trim(),
+                  email: ownerEmail.trim(),
+                  address: ownerAddress.trim() || undefined,
                 },
               })
-              if (owner) {
-                dispatch({
-                  type: 'updateOwner',
-                  id: owner.id,
-                  patch: {
-                    name: ownerName.trim(),
-                    phone: ownerPhone.trim(),
-                    email: ownerEmail.trim(),
-                    address: ownerAddress.trim() || undefined,
-                  },
-                })
-              }
-              onClose()
-            }}
-          >
-            <Trans>Save Profile</Trans>
-          </button>
-        </div>
-        <div className="timeline" aria-label={t`Medical timeline`}>
-          <h3><Trans>Medical timeline</Trans></h3>
-          {timeline.length === 0 && <p className="empty-state"><Trans>No visits or vaccinations recorded yet.</Trans></p>}
-          {timeline.map((entry) =>
-            entry.kind === 'vaccination' ? (
-              <div className="timeline-row" key={entry.vaccination.id}>
-                <Pill tone="info" dot><Trans>Vaccine</Trans></Pill>
-                <div>
-                  <strong>{entry.vaccination.vaccineName}</strong>
-                  <span>
-                    {formatDate(entry.vaccination.administeredAt)}
-                    {entry.vaccination.lotNumber ? <> · <Trans>lot {entry.vaccination.lotNumber}</Trans></> : ''}
-                    {entry.vaccination.nextDueAt ? <> · <Trans>next due {entry.vaccination.nextDueAt}</Trans></> : ''}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="timeline-row" key={entry.encounter.id}>
-                <Pill tone={entry.encounter.status === 'open' ? 'warn' : 'ok'} dot>
-                  {entry.encounter.status === 'open' ? t`Open visit` : t`Visit`}
-                </Pill>
-                <div>
-                  <strong>
-                    {formatDate(entry.encounter.openedAt)}
-                    {entry.encounter.diagnoses.length > 0 && ` — ${entry.encounter.diagnoses.map((d) => d.description).join('; ')}`}
-                  </strong>
-                  {entry.encounter.prescriptions.length > 0 && (
-                    <span>
-                      <Trans>Rx: {entry.encounter.prescriptions.map((rx) => `${rx.medication} (${rx.dose} ${rx.frequency})`).join(', ')}</Trans>
-                    </span>
-                  )}
-                  <span>
-                    <Plural value={entry.encounter.notes.length} one="# note" other="# notes" />
-                    {entry.encounter.vitals.weightKg ? <> · <Trans>weight {entry.encounter.vitals.weightKg} kg</Trans></> : ''}
-                  </span>
-                </div>
-              </div>
-            ),
-          )}
-        </div>
+            }
+            onClose()
+          }}
+        >
+          <Trans>Save Profile</Trans>
+        </button>
       </div>
-    </div>
+      <div className="timeline" aria-label={t`Medical timeline`}>
+        <h3><Trans>Medical timeline</Trans></h3>
+        {timeline.length === 0 && <p className="empty-state"><Trans>No visits or vaccinations recorded yet.</Trans></p>}
+        {timeline.map((entry) =>
+          entry.kind === 'vaccination' ? (
+            <div className="timeline-row" key={entry.vaccination.id}>
+              <Pill tone="info" dot><Trans>Vaccine</Trans></Pill>
+              <div>
+                <strong>{entry.vaccination.vaccineName}</strong>
+                <span>
+                  {formatDate(entry.vaccination.administeredAt)}
+                  {entry.vaccination.lotNumber ? <> · <Trans>lot {entry.vaccination.lotNumber}</Trans></> : ''}
+                  {entry.vaccination.nextDueAt ? <> · <Trans>next due {entry.vaccination.nextDueAt}</Trans></> : ''}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="timeline-row" key={entry.encounter.id}>
+              <Pill tone={entry.encounter.status === 'open' ? 'warn' : 'ok'} dot>
+                {entry.encounter.status === 'open' ? t`Open visit` : t`Visit`}
+              </Pill>
+              <div>
+                <strong>
+                  {formatDate(entry.encounter.openedAt)}
+                  {entry.encounter.diagnoses.length > 0 && ` — ${entry.encounter.diagnoses.map((d) => d.description).join('; ')}`}
+                </strong>
+                {entry.encounter.prescriptions.length > 0 && (
+                  <span>
+                    <Trans>Rx: {entry.encounter.prescriptions.map((rx) => `${rx.medication} (${rx.dose} ${rx.frequency})`).join(', ')}</Trans>
+                  </span>
+                )}
+                <span>
+                  <Plural value={entry.encounter.notes.length} one="# note" other="# notes" />
+                  {entry.encounter.vitals.weightKg ? <> · <Trans>weight {entry.encounter.vitals.weightKg} kg</Trans></> : ''}
+                </span>
+              </div>
+            </div>
+          ),
+        )}
+      </div>
+    </Modal>
   )
 }
 

@@ -2,11 +2,13 @@ import { useMemo, useState } from 'react'
 import { Plural, Trans, useLingui } from '@lingui/react/macro'
 import { BarChart3, ClipboardList, CreditCard, Plus, X } from 'lucide-react'
 import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
+import { DataTable, StatCard } from '@/components/vet/data-table'
 import { useClinic, usePermission } from '@/lib/vet/store'
 import { billableCatalog } from '@/lib/vet/catalog'
 import { openInvoices, outstandingBalance } from '@/lib/vet/selectors'
 import { compareTime, formatMoney as formatCurrency, formatDate, formatTime, invoiceTotals, statusLabel, statusTone, todayKey } from '@/lib/vet/format'
 import { ReceiptDialog } from './receipt-dialog'
+import { Modal } from '@/components/vet/modal'
 
 /**
  * Billing & payments View: stat cards, the invoice table and the payment,
@@ -52,7 +54,7 @@ export const Billing = () => {
     { label: t`Collected today`, value: formatCurrency(collectedToday), note: t`${data.payments.filter((p) => p.receivedAt.startsWith(today)).length} payments`, icon: Plus, tone: 'violet' },
     { label: t`Draft invoices`, value: String(drafts.length), note: t`Ready to post`, icon: ClipboardList, tone: 'amber' },
     { label: t`Billed all time`, value: formatCurrency(billedTotal), note: t`${data.invoices.length} invoices`, icon: BarChart3, tone: 'teal' },
-  ]
+  ] as const
 
   const sortedInvoices = data.invoices.toSorted((a, b) => compareTime(b.createdAt, a.createdAt))
   const paymentInvoice = data.invoices.find((i) => i.id === paymentInvoiceId)
@@ -102,17 +104,15 @@ export const Billing = () => {
         }
       />
       <div className="stat-grid">
-        {stats.map((s) => (
-          <div className="stat-card" key={s.label}>
-            <span className={`stat-icon ${s.tone}`}>
-              <s.icon size={19} />
-            </span>
-            <div>
-              <small>{s.label}</small>
-              <strong>{s.value}</strong>
-              <span className="stat-note">{s.note}</span>
-            </div>
-          </div>
+        {stats.map((stat) => (
+          <StatCard
+            key={stat.label}
+            label={stat.label}
+            value={stat.value}
+            note={stat.note}
+            icon={<stat.icon size={19} />}
+            tone={stat.tone}
+          />
         ))}
       </div>
       {newInvoiceOpen && (
@@ -173,16 +173,20 @@ export const Billing = () => {
         title={t`Invoices`}
         description={t`Drafts can be reviewed before posting; posted invoices are immutable.`}
       >
-        <div className="records-table table-wide billing-table">
-          <div className="table-head">
-            <span><Trans>Invoice</Trans></span>
-            <span><Trans>Owner</Trans></span>
-            <span><Trans>Items</Trans></span>
-            <span><Trans>Status</Trans></span>
-            <span><Trans>Total</Trans></span>
-            <span><Trans>Balance</Trans></span>
-            <span />
-          </div>
+        <DataTable
+          className="table-wide billing-table"
+          columns={[
+            <Trans key="invoice">Invoice</Trans>,
+            <Trans key="owner">Owner</Trans>,
+            <Trans key="items">Items</Trans>,
+            <Trans key="status">Status</Trans>,
+            <Trans key="total">Total</Trans>,
+            <Trans key="balance">Balance</Trans>,
+            null,
+          ]}
+          isEmpty={sortedInvoices.length === 0}
+          empty={<Trans>No invoices yet.</Trans>}
+        >
           {sortedInvoices.map((invoice) => {
             const owner = data.owners.find((o) => o.id === invoice.ownerId)
             const totals = invoiceTotals(invoice, data.clinic.vatRate, data.payments)
@@ -287,8 +291,7 @@ export const Billing = () => {
               </div>
             )
           })}
-          {sortedInvoices.length === 0 && <p className="empty-state"><Trans>No invoices yet.</Trans></p>}
-        </div>
+        </DataTable>
       </Panel>
       <Panel title={t`Recent payments`} description={t`Every payment is appended to an immutable ledger.`}>
         <div className="activity-list">
@@ -341,153 +344,111 @@ export const Billing = () => {
       </Panel>
 
       {paymentInvoice && (
-        <div
-          className="modal-backdrop"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setPaymentInvoiceId(null)
-          }}
+        <Modal
+          label={t`Record payment for ${paymentInvoice.number}`}
+          title={<Trans>Record payment — {paymentInvoice.number}</Trans>}
+          subtitle={<Trans>Balance due {formatCurrency(paymentBalance)} · partial payments are supported</Trans>}
+          onClose={() => setPaymentInvoiceId(null)}
         >
-          <div className="modal" role="dialog" aria-modal="true" aria-label={t`Record payment for ${paymentInvoice.number}`}>
-            <div className="form-heading">
-              <div>
-                <strong><Trans>Record payment — {paymentInvoice.number}</Trans></strong>
-                <span>
-                  <Trans>Balance due {formatCurrency(paymentBalance)} · partial payments are supported</Trans>
-                </span>
-              </div>
-              <button className="icon-button" onClick={() => setPaymentInvoiceId(null)} aria-label={t`Close dialog`}>
-                <X size={17} />
-              </button>
-            </div>
-            <div className="form-grid">
-              <Field label={t`Amount (THB)`} htmlFor="pay-amount">
-                <input id="pay-amount" type="number" min="0" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
-              </Field>
-              <Field label={t`Method`} htmlFor="pay-method">
-                <NativeSelect id="pay-method" value={payMethod} onChange={(e) => setPayMethod(e.target.value as typeof payMethod)}>
-                  <option value="cash">{t`Cash`}</option>
-                  <option value="card">{t`Card`}</option>
-                  <option value="promptpay">{t`PromptPay`}</option>
-                  <option value="transfer">{t`Bank transfer`}</option>
-                </NativeSelect>
-              </Field>
-            </div>
-            <div className="panel-footer">
-              <button className="button secondary" onClick={() => setPaymentInvoiceId(null)}>
-                <Trans>Cancel</Trans>
-              </button>
-              <button
-                className="button primary"
-                onClick={submitPayment}
-                disabled={!(Number(payAmount) > 0) || Math.round(Number(payAmount) * 100) > paymentBalance}
-              >
-                <Trans>Record payment</Trans>
-              </button>
-            </div>
+          <div className="form-grid">
+            <Field label={t`Amount (THB)`} htmlFor="pay-amount">
+              <input id="pay-amount" type="number" min="0" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
+            </Field>
+            <Field label={t`Method`} htmlFor="pay-method">
+              <NativeSelect id="pay-method" value={payMethod} onChange={(e) => setPayMethod(e.target.value as typeof payMethod)}>
+                <option value="cash">{t`Cash`}</option>
+                <option value="card">{t`Card`}</option>
+                <option value="promptpay">{t`PromptPay`}</option>
+                <option value="transfer">{t`Bank transfer`}</option>
+              </NativeSelect>
+            </Field>
           </div>
-        </div>
+          <div className="panel-footer">
+            <button className="button secondary" onClick={() => setPaymentInvoiceId(null)}>
+              <Trans>Cancel</Trans>
+            </button>
+            <button
+              className="button primary"
+              onClick={submitPayment}
+              disabled={!(Number(payAmount) > 0) || Math.round(Number(payAmount) * 100) > paymentBalance}
+            >
+              <Trans>Record payment</Trans>
+            </button>
+          </div>
+        </Modal>
       )}
       {receiptInvoiceId && (
         <ReceiptDialog invoiceId={receiptInvoiceId} onClose={() => setReceiptInvoiceId(null)} />
       )}
       {refundPayment && (
-        <div
-          className="modal-backdrop"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setRefundPaymentId(null)
-          }}
+        <Modal
+          label={t`Refund payment on ${data.invoices.find((i) => i.id === refundPayment.invoiceId)?.number ?? t`invoice`}`}
+          title={<Trans>Refund payment</Trans>}
+          subtitle={
+            <Trans>{formatCurrency(refundPayment.amount)} recorded on {formatDate(refundPayment.receivedAt)} · up to{' '}
+            {formatCurrency(refundable)} refundable</Trans>
+          }
+          onClose={() => setRefundPaymentId(null)}
         >
-          <div
-            className="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t`Refund payment on ${data.invoices.find((i) => i.id === refundPayment.invoiceId)?.number ?? t`invoice`}`}
-          >
-            <div className="form-heading">
-              <div>
-                <strong><Trans>Refund payment</Trans></strong>
-                <span>
-                  <Trans>{formatCurrency(refundPayment.amount)} recorded on {formatDate(refundPayment.receivedAt)} · up to{' '}
-                  {formatCurrency(refundable)} refundable</Trans>
-                </span>
-              </div>
-              <button className="icon-button" onClick={() => setRefundPaymentId(null)} aria-label={t`Close dialog`}>
-                <X size={17} />
-              </button>
-            </div>
-            <div className="form-grid">
-              <Field label={t`Refund amount (THB)`} htmlFor="refund-amount">
-                <input
-                  id="refund-amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={refundAmount}
-                  onChange={(e) => setRefundAmount(e.target.value)}
-                />
-              </Field>
-              <Field label={t`Reason (recorded on the receipt)`} htmlFor="refund-note">
-                <input
-                  id="refund-note"
-                  value={refundNote}
-                  onChange={(e) => setRefundNote(e.target.value)}
-                  placeholder={t`e.g. Dispensed the wrong strength…`}
-                />
-              </Field>
-            </div>
-            <p className="form-hint">
-              <Trans>Refunds are appended to the payment ledger; the original payment and the receipt stay unchanged.</Trans>
-            </p>
-            <div className="panel-footer">
-              <button className="button secondary" onClick={() => setRefundPaymentId(null)}>
-                <Trans>Cancel</Trans>
-              </button>
-              <button
-                className="button primary"
-                onClick={submitRefund}
-                disabled={!(Number(refundAmount) > 0) || Math.round(Number(refundAmount) * 100) > refundable || !refundNote.trim()}
-              >
-                <Trans>Record refund</Trans>
-              </button>
-            </div>
+          <div className="form-grid">
+            <Field label={t`Refund amount (THB)`} htmlFor="refund-amount">
+              <input
+                id="refund-amount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(e.target.value)}
+              />
+            </Field>
+            <Field label={t`Reason (recorded on the receipt)`} htmlFor="refund-note">
+              <input
+                id="refund-note"
+                value={refundNote}
+                onChange={(e) => setRefundNote(e.target.value)}
+                placeholder={t`e.g. Dispensed the wrong strength…`}
+              />
+            </Field>
           </div>
-        </div>
+          <p className="form-hint">
+            <Trans>Refunds are appended to the payment ledger; the original payment and the receipt stay unchanged.</Trans>
+          </p>
+          <div className="panel-footer">
+            <button className="button secondary" onClick={() => setRefundPaymentId(null)}>
+              <Trans>Cancel</Trans>
+            </button>
+            <button
+              className="button primary"
+              onClick={submitRefund}
+              disabled={!(Number(refundAmount) > 0) || Math.round(Number(refundAmount) * 100) > refundable || !refundNote.trim()}
+            >
+              <Trans>Record refund</Trans>
+            </button>
+          </div>
+        </Modal>
       )}
       {voidInvoice && (
-        <div
-          className="modal-backdrop"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setVoidInvoiceId(null)
-          }}
+        <Modal
+          label={t`Void ${voidInvoice.number}`}
+          title={<Trans>Void {voidInvoice.number}?</Trans>}
+          subtitle={<Trans>No payments are held against this invoice. Voiding cannot be undone.</Trans>}
+          onClose={() => setVoidInvoiceId(null)}
         >
-          <div className="modal" role="dialog" aria-modal="true" aria-label={t`Void ${voidInvoice.number}`}>
-            <div className="form-heading">
-              <div>
-                <strong><Trans>Void {voidInvoice.number}?</Trans></strong>
-                <span>
-                  <Trans>No payments are held against this invoice. Voiding cannot be undone.</Trans>
-                </span>
-              </div>
-              <button className="icon-button" onClick={() => setVoidInvoiceId(null)} aria-label={t`Close dialog`}>
-                <X size={17} />
-              </button>
-            </div>
-            <div className="panel-footer">
-              <button className="button secondary" onClick={() => setVoidInvoiceId(null)}>
-                <Trans>Keep invoice</Trans>
-              </button>
-              <button
-                className="button primary"
-                onClick={() => {
-                  dispatch({ type: 'voidInvoice', invoiceId: voidInvoice.id })
-                  setVoidInvoiceId(null)
-                }}
-              >
-                <Trans>Void invoice</Trans>
-              </button>
-            </div>
+          <div className="panel-footer">
+            <button className="button secondary" onClick={() => setVoidInvoiceId(null)}>
+              <Trans>Keep invoice</Trans>
+            </button>
+            <button
+              className="button primary"
+              onClick={() => {
+                dispatch({ type: 'voidInvoice', invoiceId: voidInvoice.id })
+                setVoidInvoiceId(null)
+              }}
+            >
+              <Trans>Void invoice</Trans>
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
     </>
   )

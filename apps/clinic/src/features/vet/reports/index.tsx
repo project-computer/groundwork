@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Wallet,
 } from 'lucide-react'
+import { StatCard } from '@/components/vet/data-table'
 import { Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic } from '@/lib/vet/store'
 import { formatMoney, initials, todayKey } from '@/lib/vet/format'
@@ -224,7 +225,7 @@ export const ReportsView = () => {
       icon: <CalendarCheck size={19} />,
       tone: 'blue',
     },
-  ]
+  ] as const
 
   return (
     <>
@@ -255,14 +256,14 @@ export const ReportsView = () => {
       </div>
       <div className="stat-grid report-stat-grid">
         {metricCards.map((metric) => (
-          <div className="stat-card" key={metric.label}>
-            <span className={`stat-icon ${metric.tone}`}>{metric.icon}</span>
-            <div>
-              <small>{metric.label}</small>
-              <strong>{metric.value}</strong>
-              <span className="stat-note">{metric.note}</span>
-            </div>
-          </div>
+          <StatCard
+            key={metric.label}
+            label={metric.label}
+            value={metric.value}
+            note={metric.note}
+            icon={metric.icon}
+            tone={metric.tone}
+          />
         ))}
       </div>
 

@@ -1,9 +1,10 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
-import { Check, KeyRound, Lock, ShieldCheck, X } from 'lucide-react'
+import { Check, KeyRound, Lock, ShieldCheck } from 'lucide-react'
 import type { MessageDescriptor } from '@lingui/core'
 import { msg } from '@lingui/core/macro'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { Field, NativeSelect, Pill, ReadOnlyNote } from '@/components/vet/fields'
+import { Modal } from '@/components/vet/modal'
 import { TeamPanel } from '../staff/team-panel'
 import { useClinic, usePermission, type View } from '@/lib/vet/store'
 import { hasPin } from '@/lib/vet/auth'
@@ -71,49 +72,39 @@ export const WorkspaceDialog = ({
   }, [onClose, pinFor])
 
   return (
-    <div
-      className="modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
+    <Modal
+      label={t`Clinic and account management`}
+      title={<Trans>Clinic & account</Trans>}
+      subtitle={<>{data.clinic.name} · {roleLabel[user.role]} · {user.name}</>}
+      closeLabel={t`Close clinic and account management`}
+      closeOnEscape={false}
+      wide
+      className="workspace-dialog"
+      onClose={onClose}
     >
-      <div className="modal modal-wide workspace-dialog" role="dialog" aria-modal="true" aria-label={t`Clinic and account management`}>
-        <div className="form-heading">
-          <div>
-            <strong><Trans>Clinic & account</Trans></strong>
-            <span>
-              {data.clinic.name} · {roleLabel[user.role]} · {user.name}
-            </span>
-          </div>
-          <button className="icon-button" onClick={onClose} aria-label={t`Close clinic and account management`}>
-            <X size={17} />
+      <div className="seg workspace-tabs" role="tablist" aria-label={t`Management sections`}>
+        {TABS.map((item) => (
+          <button
+            key={item.id}
+            role="tab"
+            aria-selected={tab === item.id}
+            className={tab === item.id ? 'active' : ''}
+            onClick={() => setTab(item.id)}
+          >
+            {i18n._(item.label)}
           </button>
-        </div>
-
-        <div className="seg workspace-tabs" role="tablist" aria-label={t`Management sections`}>
-          {TABS.map((item) => (
-            <button
-              key={item.id}
-              role="tab"
-              aria-selected={tab === item.id}
-              className={tab === item.id ? 'active' : ''}
-              onClick={() => setTab(item.id)}
-            >
-              {i18n._(item.label)}
-            </button>
-          ))}
-        </div>
-
-        <div className="workspace-body" role="tabpanel">
-          {tab === 'clinic' && <ClinicPanel />}
-          {tab === 'account' && <AccountPanel onSetPin={() => setPinFor(user)} onClose={onClose} />}
-          {tab === 'team' && <TeamPanel onSetPin={setPinFor} onSwitchAccount={switchAccount} onNavigate={onNavigate} />}
-          {tab === 'roles' && <RolesPanel />}
-        </div>
-
-        {pinFor && <PinDialog member={pinFor} onClose={() => setPinFor(null)} />}
+        ))}
       </div>
-    </div>
+
+      <div className="workspace-body" role="tabpanel">
+        {tab === 'clinic' && <ClinicPanel />}
+        {tab === 'account' && <AccountPanel onSetPin={() => setPinFor(user)} onClose={onClose} />}
+        {tab === 'team' && <TeamPanel onSetPin={setPinFor} onSwitchAccount={switchAccount} onNavigate={onNavigate} />}
+        {tab === 'roles' && <RolesPanel />}
+      </div>
+
+      {pinFor && <PinDialog member={pinFor} onClose={() => setPinFor(null)} />}
+    </Modal>
   )
 }
 
