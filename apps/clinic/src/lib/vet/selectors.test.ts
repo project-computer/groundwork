@@ -42,16 +42,17 @@ describe('lowStockItems', () => {
   })
 })
 
+const invoice = (id: string, subtotal: number, status: Invoice['status']): Invoice => ({
+  id,
+  number: `INV-${id}`,
+  ownerId: 'o-1',
+  status,
+  items: [{ id: `ii-${id}`, description: 'Consult', quantity: 1, unitPrice: subtotal }],
+  createdAt: '2026-10-28T09:00:00+07:00',
+  version: 1,
+})
+
 describe('outstandingBalance', () => {
-  const invoice = (id: string, subtotal: number, status: Invoice['status']): Invoice => ({
-    id,
-    number: `INV-${id}`,
-    ownerId: 'o-1',
-    status,
-    items: [{ id: `ii-${id}`, description: 'Consult', quantity: 1, unitPrice: subtotal }],
-    createdAt: '2026-10-28T09:00:00+07:00',
-    version: 1,
-  })
 
   it('sums open-invoice balances, net of payments, ignoring paid and void', () => {
     const invoices = [invoice('a', 100000, 'posted'), invoice('b', 50000, 'draft'), invoice('c', 70000, 'paid'), invoice('d', 30000, 'void')]
@@ -61,16 +62,17 @@ describe('outstandingBalance', () => {
   })
 })
 
+const vaccination = (id: string, nextDueAt?: string): Vaccination => ({
+  id,
+  patientId: 'p-1',
+  vaccineName: 'Rabies',
+  administeredAt: '2025-10-15T10:20:00+07:00',
+  nextDueAt,
+  vetId: 'u-pim',
+  version: 1,
+})
+
 describe('overdueVaccinations', () => {
-  const vaccination = (id: string, nextDueAt?: string): Vaccination => ({
-    id,
-    patientId: 'p-1',
-    vaccineName: 'Rabies',
-    administeredAt: '2025-10-15T10:20:00+07:00',
-    nextDueAt,
-    vetId: 'u-pim',
-    version: 1,
-  })
 
   it('returns only vaccinations with a past due date', () => {
     const rows = overdueVaccinations([vaccination('a', '2026-01-01'), vaccination('b', '2027-01-01'), vaccination('c')], '2026-10-28')
@@ -80,15 +82,6 @@ describe('overdueVaccinations', () => {
 
 describe('openInvoices', () => {
   it('excludes paid and void invoices', () => {
-    const invoice = (status: Invoice['status']): Invoice => ({
-      id: status,
-      number: status,
-      ownerId: 'o-1',
-      status,
-      items: [],
-      createdAt: '2026-10-28T09:00:00+07:00',
-      version: 1,
-    })
-    expect(openInvoices([invoice('draft'), invoice('posted'), invoice('paid'), invoice('void')]).map((i) => i.id)).toEqual(['draft', 'posted'])
+    expect(openInvoices([invoice('draft', 0, 'draft'), invoice('posted', 0, 'posted'), invoice('paid', 0, 'paid'), invoice('void', 0, 'void')]).map((i) => i.id)).toEqual(['draft', 'posted'])
   })
 })

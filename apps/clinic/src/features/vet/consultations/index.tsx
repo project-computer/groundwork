@@ -51,7 +51,7 @@ export const Consultations = ({ onOpen }: { onOpen: (encounterId: string) => voi
   }
   // Dispensable catalog: live inventory items (medicine/vaccine) plus legacy
   // medication products so historical prescriptions still resolve.
-  const catalog = useMemo(() => dispensableCatalog(data), [data.inventoryItems, data.products])
+  const catalog = useMemo(() => dispensableCatalog(data), [data])
   const selectedRx = catalog.find((c) => c.id === rxItemId)
   /** Units left for an inventory item after what this visit already prescribed. */
   const stockLeft = (itemId: string) => {
