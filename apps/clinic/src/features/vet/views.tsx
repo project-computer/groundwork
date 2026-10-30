@@ -8,7 +8,7 @@ import { useClinic, usePermission, useSyncState } from '@/lib/vet/store'
 import { hasPin } from '@/lib/vet/auth'
 import { buildBackup, downloadBackup, parseBackup, summarizeBackup, type BackupSummary, type ClinicBackup } from '@/lib/vet/backup'
 import { isCaseBundle, type CaseBundle } from '@/lib/vet/types'
-import { formatDate, permissionsFor, roleLabel, ROLES, statusLabel, statusTone, todayKey } from '@/lib/vet/format'
+import { compareTime, formatDate, permissionsFor, roleLabel, ROLES, statusLabel, statusTone, todayKey } from '@/lib/vet/format'
 import type { StaffUser } from '@/lib/vet/types'
 import { PinDialog } from './pin-dialog'
 
@@ -24,7 +24,7 @@ export const RecordsView = ({ onOpenConsult }: { onOpenConsult: (encounterId: st
       const patient = data.patients.find((p) => p.id === e.patientId)
       return `${patient?.name} ${e.diagnoses.map((d) => d.description).join(' ')}`.toLowerCase().includes(query.toLowerCase())
     })
-    .toSorted((a, b) => b.openedAt.localeCompare(a.openedAt))
+    .toSorted((a, b) => compareTime(b.openedAt, a.openedAt))
   return (
     <>
       <PageHeader
@@ -233,7 +233,7 @@ const Vaccinations = () => {
   }
 
   const rows = data.vaccinations
-    .toSorted((a, b) => b.administeredAt.localeCompare(a.administeredAt))
+    .toSorted((a, b) => compareTime(b.administeredAt, a.administeredAt))
     .map((v) => {
       const patient = data.patients.find((p) => p.id === v.patientId)
       const vet = data.users.find((u) => u.id === v.vetId)

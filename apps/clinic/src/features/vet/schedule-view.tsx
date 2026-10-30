@@ -4,7 +4,7 @@ import { Plural, Trans, useLingui } from '@lingui/react/macro'
 import { AlertTriangle, CalendarPlus, ChevronLeft, ChevronRight, DoorOpen, Stethoscope, UserX, X } from 'lucide-react'
 import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
-import { formatDate, formatTime, monthGrid, shiftDays, shiftMonth, statusLabel, statusTone, todayKey } from '@/lib/vet/format'
+import { compareTime, formatDate, formatTime, monthGrid, shiftDays, shiftMonth, statusLabel, statusTone, todayKey } from '@/lib/vet/format'
 import { DatePicker } from '@/components/vet/date-picker'
 import { findAppointmentConflict, isPastSlot, type AppointmentSlot } from '@/lib/vet/schedule'
 
@@ -183,7 +183,7 @@ export const ScheduleView = () => {
     () =>
       data.appointments
         .filter((a) => apptDay(a.startsAt) === dayIso)
-        .toSorted((a, b) => a.startsAt.localeCompare(b.startsAt)),
+        .toSorted((a, b) => compareTime(a.startsAt, b.startsAt)),
     [data.appointments, dayIso],
   )
   const weekAppointments = useMemo(() => {
@@ -199,7 +199,7 @@ export const ScheduleView = () => {
   const waiting = dayAppointments.filter((a) => a.status === 'checked_in')
   const upcoming = data.appointments
     .filter((a) => a.status === 'booked' && apptDay(a.startsAt) > dayIso)
-    .toSorted((a, b) => a.startsAt.localeCompare(b.startsAt))
+    .toSorted((a, b) => compareTime(a.startsAt, b.startsAt))
     .slice(0, 6)
 
   // Live clash check for the open dialog: the user must acknowledge a
@@ -548,7 +548,7 @@ export const ScheduleView = () => {
         <Panel title={t`Week overview`} description={t`Appointments across the clinic week — click or drag empty space to book`}>
           <div className="week-grid">
             {weekDays(dayIso).map((iso) => {
-              const list = (weekAppointments.get(iso) ?? []).toSorted((a, b) => a.startsAt.localeCompare(b.startsAt))
+              const list = (weekAppointments.get(iso) ?? []).toSorted((a, b) => compareTime(a.startsAt, b.startsAt))
               return (
                 <div className="week-col" key={iso}>
                   <header className={iso === todayKey() ? 'today' : ''}>

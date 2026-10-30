@@ -60,9 +60,11 @@ describe('compareTime', () => {
   it('orders mixed-offset timestamps chronologically, unlike string order', () => {
     // 09:42+07:00 is 02:42Z — seven hours EARLIER than 08:56Z — but plain
     // string comparison ranks it later. Timestamp sorts must use compareTime.
-    expect('2026-10-30T09:42:00+07:00' > '2026-10-30T08:56:00Z').toBe(true)
-    expect(compareTime('2026-10-30T08:56:00Z', '2026-10-30T09:42:00+07:00')).toBeGreaterThan(0)
-    expect(compareTime('2026-10-30T09:42:00+07:00', '2026-10-30T08:56:00Z')).toBeLessThan(0)
+    const offsetForm = '2026-10-30T09:42:00+07:00'
+    const utcForm = '2026-10-30T08:56:00Z'
+    expect(offsetForm > utcForm).toBe(true)
+    expect(compareTime(utcForm, offsetForm)).toBeGreaterThan(0)
+    expect(compareTime(offsetForm, utcForm)).toBeLessThan(0)
   })
 
   it('treats equivalent instants in different offsets as equal', () => {

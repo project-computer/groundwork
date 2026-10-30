@@ -29,7 +29,7 @@ import { DatePicker } from '@/components/vet/date-picker'
 import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission, type View } from '@/lib/vet/store'
 import { buildCaseBundle, downloadCaseBundle, newShareToken } from '@/lib/vet/case-transfer'
-import { formatMoney as formatCurrency, formatDate, formatTime, initials, invoiceTotals, itemOnHand, lotsExpiringWithin, mostUsedItems, roleLabel, sexLabel, speciesLabel, statusLabel, statusTone, todayKey, vaccinationsDue } from '@/lib/vet/format'
+import { formatMoney as formatCurrency, formatDate, formatTime, compareTime, initials, invoiceTotals, itemOnHand, lotsExpiringWithin, mostUsedItems, roleLabel, sexLabel, speciesLabel, statusLabel, statusTone, todayKey, vaccinationsDue } from '@/lib/vet/format'
 import { SPECIES, SEXES, type InventoryCategory, type Patient, type Vitals } from '@/lib/vet/types'
 import { getTheme, setTheme, THEME_CHOICES, watchSystemTheme, type ThemeChoice } from '@/lib/theme'
 import { ReportsView } from './reports-view'
@@ -1080,7 +1080,7 @@ const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: st
         at: v.administeredAt,
         vaccination: v,
       })),
-  ].toSorted((a, b) => b.at.localeCompare(a.at))
+  ].toSorted((a, b) => compareTime(b.at, a.at))
   return (
     <div
       className="modal-backdrop"
@@ -1326,7 +1326,7 @@ const Consultations = ({ onOpen }: { onOpen: (encounterId: string) => void }) =>
     data.encounters.find((e) => e.status === 'open')
   const patient = open && data.patients.find((p) => p.id === open.patientId)
   const appt = open && data.appointments.find((a) => a.id === open.appointmentId)
-  const recentEncounters = data.encounters.toSorted((a, b) => b.openedAt.localeCompare(a.openedAt)).slice(0, 8)
+  const recentEncounters = data.encounters.toSorted((a, b) => compareTime(b.openedAt, a.openedAt)).slice(0, 8)
   const [note, setNote] = useState('')
   const [vitals, setVitals] = useState<Vitals>(open?.vitals ?? { weightKg: '', tempC: '', heartRate: '', respRate: '' })
   const [dxText, setDxText] = useState('')
@@ -1989,7 +1989,7 @@ const Billing = () => {
     { label: t`Billed all time`, value: formatCurrency(billedTotal), note: t`${data.invoices.length} invoices`, icon: BarChart3, tone: 'teal' },
   ]
 
-  const sortedInvoices = data.invoices.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const sortedInvoices = data.invoices.toSorted((a, b) => compareTime(b.createdAt, a.createdAt))
   const paymentInvoice = data.invoices.find((i) => i.id === paymentInvoiceId)
   const paymentBalance = paymentInvoice ? invoiceTotals(paymentInvoice, data.clinic.vatRate, data.payments).balance : 0
   const refundPayment = data.payments.find((p) => p.id === refundPaymentId)
@@ -2232,7 +2232,7 @@ const Billing = () => {
       <Panel title={t`Recent payments`} description={t`Every payment is appended to an immutable ledger.`}>
         <div className="activity-list">
           {data.payments
-            .toSorted((a, b) => b.receivedAt.localeCompare(a.receivedAt))
+            .toSorted((a, b) => compareTime(b.receivedAt, a.receivedAt))
             .slice(0, 10)
             .map((payment) => {
               const invoice = data.invoices.find((i) => i.id === payment.invoiceId)
