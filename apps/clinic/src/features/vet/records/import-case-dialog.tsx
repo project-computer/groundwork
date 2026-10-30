@@ -12,10 +12,17 @@ type ImportOutcome =
   | { state: 'done'; message: string }
 
 export const ImportCaseDialog = ({ onClose }: { onClose: () => void }) => {
-  const { data, dispatch } = useClinic()
+  const { session, dispatch } = useClinic()
   const { t } = useLingui()
   const [paste, setPaste] = useState('')
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null)
+
+  // Refusals live in the reducer (duplicate tokens, bad formats) and arrive
+  // via session.lastRejection (ADR-0015). Derived during render: a rejection
+  // always outranks the local outcome, and a successful import clears it.
+  const shown: ImportOutcome | null = session.lastRejection
+    ? { state: 'error', message: session.lastRejection.message }
+    : outcome
 
   const receive = (raw: string) => {
     let parsed: unknown
@@ -30,13 +37,6 @@ export const ImportCaseDialog = ({ onClose }: { onClose: () => void }) => {
       return
     }
     const bundle = parsed as CaseBundle
-    if (data.caseTransfers.some((transfer) => transfer.token === bundle.token)) {
-      setOutcome({
-        state: 'error',
-        message: t`This case was already received (token ${bundle.token.slice(0, 8)}…). Import skipped to avoid duplicates.`,
-      })
-      return
-    }
     dispatch({ type: 'importCaseBundle', bundle })
     setOutcome({
       state: 'done',
@@ -82,9 +82,9 @@ export const ImportCaseDialog = ({ onClose }: { onClose: () => void }) => {
             spellCheck={false}
           />
         </Field>
-        {outcome && (
-          <p className={outcome.state === 'error' ? 'text-[13px] text-red-700' : 'text-[13px] text-green-700'} role="status">
-            {outcome.message}
+        {shown && (
+          <p className={shown.state === 'error' ? 'text-[13px] text-red-700' : 'text-[13px] text-green-700'} role="status">
+            {shown.message}
           </p>
         )}
         <div className="form-actions">

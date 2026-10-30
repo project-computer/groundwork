@@ -22,40 +22,40 @@ const baseStore = (): Store => ({
 const seedInvoiceTotal = 98440
 
 /** inv-1 fully paid in one cash payment (posted → paid). */
-const paidStore = () => payInvoice(baseStore(), seedInvoiceTotal, true)
+const paidStore = () => payInvoice(baseStore(), seedInvoiceTotal)
 
-const payInvoice = (store: Store, amount: number, settles: boolean) =>
-  reducer(store, { type: 'recordPayment', payment: { invoiceId: 'inv-1', amount, method: 'cash' }, settles })
+const payInvoice = (store: Store, amount: number) =>
+  reducer(store, { type: 'recordPayment', payment: { invoiceId: 'inv-1', amount, method: 'cash' } })
 
-describe('recordPayment (characterisation)', () => {
-  it('flips posted→paid when the caller claims settles, even for a partial amount', () => {
-    // GAP (phase 2): the reducer trusts the caller's `settles` flag; the paid
-    // transition is decided in the UI (clinic-shell billing). A partial
-    // payment marked settles=true closes an invoice that is not fully paid.
-    const next = payInvoice(baseStore(), 40000, true)
+describe('recordPayment', () => {
+  it('flips posted→paid when the payment settles the full balance', () => {
+    // Phase 2: the reducer computes the paid flip from the ledger itself —
+    // the caller no longer passes a `settles` flag.
+    const next = payInvoice(baseStore(), 98440)
     expect(next.data.payments).toHaveLength(1)
     expect(next.data.invoices.find((i) => i.id === 'inv-1')!.status).toBe('paid')
   })
 
-  it('keeps the invoice posted when settles is false', () => {
-    const next = payInvoice(baseStore(), 40000, false)
+  it('keeps a partially paid invoice posted', () => {
+    const next = payInvoice(baseStore(), 40000)
     expect(next.data.invoices.find((i) => i.id === 'inv-1')!.status).toBe('posted')
     expect(next.data.payments).toHaveLength(1)
   })
 
-  it('accepts an overpayment — the reducer does not know the balance', () => {
-    // GAP (phase 2): the UI blocks amount > balance; the reducer does not.
-    const next = payInvoice(baseStore(), 200000, false)
-    expect(next.data.payments).toHaveLength(1)
-    expect(next.data.payments[0].amount).toBe(200000)
+  it('rejects an overpayment with a reason', () => {
+    // Was accepted before phase 2 — the reducer now knows the balance.
+    const next = payInvoice(baseStore(), 200000)
+    expect(next.data.payments).toHaveLength(0)
+    expect(next.session.lastRejection).toMatchObject({ code: 'payment.overpayment' })
   })
 
-  it('ignores payments on draft invoices', () => {
+  it('rejects payments on draft invoices', () => {
     const store = baseStore()
     store.data.invoices = store.data.invoices.map((i) => (i.id === 'inv-1' ? { ...i, status: 'draft' } : i))
-    const next = payInvoice(store, 40000, true)
+    const next = payInvoice(store, 40000)
     expect(next.data.payments).toHaveLength(0)
     expect(next.data.invoices.find((i) => i.id === 'inv-1')!.status).toBe('draft')
+    expect(next.session.lastRejection).toMatchObject({ code: 'payment.not_posted' })
   })
 })
 
@@ -76,31 +76,33 @@ describe('refundPayment (characterisation)', () => {
     expect(next.data.invoices.find((i) => i.id === 'inv-1')!.status).toBe('posted')
   })
 
-  it('refuses refunds beyond the remaining headroom', () => {
+  it('rejects refunds beyond the remaining headroom', () => {
     const store = paidStore()
     const original = store.data.payments[0]
     const next = reducer(store, { type: 'refundPayment', invoiceId: 'inv-1', paymentId: original.id, amount: 98441, note: 'too much' })
     expect(next.data.payments).toHaveLength(store.data.payments.length)
-    expect(next.data).toBe(store.data)
+    expect(next.session.lastRejection).toMatchObject({ code: 'refund.exceeds_headroom' })
   })
 
-  it('refuses refunds without a note', () => {
+  it('rejects refunds without a note', () => {
     const store = paidStore()
     const original = store.data.payments[0]
     const next = reducer(store, { type: 'refundPayment', invoiceId: 'inv-1', paymentId: original.id, amount: 1000, note: '   ' })
     expect(next.data.payments).toHaveLength(store.data.payments.length)
+    expect(next.session.lastRejection).toMatchObject({ code: 'refund.empty_note' })
   })
 })
 
 describe('voidInvoice (characterisation)', () => {
   it('refuses to void while money is still held', () => {
-    const store = payInvoice(baseStore(), 40000, false)
+    const store = payInvoice(baseStore(), 40000)
     const next = reducer(store, { type: 'voidInvoice', invoiceId: 'inv-1' })
     expect(next.data.invoices.find((i) => i.id === 'inv-1')!.status).toBe('posted')
+    expect(next.session.lastRejection).toMatchObject({ code: 'payment.void_has_payments' })
   })
 
   it('nets refunds against payments — a fully refunded invoice is voidable again', () => {
-    let store = payInvoice(baseStore(), 98440, true)
+    let store = payInvoice(baseStore(), 98440)
     const original = store.data.payments[0]
     store = reducer(store, { type: 'refundPayment', invoiceId: 'inv-1', paymentId: original.id, amount: 98440, note: 'full refund' })
     // The refund reopened the invoice to posted; net money held is zero.
@@ -196,7 +198,8 @@ describe('restoreBackup (characterisation)', () => {
     const receptionist = { ...initialSession, currentUserId: 'u-nok' }
     const store: Store = { data: structuredClone(seedState), session: receptionist }
     const next = reducer(store, { type: 'restoreBackup', backup: backupOf(structuredClone(seedState)) })
-    expect(next).toBe(store)
+    expect(next.data).toBe(store.data)
+    expect(next.session.lastRejection).toMatchObject({ code: 'rbac.denied' })
   })
 
   it('keeps the signed-in admin when the backup contains them', () => {
@@ -231,17 +234,71 @@ const openEncounterStore = (): Store => {
   return { data: { ...structuredClone(seedState), encounters: [encounter, ...seedState.encounters] }, session: { ...adminSession } }
 }
 
-describe('addPrescription (characterisation)', () => {
-  it('accepts a prescription that exceeds stock on hand — the floor lives only in the UI', () => {
-    // GAP (phase 2): 30 tablets against 24 on hand (lot-2). Today the reducer
-    // accepts any quantity and closeEncounter silently under-dispenses
-    // (see close-encounter.test.ts). Phase 2 moves the stock floor into the
-    // reducer and this test flips to expect a rejection with a reason.
+describe('addPrescription', () => {
+  it('rejects a prescription that exceeds the stock on hand', () => {
+    // Phase 2: the stock floor moved into the reducer — 30 tablets against 24
+    // on hand (lot-2) is refused with a reason, not left to the form.
     const next = reducer(openEncounterStore(), {
       type: 'addPrescription',
       encounterId: 'e-9',
       prescription: { productId: 'it-2', medication: 'Amoxicillin 250 mg tablet', dose: '1', route: 'oral', frequency: 'twice daily', duration: '5 days', quantity: 30 },
     })
+    expect(next.data.encounters.find((e) => e.id === 'e-9')!.prescriptions).toHaveLength(0)
+    expect(next.session.lastRejection).toMatchObject({ code: 'stock.shortage' })
+  })
+
+  it('accepts a prescription within stock', () => {
+    const next = reducer(openEncounterStore(), {
+      type: 'addPrescription',
+      encounterId: 'e-9',
+      prescription: { productId: 'it-2', medication: 'Amoxicillin 250 mg tablet', dose: '1', route: 'oral', frequency: 'twice daily', duration: '5 days', quantity: 8 },
+    })
     expect(next.data.encounters.find((e) => e.id === 'e-9')!.prescriptions).toHaveLength(1)
+    expect(next.session.lastRejection).toBeUndefined()
+  })
+
+  it('never blocks free-text medications that carry no stock', () => {
+    const next = reducer(openEncounterStore(), {
+      type: 'addPrescription',
+      encounterId: 'e-9',
+      prescription: { medication: 'Cephalexin 250 mg (compounded)', dose: '1', route: 'oral', frequency: 'twice daily', duration: '7 days', quantity: 30 },
+    })
+    expect(next.data.encounters.find((e) => e.id === 'e-9')!.prescriptions).toHaveLength(1)
+  })
+})
+
+describe('rejection channel (ADR-0015)', () => {
+  it('clears lastRejection on the next successful commit', () => {
+    const refused = payInvoice(baseStore(), 200000)
+    expect(refused.session.lastRejection).toBeDefined()
+    const recovered = payInvoice(refused, 40000)
+    expect(recovered.session.lastRejection).toBeUndefined()
+  })
+
+  it('refuses inventory writes for roles without inventory.write', () => {
+    // The usePermission matrix and the reducer now share one source: a
+    // veterinarian holds no inventory.write, a pharmacist does.
+    const vet = { ...initialSession, currentUserId: 'u-pim' }
+    const vetStore: Store = { data: structuredClone(seedState), session: vet }
+    const refused = reducer(vetStore, {
+      type: 'recordStockMovement',
+      lotId: 'lot-2',
+      delta: -1,
+      reason: 'waste',
+      notes: 'broken vial',
+    })
+    expect(refused.session.lastRejection).toMatchObject({ code: 'rbac.inventory' })
+
+    const pharmacist = { ...initialSession, currentUserId: 'u-beer' }
+    const pharmacistStore: Store = { data: structuredClone(seedState), session: pharmacist }
+    const allowed = reducer(pharmacistStore, {
+      type: 'recordStockMovement',
+      lotId: 'lot-2',
+      delta: -1,
+      reason: 'waste',
+      notes: 'broken vial',
+    })
+    expect(allowed.session.lastRejection).toBeUndefined()
+    expect(allowed.data.inventoryLots.find((l) => l.id === 'lot-2')!.quantity).toBe(23)
   })
 })

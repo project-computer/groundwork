@@ -3,7 +3,7 @@ import { i18n } from '@lingui/core'
 import { msg } from '@lingui/core/macro'
 import { runSync } from './backend'
 import { isClinicState, loadPlanPref, loadState, parseClinicState, savePlanPref, saveState } from './persistence'
-import { can, formatMrn, invoiceTotals, roleLabel } from './format'
+import { can, formatMoney, formatMrn, invoiceTotals, roleLabel } from './format'
 import { seedState } from './seed'
 import type {
   Appointment,
@@ -44,6 +44,15 @@ export type View =
   | 'staff'
   | 'settings'
 
+/** Why the reducer refused an action (ADR-0015). Ephemeral UI feedback. */
+export interface Rejection {
+  /** Stable machine identifier, e.g. 'stock.shortage', 'rbac.denied'. */
+  code: string
+  /** Human-readable explanation a banner can show directly. */
+  message: string
+  at: string
+}
+
 /** Ephemeral UI/session state; never persisted as part of the document. */
 export interface Session {
   currentUserId: string
@@ -58,6 +67,8 @@ export interface Session {
   lastSyncError?: string
   /** Set when the last attempt to persist the document failed. */
   saveError?: string
+  /** Why the last refused dispatch happened; cleared on the next success. */
+  lastRejection?: Rejection
 }
 
 /** One reducer step: the clinic document plus its session. */
@@ -95,7 +106,7 @@ type Action =
   | { type: 'createInvoice'; ownerId: string; items: Omit<InvoiceItem, 'id'>[] }
   | { type: 'addInvoiceItem'; invoiceId: string; item: Omit<InvoiceItem, 'id'> }
   | { type: 'postInvoice'; invoiceId: string }
-  | { type: 'recordPayment'; payment: Omit<Payment, 'id' | 'receivedAt'>; settles: boolean }
+  | { type: 'recordPayment'; payment: Omit<Payment, 'id' | 'receivedAt'> }
   | { type: 'refundPayment'; invoiceId: string; paymentId: string; amount: number; note: string }
   | { type: 'voidInvoice'; invoiceId: string }
   | { type: 'addSupplier'; supplier: Omit<Supplier, 'id'> }
@@ -115,11 +126,20 @@ type Action =
   | { type: 'recordAudit'; action: string; entityType: string; entityId: string; summary: string }
 
 /**
+ * Records a refused action in state (ADR-0015) — the UI can always explain a
+ * no-op. Cleared by the next successful commit; never audited or synced.
+ */
+const reject = (store: Store, code: string, message: string): Store => ({
+  ...store,
+  session: { ...store.session, lastRejection: { code, message, at: now() } },
+})
+
+/**
  * Every business mutation passes through here so the record change, its audit
  * event and its outbox entry land in the same state transition — the in-memory
  * equivalent of the spec's single SQLite transaction. The whole document is
  * then persisted atomically to the local store (SQLite on Tauri, localStorage
- * on the web).
+ * on the web). A successful commit clears any pending rejection.
  */
 const commit = (
   store: Store,
@@ -129,6 +149,7 @@ const commit = (
   const occurredAt = now()
   return {
     ...store,
+    session: { ...store.session, lastRejection: undefined },
     data: {
       ...data,
       audit: [
@@ -190,12 +211,12 @@ export const reducer = (store: Store, action: Action): Store => {
   // the PIN before dispatching.
   if (action.type === 'signIn') {
     const target = data.users.find((u) => u.id === action.userId)
-    if (!target || !target.active) return store
+    if (!target || !target.active) return reject(store, 'auth.inactive_member', 'That member is deactivated and cannot sign in.')
     return { ...store, session: { ...session, currentUserId: target.id, locked: false } }
   }
 
   // Writes require a reachable clinic server; cached data stays readable.
-  if (!session.lanOnline) return store
+  if (!session.lanOnline) return reject(store, 'sync.offline', 'Offline from the clinic server — changes are read-only until you reconnect.')
 
   // Exporting and restoring are audited like any other write, but they do not
   // create an outbox entry: the audit trail is local and must not be replayed
@@ -227,14 +248,14 @@ export const reducer = (store: Store, action: Action): Store => {
   // applies when that account holds a PIN.
   if (action.type === 'restoreBackup') {
     const actor = data.users.find((u) => u.id === session.currentUserId)
-    if (!actor || !can(actor.role, 'data.export')) return store
+    if (!actor || !can(actor.role, 'data.export')) return reject(store, 'rbac.denied', 'Restoring a backup needs the data-export permission.')
     const restored = parseClinicState(action.backup.state)
-    if (!restored) return store
+    if (!restored) return reject(store, 'backup.invalid', 'That file is not a readable clinic backup.')
     const nextUser =
       restored.users.find((u) => u.id === actor.id) ??
       restored.users.find((u) => u.role === 'admin' && u.active) ??
       restored.users.find((u) => u.active)
-    if (!nextUser) return store
+    if (!nextUser) return reject(store, 'backup.no_active_member', 'The backup contains no active staff member to sign in as.')
     const summary = `Restored backup from ${action.backup.createdAt} — ${restored.patients.length} patients, ${restored.encounters.length} encounters`
     return {
       data: {
@@ -267,45 +288,48 @@ export const reducer = (store: Store, action: Action): Store => {
   // like every other write. The signed-in admin cannot lock themselves out.
   if (action.type === 'addStaff' || action.type === 'setStaffActive') {
     const actor = data.users.find((u) => u.id === session.currentUserId)
-    if (!actor || !can(actor.role, 'staff.manage')) return store
-    if (action.type === 'setStaffActive' && !action.active && action.id === session.currentUserId) return store
-    if (action.type === 'addStaff' && !action.name.trim()) return store
+    if (!actor || !can(actor.role, 'staff.manage')) return reject(store, 'rbac.denied', 'Only clinic admins manage staff accounts.')
+    if (action.type === 'setStaffActive' && !action.active && action.id === session.currentUserId)
+      return reject(store, 'staff.self_deactivate', 'You cannot deactivate your own account.')
+    if (action.type === 'addStaff' && !action.name.trim()) return reject(store, 'staff.empty_name', 'A staff member needs a name.')
   }
 
   // Members may edit their own profile; only admins may change anyone else's
   // account or grant a role.
   if (action.type === 'updateStaff') {
     const actor = data.users.find((u) => u.id === session.currentUserId)
-    if (!actor || !data.users.some((u) => u.id === action.id)) return store
+    if (!actor || !data.users.some((u) => u.id === action.id)) return reject(store, 'staff.not_found', 'That staff member no longer exists.')
     const isSelf = actor.id === action.id
     const managesStaff = can(actor.role, 'staff.manage')
-    if (!managesStaff && !isSelf) return store
-    if (!managesStaff && action.role !== undefined && action.role !== actor.role) return store
-    if (action.name !== undefined && !action.name.trim()) return store
+    if (!managesStaff && !isSelf) return reject(store, 'rbac.denied', 'You can only edit your own profile.')
+    if (!managesStaff && action.role !== undefined && action.role !== actor.role)
+      return reject(store, 'staff.self_role', 'Only clinic admins can change roles.')
+    if (action.name !== undefined && !action.name.trim()) return reject(store, 'staff.empty_name', 'A staff member needs a name.')
   }
 
   // Clinic identity is tenant configuration, reserved for clinic admins.
   if (action.type === 'updateClinic') {
     const actor = data.users.find((u) => u.id === session.currentUserId)
-    if (!actor || !can(actor.role, 'clinic.manage')) return store
-    if (action.patch.name !== undefined && !action.patch.name.trim()) return store
+    if (!actor || !can(actor.role, 'clinic.manage')) return reject(store, 'rbac.denied', 'Clinic identity is reserved for clinic admins.')
+    if (action.patch.name !== undefined && !action.patch.name.trim()) return reject(store, 'clinic.empty_name', 'The clinic needs a name.')
     if (action.patch.vatRate !== undefined && (!Number.isFinite(action.patch.vatRate) || action.patch.vatRate < 0 || action.patch.vatRate > 1)) {
-      return store
+      return reject(store, 'clinic.invalid_vat', 'VAT must be a rate between 0 and 1.')
     }
   }
 
   // PINs are a credential change: admins manage anyone's, members their own.
   if (action.type === 'setStaffPin') {
     const actor = data.users.find((u) => u.id === session.currentUserId)
-    if (!actor || !data.users.some((u) => u.id === action.id)) return store
-    if (actor.role !== 'admin' && actor.id !== action.id) return store
+    if (!actor || !data.users.some((u) => u.id === action.id)) return reject(store, 'staff.not_found', 'That staff member no longer exists.')
+    if (actor.role !== 'admin' && actor.id !== action.id) return reject(store, 'rbac.denied', 'You can only change your own PIN.')
   }
 
-  // Inventory writes follow the slice 0007/0008 RBAC matrix: admin and
-  // pharmacist write; veterinarian and reception read-only.
+  // Inventory writes follow the permission matrix — admin and pharmacist
+  // hold inventory.write; veterinarian and reception are read-only. The
+  // matrix lives in format.ts; usePermission derives from the same source.
   if (action.type === 'addSupplier' || action.type === 'addInventoryItem' || action.type === 'receiveLot' || action.type === 'recordStockMovement') {
     const actor = data.users.find((u) => u.id === session.currentUserId)
-    if (!actor || (actor.role !== 'admin' && actor.role !== 'pharmacist')) return store
+    if (!actor || !can(actor.role, 'inventory.write')) return reject(store, 'rbac.inventory', 'Only admins and pharmacists can change stock.')
   }
 
   switch (action.type) {
@@ -349,7 +373,7 @@ export const reducer = (store: Store, action: Action): Store => {
     case 'updateOwner': {
       const owner = data.owners.find((o) => o.id === action.id)
       if (!owner) return store
-      if (action.patch.name !== undefined && !action.patch.name.trim()) return store
+      if (action.patch.name !== undefined && !action.patch.name.trim()) return reject(store, 'owner.empty_name', 'An owner needs a name.')
       const next: Owner = {
         ...owner,
         ...action.patch,
@@ -398,7 +422,8 @@ export const reducer = (store: Store, action: Action): Store => {
     }
     case 'rescheduleAppointment': {
       const appt = data.appointments.find((a) => a.id === action.id)
-      if (!appt || (appt.status !== 'booked' && appt.status !== 'no_show' && appt.status !== 'cancelled')) return store
+      if (!appt || (appt.status !== 'booked' && appt.status !== 'no_show' && appt.status !== 'cancelled'))
+        return reject(store, 'appointment.not_reschedulable', 'Only booked, no-show or cancelled appointments can be rescheduled.')
       return commit(
         store,
         {
@@ -471,7 +496,8 @@ export const reducer = (store: Store, action: Action): Store => {
       const enc = data.encounters.find((e) => e.id === action.encounterId)
       if (!enc || enc.status !== 'open') return store
       if (!enc.notes.some((n) => n.id === action.noteId)) return store
-      if (!action.body.trim() || !action.reason.trim()) return store
+      if (!action.body.trim() || !action.reason.trim())
+        return reject(store, 'note.empty', 'An amendment needs both the new text and a reason.')
       const note = {
         id: uid(),
         authorId: session.currentUserId,
@@ -511,6 +537,18 @@ export const reducer = (store: Store, action: Action): Store => {
       )
     }
     case 'addPrescription': {
+      // Stock floor — enforced here, not only in the form (phase 2 of the
+      // 2026-10-29 refactor): a prescription may not exceed the quantity on
+      // hand across the item's InventoryLots. Legacy catalog products and
+      // free-text medications carry no stock and are never blocked.
+      if (action.prescription.productId) {
+        const item = data.inventoryItems.find((i) => i.id === action.prescription.productId)
+        if (item) {
+          const onHand = data.inventoryLots.filter((l) => l.itemId === item.id).reduce((sum, l) => sum + l.quantity, 0)
+          if (action.prescription.quantity > onHand)
+            return reject(store, 'stock.shortage', `Only ${onHand} ${item.unit} of ${item.name} left in stock.`)
+        }
+      }
       const rx = { ...action.prescription, id: uid(), prescriberId: session.currentUserId }
       return commit(store, updateEncounter(data, action.encounterId, (e) => ({ ...e, prescriptions: [...e.prescriptions, rx] })), {
         action: 'prescription.create',
@@ -531,7 +569,8 @@ export const reducer = (store: Store, action: Action): Store => {
     }
     case 'recordVaccination': {
       const patient = data.patients.find((p) => p.id === action.patientId)
-      if (!patient || !action.vaccination.vaccineName.trim()) return store
+      if (!patient) return store
+      if (!action.vaccination.vaccineName.trim()) return reject(store, 'vaccination.empty_name', 'A vaccination needs the vaccine name.')
       const vac: Vaccination = {
         ...action.vaccination,
         vaccineName: action.vaccination.vaccineName.trim(),
@@ -559,10 +598,11 @@ export const reducer = (store: Store, action: Action): Store => {
     }
     case 'importCaseBundle': {
       const bundle = action.bundle
-      if (bundle.format !== 'vetcare-case-bundle') return store
+      if (bundle.format !== 'vetcare-case-bundle') return reject(store, 'case.invalid_format', 'That file is not a VetCare case bundle.')
       // Guard: the same share token can only be received once. (The copy gets
       // a fresh local MRN, so a source-MRN clash needs no guard.)
-      if (data.caseTransfers.some((t) => t.token === bundle.token)) return store
+      if (data.caseTransfers.some((t) => t.token === bundle.token))
+        return reject(store, 'case.duplicate_token', `This case was already received (token ${bundle.token.slice(0, 8)}…).`)
 
       // Owner is matched by phone (joint records stay linked); created if new.
       let owner = data.owners.find((o) => o.phone === bundle.owner.phone)
@@ -670,7 +710,7 @@ export const reducer = (store: Store, action: Action): Store => {
       )
     }
     case 'createInvoice': {
-      if (!action.items.length) return store
+      if (!action.items.length) return reject(store, 'invoice.empty', 'An invoice needs at least one line item.')
       const owner = data.owners.find((o) => o.id === action.ownerId)
       if (!owner) return store
       const invoiceId = uid()
@@ -706,7 +746,7 @@ export const reducer = (store: Store, action: Action): Store => {
     }
     case 'postInvoice': {
       const inv = data.invoices.find((i) => i.id === action.invoiceId)
-      if (!inv || inv.status !== 'draft') return store
+      if (!inv || inv.status !== 'draft') return reject(store, 'invoice.not_draft', 'Only draft invoices can be posted.')
       return commit(
         store,
         { ...data, invoices: data.invoices.map((i) => (i.id === inv.id ? { ...i, status: 'posted', version: i.version + 1 } : i)) },
@@ -716,13 +756,20 @@ export const reducer = (store: Store, action: Action): Store => {
     case 'recordPayment': {
       const payment: Payment = { ...action.payment, id: uid(), receivedAt: now() }
       const inv = data.invoices.find((i) => i.id === payment.invoiceId)
-      if (!inv || inv.status !== 'posted') return store
+      if (!inv || inv.status !== 'posted') return reject(store, 'payment.not_posted', 'Only posted invoices can take a payment.')
+      if (!Number.isFinite(payment.amount) || payment.amount <= 0)
+        return reject(store, 'payment.invalid_amount', 'A payment needs a positive amount.')
+      // The paid flip is decided here, not by the caller (phase 2): a payment
+      // settles the invoice when the ledger reaches the invoice total.
+      const balance = invoiceTotals(inv, data.clinic.vatRate, data.payments).balance
+      if (payment.amount > balance) return reject(store, 'payment.overpayment', `That exceeds the balance due (${formatMoney(balance)}).`)
+      const settles = payment.amount === balance
       return commit(
         store,
         {
           ...data,
           payments: [...data.payments, payment],
-          invoices: action.settles ? data.invoices.map((i) => (i.id === inv.id ? { ...i, status: 'paid', version: i.version + 1 } : i)) : data.invoices,
+          invoices: settles ? data.invoices.map((i) => (i.id === inv.id ? { ...i, status: 'paid', version: i.version + 1 } : i)) : data.invoices,
         },
         { action: 'payment.record', entityType: 'payment', entityId: payment.id, summary: `Payment on ${inv.number} (${payment.method})`, operation: 'append' },
       )
@@ -730,15 +777,17 @@ export const reducer = (store: Store, action: Action): Store => {
     case 'refundPayment': {
       const inv = data.invoices.find((i) => i.id === action.invoiceId)
       const original = data.payments.find((p) => p.id === action.paymentId)
-      if (!inv || inv.status === 'draft' || inv.status === 'void') return store
+      if (!inv || inv.status === 'draft' || inv.status === 'void') return reject(store, 'payment.not_refundable', 'Draft and void invoices cannot be refunded.')
       if (!original || original.invoiceId !== inv.id) return store
-      if ((original.kind ?? 'payment') !== 'payment') return store
+      if ((original.kind ?? 'payment') !== 'payment') return reject(store, 'payment.not_refundable', 'Only payments can be refunded, not refunds themselves.')
       const alreadyRefunded = data.payments
         .filter((p) => p.refundOf === original.id)
         .reduce((sum, p) => sum + Math.abs(p.amount), 0)
       const amount = Math.round(action.amount)
-      if (!Number.isFinite(amount) || amount <= 0 || amount > original.amount - alreadyRefunded) return store
-      if (!action.note.trim()) return store
+      if (!Number.isFinite(amount) || amount <= 0) return reject(store, 'payment.invalid_amount', 'A refund needs a positive amount.')
+      if (amount > original.amount - alreadyRefunded)
+        return reject(store, 'refund.exceeds_headroom', `Only ${formatMoney(original.amount - alreadyRefunded)} of that payment is still refundable.`)
+      if (!action.note.trim()) return reject(store, 'refund.empty_note', 'A refund needs a reason for the ledger.')
       const refund: Payment = {
         id: uid(),
         invoiceId: inv.id,
@@ -770,12 +819,12 @@ export const reducer = (store: Store, action: Action): Store => {
     }
     case 'voidInvoice': {
       const inv = data.invoices.find((i) => i.id === action.invoiceId)
-      if (!inv || inv.status === 'draft' || inv.status === 'void') return store
+      if (!inv || inv.status === 'draft' || inv.status === 'void') return reject(store, 'invoice.not_voidable', 'Only posted invoices can be voided.')
       // Parity with the cloud API's void rule: money that is still held cannot
       // be voided. Refunds net against payments, so a fully refunded invoice
       // becomes voidable again.
       const netPaid = data.payments.filter((p) => p.invoiceId === inv.id).reduce((sum, p) => sum + p.amount, 0)
-      if (netPaid > 0) return store
+      if (netPaid > 0) return reject(store, 'payment.void_has_payments', 'This invoice holds payments — refund them before voiding.')
       return commit(
         store,
         { ...data, invoices: data.invoices.map((i) => (i.id === inv.id ? { ...i, status: 'void' as const, version: i.version + 1 } : i)) },
@@ -783,7 +832,7 @@ export const reducer = (store: Store, action: Action): Store => {
       )
     }
     case 'addSupplier': {
-      if (!action.supplier.name.trim()) return store
+      if (!action.supplier.name.trim()) return reject(store, 'supplier.empty_name', 'A supplier needs a name.')
       const supplier: Supplier = { ...action.supplier, id: uid(), name: action.supplier.name.trim() }
       return commit(store, { ...data, suppliers: [supplier, ...data.suppliers] }, {
         action: 'supplier.create',
@@ -793,7 +842,7 @@ export const reducer = (store: Store, action: Action): Store => {
       })
     }
     case 'addInventoryItem': {
-      if (!action.item.name.trim()) return store
+      if (!action.item.name.trim()) return reject(store, 'inventory.empty_name', 'An inventory item needs a name.')
       const item: InventoryItem = { ...action.item, id: uid(), name: action.item.name.trim() }
       return commit(store, { ...data, inventoryItems: [item, ...data.inventoryItems] }, {
         action: 'inventory_item.create',
@@ -807,7 +856,8 @@ export const reducer = (store: Store, action: Action): Store => {
       // brings it up — the ledger reconciles with the cached quantity, mirroring
       // the backend's transactional rule (slice 0008).
       const item = data.inventoryItems.find((i) => i.id === action.lot.itemId)
-      if (!item || !action.lot.lotNumber.trim() || action.quantity <= 0) return store
+      if (!item || !action.lot.lotNumber.trim() || action.quantity <= 0)
+        return reject(store, 'stock.invalid_lot', 'A lot needs its item, a lot number and a positive quantity.')
       const lot: InventoryLot = { ...action.lot, id: uid(), lotNumber: action.lot.lotNumber.trim(), quantity: 0 }
       const movement: StockMovement = {
         id: uid(),
@@ -832,7 +882,7 @@ export const reducer = (store: Store, action: Action): Store => {
       // in the same transition; negative stock is refused (CHECK-equivalent).
       const lot = data.inventoryLots.find((l) => l.id === action.lotId)
       if (!lot) return store
-      if (lot.quantity + action.delta < 0) return store
+      if (lot.quantity + action.delta < 0) return reject(store, 'stock.negative', 'Stock cannot go negative — check the lot quantity.')
       const movement: StockMovement = {
         id: uid(),
         lotId: lot.id,

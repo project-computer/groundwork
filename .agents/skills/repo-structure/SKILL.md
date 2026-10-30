@@ -72,9 +72,12 @@ one of them is a bug waiting to happen. Use `CONTEXT.md` terms, not synonyms
 (Patient, Owner, Visit, Vaccination, InventoryItem, InventoryLot…).
 
 When the reducer refuses an action it records why — `session.lastRejection`
-(ADR-0015). Never add a new silent `return store` guard. The 2026-10
-frontend refactor (`docs/plans/2026-10-29-frontend-refactor.md`) is moving
-the UI-only copies of these rules home — don't add new ones while it runs.
+with a stable `code` (ADR-0015) — and `commit` clears it on the next
+success. Never add a new silent `return store` guard. The UI renders it via
+`shell/rejection-banner.tsx` and derives dialogs from it; enforcement is
+never duplicated in components — disabled buttons are presentation only.
+The role matrix lives in `format.ts` (`can`/`permissionsFor`) and the
+reducer checks it through `can()` — one source for `usePermission` too.
 
 ## Tests — through the interface
 

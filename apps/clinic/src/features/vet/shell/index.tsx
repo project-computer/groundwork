@@ -36,6 +36,7 @@ import { StaffView } from '../staff'
 import { LockScreen } from '../lock-screen'
 import { LanguageToggle } from '../language-toggle'
 import { SaveErrorBanner } from '../save-error-banner'
+import { RejectionBanner } from './rejection-banner'
 import { WorkspaceDialog, type WorkspaceTab } from '../workspace'
 
 interface NavEntry {
@@ -205,6 +206,7 @@ export const ClinicApp = () => {
           </div>
         </header>
         <SaveErrorBanner />
+        <RejectionBanner />
         <div className="page-wrap">
           {activeView === 'dashboard' && (
             <Dashboard

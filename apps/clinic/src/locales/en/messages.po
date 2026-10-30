@@ -3024,11 +3024,6 @@ msgstr "This appointment starts in the past. Saving is allowed for record-keepin
 msgid "This backup belongs to a different clinic ({0}). Restoring it will replace this clinic's records."
 msgstr "This backup belongs to a different clinic ({0}). Restoring it will replace this clinic's records."
 
-#. placeholder {0}: bundle.token.slice(0, 8)
-#: src/features/vet/records/import-case-dialog.tsx
-msgid "This case was already received (token {0}…). Import skipped to avoid duplicates."
-msgstr "This case was already received (token {0}…). Import skipped to avoid duplicates."
-
 #: src/features/vet/workspace/index.tsx
 msgid "This device unlocks with your staff PIN."
 msgstr "This device unlocks with your staff PIN."

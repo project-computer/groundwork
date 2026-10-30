@@ -159,7 +159,7 @@ export const vaccinationsDue = (vaccinations: Vaccination[], days = 30, today = 
 
 const rolePermissions: Record<Role, Permission[]> = {
   reception: ['records.write', 'appointments.write', 'billing.write'],
-  veterinarian: ['records.write', 'appointments.write', 'clinical.write', 'inventory.write'],
+  veterinarian: ['records.write', 'appointments.write', 'clinical.write'],
   pharmacist: ['records.write', 'billing.write', 'inventory.write'],
   admin: ['records.write', 'appointments.write', 'billing.write', 'inventory.write', 'staff.manage', 'clinic.manage', 'data.export'],
 }

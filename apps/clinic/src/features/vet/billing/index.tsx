@@ -77,7 +77,6 @@ export const Billing = () => {
     dispatch({
       type: 'recordPayment',
       payment: { invoiceId: paymentInvoice.id, amount, method: payMethod },
-      settles: amount >= paymentBalance,
     })
     setPaymentInvoiceId(null)
     setPayAmount('')

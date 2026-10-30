@@ -96,10 +96,14 @@ trail the code they describe.
   and TeamPanel are colocated in staff/ (deep dedup of their shared member
   form is still open). pet→patient / encounter→Visit renames rode the
   moves; CSS `pet-*` classes remain for the phase 6 sweep.
-- Write-path invariants enforced in the reducer — **planned (phase 2)**:
-  stock floor in `addPrescription`, `recordPayment` computes `settles`
-  itself, one refund/void formula, one role matrix (`usePermission` derives
-  from it), rejections surfaced via `session.lastRejection` (ADR-0015).
+- Write-path invariants enforced in the reducer — **done (ADR-0015)**:
+  stock floor in `addPrescription` (inventory items only; free-text meds
+  pass), `recordPayment` computes the paid flip from the ledger and rejects
+  overpayments (action no longer takes `settles`), refund headroom and void
+  netting single-sourced, rejections surfaced via `session.lastRejection`
+  (code + message, rendered by shell/rejection-banner.tsx), and one role
+  matrix — `format.can()` — behind both the reducer and `usePermission`
+  (veterinarian no longer holds inventory.write).
 - Read model — **planned (phase 3)**: `lib/vet/catalog.ts` (prescribable/
   billable items) + `lib/vet/selectors.ts` (outstanding balance, overdue
   vaccinations, low stock — one home each) + `lib/vet/report.ts`
