@@ -483,6 +483,10 @@ msgstr "Appointment completion"
 msgid "Appointment completion (%)"
 msgstr "Appointment completion (%)"
 
+#: src/features/vet/schedule-view.tsx
+msgid "Appointment date"
+msgstr "Appointment date"
+
 #: src/features/vet/reports-view.tsx
 msgid "Appointments"
 msgstr "Appointments"
@@ -750,6 +754,10 @@ msgstr "Choose a backup file"
 #: src/features/vet/clinic-shell.tsx
 msgid "Choose a booked appointment from the calendar to begin, or open a past visit below."
 msgstr "Choose a booked appointment from the calendar to begin, or open a past visit below."
+
+#: src/components/vet/date-picker.tsx
+msgid "Choose a date"
+msgstr "Choose a date"
 
 #: src/features/vet/views.tsx
 msgid "Choose backup…"
@@ -1396,6 +1404,7 @@ msgstr "Follow-up: {0}"
 msgid "Frequency"
 msgstr "Frequency"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Fri"
@@ -1559,9 +1568,17 @@ msgstr "Jan"
 msgid "Jul"
 msgstr "Jul"
 
+#: src/features/vet/schedule-view.tsx
+msgid "Jump to date"
+msgstr "Jump to date"
+
 #: src/features/vet/reports-view.tsx
 msgid "Jun"
 msgstr "Jun"
+
+#: src/features/vet/clinic-shell.tsx
+msgid "Keep invoice"
+msgstr "Keep invoice"
 
 #. placeholder {0}: localeLabel[locale]
 #. placeholder {1}: localeLabel[next]
@@ -1756,6 +1773,7 @@ msgstr "Microchip (optional)"
 msgid "Mixed breed"
 msgstr "Mixed breed"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Mon"
@@ -1836,6 +1854,10 @@ msgstr "next due {0}"
 #: src/features/vet/views.tsx
 msgid "Next due date"
 msgstr "Next due date"
+
+#: src/components/vet/date-picker.tsx
+msgid "Next month"
+msgstr "Next month"
 
 #. placeholder {0}: data.patients.find((p) => p.id === dueVaccinations[0].patientId)?.name ?? '—'
 #: src/features/vet/clinic-shell.tsx
@@ -1921,6 +1943,10 @@ msgstr "No owner"
 #: src/features/vet/clinic-shell.tsx
 msgid "No patients match your search."
 msgstr "No patients match your search."
+
+#: src/features/vet/clinic-shell.tsx
+msgid "No payments are held against this invoice. Voiding cannot be undone."
+msgstr "No payments are held against this invoice. Voiding cannot be undone."
 
 #: src/features/vet/reports-view.tsx
 msgid "No payments or invoices recorded in this period."
@@ -2288,6 +2314,10 @@ msgstr "Preview Cloud plan"
 msgid "Previous day"
 msgstr "Previous day"
 
+#: src/components/vet/date-picker.tsx
+msgid "Previous month"
+msgstr "Previous month"
+
 #: src/features/vet/clinic-shell.tsx
 msgid "Price"
 msgstr "Price"
@@ -2608,6 +2638,7 @@ msgstr "Route"
 msgid "Rx: {0}"
 msgstr "Rx: {0}"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Sat"
@@ -2860,6 +2891,7 @@ msgstr "Subtotal"
 msgid "Summary"
 msgstr "Summary"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Sun"
@@ -2981,6 +3013,7 @@ msgstr "This vet"
 msgid "This year"
 msgstr "This year"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Thu"
@@ -2995,6 +3028,7 @@ msgstr "Time"
 msgid "Timezone"
 msgstr "Timezone"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Today"
@@ -3024,6 +3058,7 @@ msgstr "Total"
 msgid "Try again"
 msgstr "Try again"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Tue"
@@ -3180,10 +3215,19 @@ msgstr "void"
 msgid "Void"
 msgstr "Void"
 
-#. placeholder {0}: invoice.number
+#. placeholder {0}: voidInvoice.number
 #: src/features/vet/clinic-shell.tsx
-msgid "Void {0}? This cannot be undone."
-msgstr "Void {0}? This cannot be undone."
+msgid "Void {0}"
+msgstr "Void {0}"
+
+#. placeholder {0}: voidInvoice.number
+#: src/features/vet/clinic-shell.tsx
+msgid "Void {0}?"
+msgstr "Void {0}?"
+
+#: src/features/vet/clinic-shell.tsx
+msgid "Void invoice"
+msgstr "Void invoice"
 
 #: src/features/vet/schedule-view.tsx
 msgid "Waiting queue"
@@ -3210,6 +3254,7 @@ msgstr "waste"
 msgid "Waste 1"
 msgstr "Waste 1"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Wed"

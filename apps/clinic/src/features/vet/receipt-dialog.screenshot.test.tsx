@@ -1,9 +1,16 @@
 import "@/index.css";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import { App } from "@/app/App";
 import { seedState } from "@/lib/vet/seed";
+
+// Freeze the clock so the receipt renders the same dates every run — the
+// seed builds timestamps from today's date (pattern from b2a0886). Fakes
+// Date only; timers stay real so the browser driver keeps working.
+vi.hoisted(() => {
+  vi.useFakeTimers({ toFake: ["Date"], now: Date.parse("2026-10-28T09:00:00+07:00") });
+});
 
 // The receipt dialog was migrated from receipt.css to Tailwind utilities; these
 // screenshots pin the converted layout (dashed rules, right-aligned amount

@@ -638,15 +638,19 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
             <button className="button primary" onClick={onManageClinic} disabled={!onManageClinic}>
               <Trans>Manage clinic & account</Trans>
             </button>
-            <button className="button secondary" onClick={() => dispatch({ type: 'session', patch: { lanOnline: !session.lanOnline } })}>
-              {session.lanOnline ? <Trans>Simulate server offline</Trans> : <Trans>Reconnect server</Trans>}
-            </button>
-            <button
-              className="button secondary"
-              onClick={() => dispatch({ type: 'session', patch: { plan: session.plan === 'local' ? 'cloud' : 'local' } })}
-            >
-              {session.plan === 'local' ? <Trans>Preview Cloud plan</Trans> : <Trans>Switch to Local plan</Trans>}
-            </button>
+            {import.meta.env.DEV && (
+              <>
+                <button className="button secondary" onClick={() => dispatch({ type: 'session', patch: { lanOnline: !session.lanOnline } })}>
+                  {session.lanOnline ? <Trans>Simulate server offline</Trans> : <Trans>Reconnect server</Trans>}
+                </button>
+                <button
+                  className="button secondary"
+                  onClick={() => dispatch({ type: 'session', patch: { plan: session.plan === 'local' ? 'cloud' : 'local' } })}
+                >
+                  {session.plan === 'local' ? <Trans>Preview Cloud plan</Trans> : <Trans>Switch to Local plan</Trans>}
+                </button>
+              </>
+            )}
           </div>
         </Panel>
         <Panel title={t`Portability & recovery`} description={t`Export and manual backup are included in the free Local plan.`}>

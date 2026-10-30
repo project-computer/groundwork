@@ -16,8 +16,6 @@ afterEach(() => {
 it("voids a posted invoice with no payments and keeps it out of outstanding", async () => {
   await page.viewport(1280, 900)
   seed(seedState)
-  const confirmMock = vi.fn(() => true)
-  vi.stubGlobal("confirm", confirmMock)
 
   await renderApp()
   await signInAsAdmin()
@@ -27,7 +25,11 @@ it("voids a posted invoice with no payments and keeps it out of outstanding", as
   await expect.element(voidButton).toBeVisible()
   await voidButton.click()
 
-  expect(confirmMock, "confirm should be raised before voiding").toHaveBeenCalled()
+  // Destructive action asks for confirmation in a dialog before voiding.
+  const dialog = page.getByRole("dialog", { name: "Void INV-2026-0142" })
+  await expect.element(dialog).toBeVisible()
+  await dialog.getByRole("button", { name: "Void invoice" }).click()
+  await expect.element(dialog).not.toBeInTheDocument()
 
   const voidedRow = page.getByRole("button", { name: "Record payment" })
   await expect.element(voidedRow).not.toBeInTheDocument()
@@ -35,6 +37,24 @@ it("voids a posted invoice with no payments and keeps it out of outstanding", as
   // Outstanding stat must not count the voided invoice.
   const statCard = document.querySelectorAll(".stat-card")[0]
   expect(statCard?.textContent).toContain("0 open invoices")
+})
+
+it("keeps the invoice when the void confirmation is dismissed", async () => {
+  await page.viewport(1280, 900)
+  seed(seedState)
+
+  await renderApp()
+  await signInAsAdmin()
+  await page.getByRole("button", { name: "Billing & Payments" }).click()
+
+  await page.getByRole("button", { name: "Void", exact: true }).click()
+  const dialog = page.getByRole("dialog", { name: "Void INV-2026-0142" })
+  await expect.element(dialog).toBeVisible()
+  await dialog.getByRole("button", { name: "Keep invoice" }).click()
+  await expect.element(dialog).not.toBeInTheDocument()
+
+  // Still posted, still payable.
+  await expect.element(page.getByRole("button", { name: "Record payment" })).toBeVisible()
 })
 
 it("offers no void on invoices that already have payments", async () => {

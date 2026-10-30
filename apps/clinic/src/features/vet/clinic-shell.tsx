@@ -1958,6 +1958,7 @@ const Billing = () => {
   const [refundPaymentId, setRefundPaymentId] = useState<string | null>(null)
   const [refundAmount, setRefundAmount] = useState('')
   const [refundNote, setRefundNote] = useState('')
+  const [voidInvoiceId, setVoidInvoiceId] = useState<string | null>(null)
 
   // Billable catalog: legacy products (services & medications) plus live inventory items.
   const catalog = useMemo(
@@ -1991,6 +1992,7 @@ const Billing = () => {
 
   const sortedInvoices = data.invoices.toSorted((a, b) => compareTime(b.createdAt, a.createdAt))
   const paymentInvoice = data.invoices.find((i) => i.id === paymentInvoiceId)
+  const voidInvoice = data.invoices.find((i) => i.id === voidInvoiceId)
   const paymentBalance = paymentInvoice ? invoiceTotals(paymentInvoice, data.clinic.vatRate, data.payments).balance : 0
   const refundPayment = data.payments.find((p) => p.id === refundPaymentId)
   const refundedSoFar = refundPayment
@@ -2174,11 +2176,7 @@ const Billing = () => {
                         className="row-action"
                         disabled={!billing.allowed}
                         title={billing.reason || undefined}
-                        onClick={() => {
-                          if (confirm(t`Void ${invoice.number}? This cannot be undone.`)) {
-                            dispatch({ type: 'voidInvoice', invoiceId: invoice.id })
-                          }
-                        }}
+                        onClick={() => setVoidInvoiceId(invoice.id)}
                       >
                         <Trans>Void</Trans>
                       </button>
@@ -2387,6 +2385,42 @@ const Billing = () => {
                 disabled={!(Number(refundAmount) > 0) || Math.round(Number(refundAmount) * 100) > refundable || !refundNote.trim()}
               >
                 <Trans>Record refund</Trans>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {voidInvoice && (
+        <div
+          className="modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setVoidInvoiceId(null)
+          }}
+        >
+          <div className="modal" role="dialog" aria-modal="true" aria-label={t`Void ${voidInvoice.number}`}>
+            <div className="form-heading">
+              <div>
+                <strong><Trans>Void {voidInvoice.number}?</Trans></strong>
+                <span>
+                  <Trans>No payments are held against this invoice. Voiding cannot be undone.</Trans>
+                </span>
+              </div>
+              <button className="icon-button" onClick={() => setVoidInvoiceId(null)} aria-label={t`Close dialog`}>
+                <X size={17} />
+              </button>
+            </div>
+            <div className="panel-footer">
+              <button className="button secondary" onClick={() => setVoidInvoiceId(null)}>
+                <Trans>Keep invoice</Trans>
+              </button>
+              <button
+                className="button primary"
+                onClick={() => {
+                  dispatch({ type: 'voidInvoice', invoiceId: voidInvoice.id })
+                  setVoidInvoiceId(null)
+                }}
+              >
+                <Trans>Void invoice</Trans>
               </button>
             </div>
           </div>

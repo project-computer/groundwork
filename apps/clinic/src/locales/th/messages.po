@@ -483,6 +483,10 @@ msgstr "นัดหมายที่สำเร็จ"
 msgid "Appointment completion (%)"
 msgstr "นัดหมายที่สำเร็จ (%)"
 
+#: src/features/vet/schedule-view.tsx
+msgid "Appointment date"
+msgstr "วันที่นัดหมาย"
+
 #: src/features/vet/reports-view.tsx
 msgid "Appointments"
 msgstr "นัดหมาย"
@@ -750,6 +754,10 @@ msgstr "เลือกไฟล์สำรองข้อมูล"
 #: src/features/vet/clinic-shell.tsx
 msgid "Choose a booked appointment from the calendar to begin, or open a past visit below."
 msgstr "เลือกนัดหมายที่จองไว้จากปฏิทินเพื่อเริ่มต้น หรือเปิดการรักษาที่ผ่านมาด้านล่าง"
+
+#: src/components/vet/date-picker.tsx
+msgid "Choose a date"
+msgstr "เลือกวันที่"
 
 #: src/features/vet/views.tsx
 msgid "Choose backup…"
@@ -1396,6 +1404,7 @@ msgstr "นัดติดตามอาการ: {0}"
 msgid "Frequency"
 msgstr "ความถี่"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Fri"
@@ -1559,9 +1568,17 @@ msgstr "ม.ค."
 msgid "Jul"
 msgstr "ก.ค."
 
+#: src/features/vet/schedule-view.tsx
+msgid "Jump to date"
+msgstr "ไปที่วันที่"
+
 #: src/features/vet/reports-view.tsx
 msgid "Jun"
 msgstr "มิ.ย."
+
+#: src/features/vet/clinic-shell.tsx
+msgid "Keep invoice"
+msgstr "คงใบแจ้งหนี้"
 
 #. placeholder {0}: localeLabel[locale]
 #. placeholder {1}: localeLabel[next]
@@ -1756,6 +1773,7 @@ msgstr "ไมโครชิป (ไม่บังคับ)"
 msgid "Mixed breed"
 msgstr "พันธุ์ผสม"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Mon"
@@ -1836,6 +1854,10 @@ msgstr "ครบกำหนดถัดไป {0}"
 #: src/features/vet/views.tsx
 msgid "Next due date"
 msgstr "วันครบกำหนดถัดไป"
+
+#: src/components/vet/date-picker.tsx
+msgid "Next month"
+msgstr "เดือนถัดไป"
 
 #. placeholder {0}: data.patients.find((p) => p.id === dueVaccinations[0].patientId)?.name ?? '—'
 #: src/features/vet/clinic-shell.tsx
@@ -1921,6 +1943,10 @@ msgstr "ไม่ระบุเจ้าของ"
 #: src/features/vet/clinic-shell.tsx
 msgid "No patients match your search."
 msgstr "ไม่พบผู้ป่วยที่ตรงกับคำค้น"
+
+#: src/features/vet/clinic-shell.tsx
+msgid "No payments are held against this invoice. Voiding cannot be undone."
+msgstr "ใบแจ้งหนี้นี้ยังไม่มีการรับชำระ การยกเลิกไม่สามารถเรียกคืนได้"
 
 #: src/features/vet/reports-view.tsx
 msgid "No payments or invoices recorded in this period."
@@ -2288,6 +2314,10 @@ msgstr "ทดลองแพ็กเกจ Cloud"
 msgid "Previous day"
 msgstr "วันก่อนหน้า"
 
+#: src/components/vet/date-picker.tsx
+msgid "Previous month"
+msgstr "เดือนก่อนหน้า"
+
 #: src/features/vet/clinic-shell.tsx
 msgid "Price"
 msgstr "ราคา"
@@ -2608,6 +2638,7 @@ msgstr "วิธีให้ยา"
 msgid "Rx: {0}"
 msgstr "Rx: {0}"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Sat"
@@ -2860,6 +2891,7 @@ msgstr "ยอดรวมย่อย"
 msgid "Summary"
 msgstr "สรุป"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Sun"
@@ -2981,6 +3013,7 @@ msgstr "สัตวแพทย์ท่านนี้"
 msgid "This year"
 msgstr "ปีนี้"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Thu"
@@ -2995,6 +3028,7 @@ msgstr "เวลา"
 msgid "Timezone"
 msgstr "เขตเวลา"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Today"
@@ -3024,6 +3058,7 @@ msgstr "รวมทั้งสิ้น"
 msgid "Try again"
 msgstr "ลองอีกครั้ง"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Tue"
@@ -3180,10 +3215,19 @@ msgstr "เป็นโมฆะ"
 msgid "Void"
 msgstr "เป็นโมฆะ"
 
-#. placeholder {0}: invoice.number
+#. placeholder {0}: voidInvoice.number
 #: src/features/vet/clinic-shell.tsx
-msgid "Void {0}? This cannot be undone."
-msgstr "ยกเลิก {0} เป็นโมฆะ? การกระทำนี้ย้อนกลับไม่ได้"
+msgid "Void {0}"
+msgstr "ยกเลิก {0}"
+
+#. placeholder {0}: voidInvoice.number
+#: src/features/vet/clinic-shell.tsx
+msgid "Void {0}?"
+msgstr "ยกเลิก {0}?"
+
+#: src/features/vet/clinic-shell.tsx
+msgid "Void invoice"
+msgstr "ยกเลิกใบแจ้งหนี้"
 
 #: src/features/vet/schedule-view.tsx
 msgid "Waiting queue"
@@ -3210,6 +3254,7 @@ msgstr "ของเสีย"
 msgid "Waste 1"
 msgstr "ตัดของเสีย 1 หน่วย"
 
+#: src/components/vet/date-picker.tsx
 #: src/features/vet/reports-view.tsx
 #: src/features/vet/schedule-view.tsx
 msgid "Wed"
