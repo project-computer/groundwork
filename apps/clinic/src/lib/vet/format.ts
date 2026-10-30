@@ -53,6 +53,14 @@ export const formatMoney = (minor: number) => money.format(minor / 100)
 export const formatTime = (iso: string) => time.format(new Date(iso))
 export const formatDate = (iso: string) => date.format(new Date(iso))
 
+/**
+ * Chronological comparison for ISO timestamps that may mix UTC (`Z`) and
+ * offset (`+07:00`) forms. String order is wrong across offsets —
+ * `09:42+07:00` (= 02:42Z) sorts after `08:56Z` — so every timestamp sort
+ * must go through here, never `localeCompare`.
+ */
+export const compareTime = (a: string, b: string) => Date.parse(a) - Date.parse(b)
+
 /** Shifts a YYYY-MM-DD key by whole days. */
 export const shiftDays = (iso: string, days: number): string => {
   const d = new Date(`${iso}T12:00:00Z`)

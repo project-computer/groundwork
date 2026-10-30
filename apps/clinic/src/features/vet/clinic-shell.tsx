@@ -25,6 +25,7 @@ import {
 import { msg } from '@lingui/core/macro'
 import type { MessageDescriptor } from '@lingui/core'
 import { Trans, Plural, useLingui } from '@lingui/react/macro'
+import { DatePicker } from '@/components/vet/date-picker'
 import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission, type View } from '@/lib/vet/store'
 import { buildCaseBundle, downloadCaseBundle, newShareToken } from '@/lib/vet/case-transfer'
@@ -192,9 +193,9 @@ const NotificationCenter = ({ setView }: { setView: SetView }) => {
   const badge = reminders.length > 9 ? '9+' : String(reminders.length)
 
   return (
-    <div className="notif-root" ref={rootRef}>
+    <div className="relative" ref={rootRef}>
       <button
-        className="icon-button notif-bell"
+        className="icon-button relative"
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -202,10 +203,18 @@ const NotificationCenter = ({ setView }: { setView: SetView }) => {
         title={t`Notifications`}
       >
         <Bell size={18} />
-        {reminders.length > 0 && <span className="notif-badge">{badge}</span>}
+        {reminders.length > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold leading-4 text-center">
+            {badge}
+          </span>
+        )}
       </button>
       {open && (
-        <div className="notif-panel" role="dialog" aria-label={t`Notifications`}>
+        <div
+          className="absolute right-0 top-[calc(100%+8px)] w-[min(360px,calc(100vw-32px))] max-h-[70vh] overflow-auto bg-card border border-border rounded-xl shadow-[0_12px_32px_rgb(0_0_0/0.14)] z-[60]"
+          role="dialog"
+          aria-label={t`Notifications`}
+        >
           <div className="form-heading">
             <div>
               <strong><Trans>Notifications</Trans></strong>
@@ -221,12 +230,12 @@ const NotificationCenter = ({ setView }: { setView: SetView }) => {
               <X size={16} />
             </button>
           </div>
-          <div className="notif-list">
+          <div className="flex flex-col">
             {reminders.length === 0 && <p className="empty-state"><Trans>All clear — no overdue work, stock or expiry warnings.</Trans></p>}
             {reminders.map((r) => (
               <button
                 key={r.id}
-                className="notif-item"
+                className="flex items-start gap-2.5 w-full py-2.5 px-3.5 border-0 border-t border-border bg-transparent text-left cursor-pointer first:border-t-0 hover:bg-black/[0.04]"
                 onClick={() => {
                   setView(r.view)
                   setOpen(false)
@@ -235,9 +244,9 @@ const NotificationCenter = ({ setView }: { setView: SetView }) => {
                 <Pill tone={r.tone} dot>
                   {r.tone === 'bad' ? t`overdue` : r.tone === 'warn' ? t`due soon` : t`expiring`}
                 </Pill>
-                <span className="notif-text">
-                  <strong>{r.title}</strong>
-                  <span>{r.detail}</span>
+                <span className="flex flex-col gap-0.5 min-w-0">
+                  <strong className="text-[13px]">{r.title}</strong>
+                  <span className="text-xs text-muted-foreground">{r.detail}</span>
                 </span>
               </button>
             ))}
@@ -923,7 +932,7 @@ const Owners = ({
               </NativeSelect>
             </Field>
             <Field label={t`Date of birth`} htmlFor="pet-dob">
-              <input id="pet-dob" type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+              <DatePicker id="pet-dob" label={t`Date of birth`} value={birthDate} onChange={setBirthDate} />
             </Field>
             <Field label={t`Microchip (optional)`} htmlFor="microchip">
               <input
@@ -1170,7 +1179,7 @@ const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patientId: st
               </NativeSelect>
             </Field>
             <Field label={t`Date of birth`} htmlFor="pt-birth">
-              <input id="pt-birth" type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+              <DatePicker id="pt-birth" label={t`Date of birth`} value={birthDate} onChange={setBirthDate} />
             </Field>
             <Field label={t`Weight (kg)`} htmlFor="pt-weight">
               <input
@@ -1672,7 +1681,7 @@ const Consultations = ({ onOpen }: { onOpen: (encounterId: string) => void }) =>
                   <input id="vac-lot" value={vacLot} onChange={(e) => setVacLot(e.target.value)} placeholder={t`e.g. RAB-2610B…`} />
                 </Field>
                 <Field label={t`Next due`} htmlFor="vac-next">
-                  <input id="vac-next" type="date" value={vacNextDue} onChange={(e) => setVacNextDue(e.target.value)} />
+                  <DatePicker id="vac-next" label={t`Next due`} value={vacNextDue} onChange={setVacNextDue} />
                 </Field>
               </div>
               <button className="button secondary" onClick={recordVac} disabled={!vacName.trim()}>
@@ -1913,7 +1922,7 @@ const Consultations = ({ onOpen }: { onOpen: (encounterId: string) => void }) =>
             <div className="inline-form nested">
               <div className="form-grid">
                 <Field label={t`Follow-up date`} htmlFor="fu-date">
-                  <input id="fu-date" type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
+                  <DatePicker id="fu-date" label={t`Follow-up date`} value={followUpDate} onChange={setFollowUpDate} />
                 </Field>
                 <Field label={t`Time`} htmlFor="fu-time">
                   <input id="fu-time" type="time" value={followUpTime} onChange={(e) => setFollowUpTime(e.target.value)} />
@@ -2403,40 +2412,40 @@ const ReceiptDialog = ({ invoiceId, onClose }: { invoiceId: string; onClose: () 
       }}
     >
       <div className="modal" role="dialog" aria-modal="true" aria-label={t`Receipt for ${invoice.number}`}>
-        <div className="print-area receipt">
-          <header>
-            <h2>{data.clinic.name}</h2>
-            <span><Trans>Invoice / Receipt</Trans></span>
+        <div className="print-area flex flex-col gap-3 tabular-nums print:visible print:absolute print:left-0 print:top-0 print:w-full print:p-6">
+          <header className="flex flex-col gap-0.5 text-center border-b border-dashed border-border pb-2.5">
+            <h2 className="m-0 text-base">{data.clinic.name}</h2>
+            <span className="text-xs text-muted-foreground"><Trans>Invoice / Receipt</Trans></span>
           </header>
-          <div className="receipt-meta">
+          <div className="flex flex-wrap gap-3 text-[12.5px]">
             <span>{invoice.number}</span>
             <span>{formatDate(invoice.createdAt)}</span>
             <span>{owner?.name}</span>
           </div>
-          <div className="receipt-items">
-            <div className="receipt-line receipt-head">
-              <span><Trans>Item</Trans></span>
-              <span><Trans>Qty</Trans></span>
-              <span><Trans>Price</Trans></span>
-              <span><Trans>Amount</Trans></span>
+          <div className="flex flex-col gap-1">
+            <div className="grid grid-cols-[minmax(0,1fr)_40px_90px_90px] gap-2 text-[11.5px] font-semibold uppercase tracking-[0.04em] text-muted-foreground border-b border-border pb-1">
+              <span className="truncate"><Trans>Item</Trans></span>
+              <span className="truncate text-right"><Trans>Qty</Trans></span>
+              <span className="truncate text-right"><Trans>Price</Trans></span>
+              <span className="truncate text-right"><Trans>Amount</Trans></span>
             </div>
             {invoice.items.map((item) => (
-              <div className="receipt-line" key={item.id}>
-                <span>{item.description}</span>
-                <span>{item.quantity}</span>
-                <span>{formatCurrency(item.unitPrice)}</span>
-                <span>{formatCurrency(item.quantity * item.unitPrice)}</span>
+              <div className="grid grid-cols-[minmax(0,1fr)_40px_90px_90px] gap-2 text-[12.5px]" key={item.id}>
+                <span className="truncate">{item.description}</span>
+                <span className="truncate text-right">{item.quantity}</span>
+                <span className="truncate text-right">{formatCurrency(item.unitPrice)}</span>
+                <span className="truncate text-right">{formatCurrency(item.quantity * item.unitPrice)}</span>
               </div>
             ))}
           </div>
-          <div className="receipt-totals">
-            <div><span><Trans>Subtotal</Trans></span><strong>{formatCurrency(totals.subtotal)}</strong></div>
-            <div><span><Trans>VAT ({Math.round(data.clinic.vatRate * 100)}%)</Trans></span><strong>{formatCurrency(totals.tax)}</strong></div>
-            <div className="receipt-grand"><span><Trans>Total</Trans></span><strong>{formatCurrency(totals.total)}</strong></div>
+          <div className="flex flex-col gap-1 border-t border-border pt-2">
+            <div className="flex justify-between text-[12.5px]"><span><Trans>Subtotal</Trans></span><strong>{formatCurrency(totals.subtotal)}</strong></div>
+            <div className="flex justify-between text-[12.5px]"><span><Trans>VAT ({Math.round(data.clinic.vatRate * 100)}%)</Trans></span><strong>{formatCurrency(totals.tax)}</strong></div>
+            <div className="flex justify-between border-t border-dashed border-border pt-1 font-bold text-[13.5px]"><span><Trans>Total</Trans></span><strong>{formatCurrency(totals.total)}</strong></div>
             {invoicePayments.length > 0 && (
               <>
                 {invoicePayments.map((p) => (
-                  <div key={p.id}>
+                  <div className="flex justify-between text-[12.5px]" key={p.id}>
                     <span>
                       {p.kind === 'refund' ? t`Refund` : t`Paid`} — {p.method}
                       {p.note ? ` · ${p.note}` : ''}
@@ -2444,13 +2453,13 @@ const ReceiptDialog = ({ invoiceId, onClose }: { invoiceId: string; onClose: () 
                     <strong>{formatCurrency(p.amount)}</strong>
                   </div>
                 ))}
-                <div className="receipt-grand"><span><Trans>Balance due</Trans></span><strong>{formatCurrency(totals.balance)}</strong></div>
+                <div className="flex justify-between border-t border-dashed border-border pt-1 font-bold text-[13.5px]"><span><Trans>Balance due</Trans></span><strong>{formatCurrency(totals.balance)}</strong></div>
               </>
             )}
           </div>
-          <footer><Trans>Thank you — {data.clinic.name} · {data.clinic.timezone}</Trans></footer>
+          <footer className="text-center text-xs text-muted-foreground border-t border-dashed border-border pt-2.5"><Trans>Thank you — {data.clinic.name} · {data.clinic.timezone}</Trans></footer>
         </div>
-        <div className="panel-footer no-print">
+        <div className="panel-footer print:hidden">
           <button className="button secondary" onClick={onClose}>
             <Trans>Close</Trans>
           </button>
@@ -2679,7 +2688,7 @@ const Inventory = () => {
                         <input id={`lot-qty-${item.id}`} type="number" min="1" value={lotQuantity} onChange={(e) => setLotQuantity(e.target.value)} />
                       </Field>
                       <Field label={t`Expiry date`} htmlFor={`lot-exp-${item.id}`}>
-                        <input id={`lot-exp-${item.id}`} type="date" value={lotExpiry} onChange={(e) => setLotExpiry(e.target.value)} />
+                        <DatePicker id={`lot-exp-${item.id}`} label={t`Expiry date`} value={lotExpiry} onChange={setLotExpiry} />
                       </Field>
                       <Field label={t`Supplier`} htmlFor={`lot-sup-${item.id}`}>
                         <select id={`lot-sup-${item.id}`} value={lotSupplier} onChange={(e) => setLotSupplier(e.target.value)}>

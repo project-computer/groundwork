@@ -27,13 +27,14 @@ it("surfaces overdue vaccinations and stock warnings, and navigates on click", a
   const panel = page.getByRole("dialog", { name: "Notifications" })
   await expect.element(panel).toBeVisible()
 
-  const text = [...document.querySelectorAll(".notif-item")].map((n) => n.textContent ?? "").join(" | ")
+  const panelEl = document.querySelector('[role="dialog"]')
+  const text = [...(panelEl?.querySelectorAll("button") ?? [])].map((n) => n.textContent ?? "").join(" | ")
   expect(text).toContain("Vaccination overdue — Tiger")
   expect(text).toContain("Low stock — Cohesive bandage 5cm")
   expect(text).toContain("Expiring soon")
 
   // Clicking an inventory reminder navigates to Pharmacy & Inventory.
-  const lowStockItem = [...document.querySelectorAll(".notif-item")].find((n) => (n.textContent ?? "").includes("Low stock"))
+  const lowStockItem = [...(panelEl?.querySelectorAll("button") ?? [])].find((n) => (n.textContent ?? "").includes("Low stock"))
   lowStockItem!.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
   await new Promise((r) => setTimeout(r, 50))
   const active = document.querySelector(".nav-item.active")

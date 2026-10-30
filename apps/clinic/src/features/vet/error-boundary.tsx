@@ -29,11 +29,11 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (!this.state.error) return this.props.children
     return (
-      <div className="crash-screen" role="alert">
-        <strong>{i18n._(msg`Something went wrong while drawing the workspace`)}</strong>
-        <span className="crash-message">{this.state.error.message}</span>
-        <span>{i18n._(msg`Your records are saved on this computer — nothing was lost.`)}</span>
-        <div className="crash-actions">
+      <div className="flex flex-col items-center justify-center gap-2.5 min-h-[60vh] p-8 text-center" role="alert">
+        <strong className="text-[17px]">{i18n._(msg`Something went wrong while drawing the workspace`)}</strong>
+        <span className="font-mono text-muted-foreground text-[13px]">{this.state.error.message}</span>
+        <span className="text-muted-foreground text-[13px]">{i18n._(msg`Your records are saved on this computer — nothing was lost.`)}</span>
+        <div className="flex gap-2.5 mt-2">
           <button className="button primary" onClick={() => this.setState({ error: null })}>
             {i18n._(msg`Try again`)}
           </button>

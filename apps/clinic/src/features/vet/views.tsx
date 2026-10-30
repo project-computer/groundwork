@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Activity, AlertTriangle, Database, RotateCcw, ShieldCheck, Stethoscope, X } from 'lucide-react'
 import { plural } from '@lingui/core/macro'
 import { Trans, Plural, useLingui } from '@lingui/react/macro'
+import { DatePicker } from '@/components/vet/date-picker'
 import { Field, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission, useSyncState } from '@/lib/vet/store'
 import { hasPin } from '@/lib/vet/auth'
@@ -182,7 +183,7 @@ const ImportCaseDialog = ({ onClose }: { onClose: () => void }) => {
           />
         </Field>
         {outcome && (
-          <p className={outcome.state === 'error' ? 'import-error' : 'import-ok'} role="status">
+          <p className={outcome.state === 'error' ? 'text-[13px] text-red-700' : 'text-[13px] text-green-700'} role="status">
             {outcome.message}
           </p>
         )}
@@ -254,8 +255,8 @@ const Vaccinations = () => {
           </select>
           <input value={vaccineName} onChange={(e) => setVaccineName(e.target.value)} placeholder={t`Vaccine name`} aria-label={t`Vaccine name`} />
           <input value={lotNumber} onChange={(e) => setLotNumber(e.target.value)} placeholder={t`Lot number`} aria-label={t`Lot number`} />
-          <input type="date" value={administeredAt} onChange={(e) => setAdministeredAt(e.target.value)} aria-label={t`Date administered`} />
-          <input type="date" value={nextDueAt} onChange={(e) => setNextDueAt(e.target.value)} aria-label={t`Next due date`} />
+          <DatePicker label={t`Date administered`} value={administeredAt} onChange={setAdministeredAt} />
+          <DatePicker label={t`Next due date`} value={nextDueAt} onChange={setNextDueAt} />
           <button className="small-button" onClick={record} disabled={!patientId || !vaccineName.trim()}>
             <Trans>Record</Trans>
           </button>

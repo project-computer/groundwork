@@ -12,18 +12,21 @@ export const SaveErrorBanner = () => {
   const { t } = useLingui()
   if (!session.saveError) return null
   return (
-    <div className="save-error-banner" role="alert">
-      <span className="save-error-icon">
+    <div
+      className="flex items-start gap-2.5 mt-3 mx-6 px-3.5 py-2.5 border border-red-600 rounded-xl bg-red-50 text-red-700"
+      role="alert"
+    >
+      <span className="inline-flex mt-0.5 text-red-600">
         <AlertTriangle size={16} />
       </span>
       <div>
-        <strong><Trans>Changes are not being saved to this computer</Trans></strong>
-        <span>
+        <strong className="block text-[13px] font-bold"><Trans>Changes are not being saved to this computer</Trans></strong>
+        <span className="text-xs text-foreground/80">
           {session.saveError} — <Trans>check free disk space or the clinic server before continuing.</Trans>
         </span>
       </div>
       <button
-        className="icon-button"
+        className="icon-button ml-auto"
         onClick={() => dispatch({ type: 'session', patch: { saveError: undefined } })}
         aria-label={t`Dismiss saving warning`}
       >

@@ -57,6 +57,26 @@ const setValue = (element: HTMLInputElement | HTMLSelectElement, value: string) 
   });
 }
 
+const monthOf = (key: string) => Number(key.slice(0, 4)) * 12 + Number(key.slice(5, 7));
+
+/** Picks a date through the shared DatePicker: open the trigger, step to the month, click the day cell. */
+const pickDate = (id: string, iso: string) => {
+  const trigger = document.getElementById(id);
+  if (!trigger) throw new Error(`date picker not found: ${id}`);
+  click(trigger);
+  const first = document.querySelector<HTMLButtonElement>('.date-picker-pop [data-iso]:not([data-outside])');
+  if (!first) throw new Error(`date picker grid not found: ${id}`);
+  const delta = monthOf(iso) - monthOf(first.dataset.iso!);
+  if (delta !== 0) {
+    const [previous, next] = document.querySelectorAll<HTMLButtonElement>('.date-picker-head button');
+    const nav = delta < 0 ? previous : next;
+    for (let step = 0; step < Math.abs(delta); step++) click(nav);
+  }
+  const day = document.querySelector<HTMLButtonElement>(`.date-picker-pop [data-iso="${iso}"]`);
+  if (!day) throw new Error(`day not found in picker: ${iso}`);
+  click(day);
+}
+
 /** Drag events in jsdom carry no dataTransfer; attach a minimal stub. */
 const dragEvent = (type: string) => {
   const event = new MouseEvent(type, { bubbles: true, cancelable: true });
@@ -405,7 +425,7 @@ describe("App", () => {
 
     setValue(document.getElementById("vac-name") as HTMLInputElement, "Rabies vaccine");
     setValue(document.getElementById("vac-lot") as HTMLInputElement, "RAB-2610B");
-    setValue(document.getElementById("vac-next") as HTMLInputElement, "2026-11-15");
+    pickDate("vac-next", "2026-11-15");
     click(findButton("Record vaccination"));
     await flush();
     expect(document.body.textContent).toContain("next due 2026-11-15");
@@ -425,7 +445,7 @@ describe("App", () => {
     click(findButton("Start")); // Moo Daeng
     await flush();
 
-    setValue(document.getElementById("fu-date") as HTMLInputElement, "2026-11-05");
+    pickDate("fu-date", "2026-11-05");
     click(findButton("Book follow-up"));
     await flush();
 
@@ -473,7 +493,7 @@ describe("App", () => {
     setValue(document.getElementById("owner-select") as HTMLSelectElement, "o-1");
     setValue(document.getElementById("pet") as HTMLInputElement, "Thong Dee");
     setValue(document.getElementById("pet-species") as HTMLSelectElement, "Cat");
-    setValue(document.getElementById("pet-dob") as HTMLInputElement, "2024-06-01");
+    pickDate("pet-dob", "2024-06-01");
     click(findButton("Save Records"));
     await flush();
 

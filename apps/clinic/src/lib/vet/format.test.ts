@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   can,
+  compareTime,
   invoiceTotals,
   itemOnHand,
   lotsExpiringWithin,
@@ -52,6 +53,20 @@ describe('invoiceTotals', () => {
     const other = { ...payment(50000), invoiceId: 'inv-other' }
     const totals = invoiceTotals(invoice([{ quantity: 2, unitPrice: 1000 }]), 0, [other])
     expect(totals.paid).toBe(0)
+  })
+})
+
+describe('compareTime', () => {
+  it('orders mixed-offset timestamps chronologically, unlike string order', () => {
+    // 09:42+07:00 is 02:42Z — seven hours EARLIER than 08:56Z — but plain
+    // string comparison ranks it later. Timestamp sorts must use compareTime.
+    expect('2026-10-30T09:42:00+07:00' > '2026-10-30T08:56:00Z').toBe(true)
+    expect(compareTime('2026-10-30T08:56:00Z', '2026-10-30T09:42:00+07:00')).toBeGreaterThan(0)
+    expect(compareTime('2026-10-30T09:42:00+07:00', '2026-10-30T08:56:00Z')).toBeLessThan(0)
+  })
+
+  it('treats equivalent instants in different offsets as equal', () => {
+    expect(compareTime('2026-10-30T09:42:00+07:00', '2026-10-30T02:42:00Z')).toBe(0)
   })
 })
 

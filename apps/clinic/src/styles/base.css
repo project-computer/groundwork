@@ -168,6 +168,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Print: only .print-area subtrees are inked; everything else opt out via
+   `print:hidden`. The blanket visibility flip cannot be expressed per element. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+}
 /* ---------- Clinic workspace design system (Vettera) ----------
    Second palette, ported from the VetDesk app. It intentionally owns
    --sidebar-border (the shadcn duplicates were removed): component CSS below
@@ -352,4 +360,23 @@ button {
 button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+/* Print stylesheet: the only global media block. Printing shows just the
+   .print-area subtree (the receipt), absolutely positioned at the page top. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 24px;
+  }
 }
