@@ -36,7 +36,7 @@ import { StaffView } from '../staff'
 import { LockScreen } from '../lock-screen'
 import { LanguageToggle } from '../language-toggle'
 import { SaveErrorBanner } from '../save-error-banner'
-import { WorkspaceDialog, type WorkspaceTab } from '../workspace-dialog'
+import { WorkspaceDialog, type WorkspaceTab } from '../workspace'
 
 interface NavEntry {
   id: View
