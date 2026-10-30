@@ -13,11 +13,11 @@ import {
 } from 'lucide-react'
 import { Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic } from '@/lib/vet/store'
-import { formatDate, formatMoney, initials, invoiceTotals, lotsExpiringWithin, stockValuation, todayKey } from '@/lib/vet/format'
-import { lowStockItems, openInvoices, outstandingBalance } from '@/lib/vet/selectors'
+import { formatMoney, initials, todayKey } from '@/lib/vet/format'
+import { buildReport, type BucketLabel, type ReportPeriodLabel, type ReportRange, type TrendCaptionKey } from '@/lib/vet/report'
 import type { AppointmentStatus, ClinicState } from '@/lib/vet/types'
 
-/* ---------- period helpers ---------- */
+/* ---------- labels (the report model itself is translation-free) ---------- */
 
 const RANGES = [
   { id: 'today', label: msg`Today` },
@@ -28,68 +28,10 @@ const RANGES = [
   { id: 'all', label: msg`All time` },
 ] as const
 
-type ReportRange = (typeof RANGES)[number]['id']
-
-interface Period {
-  start: Date | null
-  end: Date
-}
-
-interface TrendBucket {
-  key: string
-  label: string
-  collected: number
-  billed: number
-  showLabel: boolean
-}
+type BarTone = 'teal' | 'blue' | 'violet' | 'amber' | 'red' | 'muted'
 
 const MONTHS = [msg`Jan`, msg`Feb`, msg`Mar`, msg`Apr`, msg`May`, msg`Jun`, msg`Jul`, msg`Aug`, msg`Sep`, msg`Oct`, msg`Nov`, msg`Dec`]
 const WEEKDAYS = [msg`Sun`, msg`Mon`, msg`Tue`, msg`Wed`, msg`Thu`, msg`Fri`, msg`Sat`]
-
-const pad = (n: number) => String(n).padStart(2, '0')
-const dayKey = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-const monthKey = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}`
-
-const startOfDay = (date: Date) => {
-  const next = new Date(date)
-  next.setHours(0, 0, 0, 0)
-  return next
-}
-
-const endOfDay = (date: Date) => {
-  const next = new Date(date)
-  next.setHours(23, 59, 59, 999)
-  return next
-}
-
-const reportPeriod = (range: ReportRange, now: Date): Period => {
-  const end = endOfDay(now)
-  if (range === 'all') return { start: null, end }
-  if (range === 'today') return { start: startOfDay(now), end }
-  if (range === 'month') return { start: new Date(now.getFullYear(), now.getMonth(), 1), end }
-  if (range === 'year') return { start: new Date(now.getFullYear(), 0, 1), end }
-  const start = startOfDay(now)
-  start.setDate(start.getDate() - (range === '7d' ? 6 : 29))
-  return { start, end }
-}
-
-const within = (iso: string, period: Period) => {
-  const time = new Date(iso).getTime()
-  if (!Number.isFinite(time)) return false
-  if (time > period.end.getTime()) return false
-  return !period.start || time >= period.start.getTime()
-}
-
-const periodLabel = (period: Period) => {
-  if (!period.start) return globalI18n._(msg`All activity through ${formatDate(period.end.toISOString())}`)
-  const start = formatDate(period.start.toISOString())
-  const end = formatDate(period.end.toISOString())
-  return start === end ? start : `${start} – ${end}`
-}
-
-/* ---------- report model ---------- */
-
-type BarTone = 'teal' | 'blue' | 'violet' | 'amber' | 'red' | 'muted'
 
 const STATUS_LABELS: Record<AppointmentStatus, MessageDescriptor> = {
   booked: msg`Booked`,
@@ -105,186 +47,38 @@ const STATUS_TONE: Record<AppointmentStatus, BarTone> = {
   checked_in: 'violet',
   in_consult: 'violet',
   completed: 'teal',
-  cancelled: 'amber',
+  cancelled: 'muted',
   no_show: 'red',
 }
 
-const STATUS_ORDER: AppointmentStatus[] = ['booked', 'checked_in', 'in_consult', 'completed', 'cancelled', 'no_show']
-
-const addTrendAmount = (buckets: Map<string, TrendBucket>, key: string, kind: 'collected' | 'billed', amount: number) => {
-  const bucket = buckets.get(key)
-  if (bucket) bucket[kind] += amount
+const TREND_CAPTIONS: Record<TrendCaptionKey, MessageDescriptor> = {
+  hourly: msg`Hourly · 08:00–19:00`,
+  'monthly-year': msg`Monthly · this year`,
+  'monthly-12m': msg`Monthly · last 12 months`,
+  'daily-7d': msg`Daily · last 7 days`,
+  'daily-period': msg`Daily · selected period`,
 }
 
-const buildTrend = (data: ClinicState, range: ReportRange, period: Period, now: Date) => {
-  const payments = data.payments.filter((p) => within(p.receivedAt, period))
-  const invoices = data.invoices.filter((i) => i.status !== 'draft' && within(i.createdAt, period))
-
-  let buckets: TrendBucket[]
-  let keyOf: (date: Date) => string
-  let caption: string
-
-  if (range === 'today') {
-    buckets = Array.from({ length: 12 }, (_, index) => {
-      const hour = index + 8
-      return { key: String(hour), label: pad(hour), collected: 0, billed: 0, showLabel: index % 2 === 0 || index === 11 }
-    })
-    keyOf = (date) => String(date.getHours())
-    caption = globalI18n._(msg`Hourly · 08:00–19:00`)
-  } else if (range === 'year') {
-    buckets = MONTHS.map((label, index) => ({
-      key: `${now.getFullYear()}-${pad(index + 1)}`,
-      label: globalI18n._(label),
-      collected: 0,
-      billed: 0,
-      showLabel: true,
-    }))
-    keyOf = monthKey
-    caption = globalI18n._(msg`Monthly · this year`)
-  } else if (range === 'all') {
-    buckets = Array.from({ length: 12 }, (_, index) => {
-      const date = new Date(now.getFullYear(), now.getMonth() - (11 - index), 1)
-      return {
-        key: monthKey(date),
-        label: globalI18n._(MONTHS[date.getMonth()]),
-        collected: 0,
-        billed: 0,
-        showLabel: true,
-      }
-    })
-    keyOf = monthKey
-    caption = globalI18n._(msg`Monthly · last 12 months`)
-  } else {
-    const start = period.start ?? startOfDay(now)
-    const days: Date[] = []
-    const cursor = new Date(start)
-    while (cursor.getTime() <= period.end.getTime() && days.length < 366) {
-      days.push(new Date(cursor))
-      cursor.setDate(cursor.getDate() + 1)
-    }
-    buckets = days.map((date, index) => ({
-      key: dayKey(date),
-      label: range === '7d' ? globalI18n._(WEEKDAYS[date.getDay()]) : String(date.getDate()),
-      collected: 0,
-      billed: 0,
-      showLabel:
-        range === '7d' || index === 0 || (index + 1) % 5 === 0 || index === days.length - 1,
-    }))
-    keyOf = dayKey
-    caption = range === '7d' ? globalI18n._(msg`Daily · last 7 days`) : globalI18n._(msg`Daily · selected period`)
-  }
-
-  const byKey = new Map(buckets.map((bucket) => [bucket.key, bucket]))
-  payments.forEach((payment) => addTrendAmount(byKey, keyOf(new Date(payment.receivedAt)), 'collected', payment.amount))
-  invoices.forEach((invoice) =>
-    addTrendAmount(byKey, keyOf(new Date(invoice.createdAt)), 'billed', invoiceTotals(invoice, data.clinic.vatRate, data.payments).total),
-  )
-
-  return { buckets, caption, max: Math.max(0, ...buckets.map((bucket) => Math.max(bucket.collected, bucket.billed))) }
-}
-
-const buildReport = (data: ClinicState, range: ReportRange) => {
-  const now = new Date()
-  const period = reportPeriod(range, now)
-
-  const payments = data.payments.filter((payment) => within(payment.receivedAt, period))
-  const invoices = data.invoices.filter((invoice) => within(invoice.createdAt, period))
-  const postedInvoices = invoices.filter((invoice) => invoice.status !== 'draft')
-  const encounters = data.encounters.filter((encounter) => within(encounter.openedAt, period))
-  const appointments = data.appointments.filter((appointment) => within(appointment.startsAt, period))
-  const totals = postedInvoices.map((invoice) => invoiceTotals(invoice, data.clinic.vatRate, data.payments))
-
-  const collected = payments.reduce((sum, payment) => sum + payment.amount, 0)
-  const billed = totals.reduce((sum, total) => sum + total.total, 0)
-  const vat = totals.reduce((sum, total) => sum + total.tax, 0)
-  const avgVisit = encounters.length ? Math.round(billed / encounters.length) : 0
-
-  const open = openInvoices(data.invoices)
-  const outstanding = outstandingBalance(data.invoices, data.clinic.vatRate, payments)
-
-  const completedAppointments = appointments.filter((appointment) => appointment.status === 'completed').length
-  const noShows = appointments.filter((appointment) => appointment.status === 'no_show').length
-  const completionRate = appointments.length ? Math.round((completedAppointments / appointments.length) * 100) : 0
-  const openVisits = encounters.filter((encounter) => encounter.status === 'open').length
-
-  const statusRows = STATUS_ORDER.map((status) => ({
-    status,
-    label: globalI18n._(STATUS_LABELS[status]),
-    tone: STATUS_TONE[status],
-    count: appointments.filter((appointment) => appointment.status === status).length,
-  })).filter((row) => row.count > 0)
-  const maxStatus = Math.max(1, ...statusRows.map((row) => row.count))
-
-  const services = new Map<string, { name: string; quantity: number; revenue: number }>()
-  postedInvoices.forEach((invoice) => {
-    invoice.items.forEach((item) => {
-      const key = item.productId ?? item.description
-      const row = services.get(key) ?? { name: item.description, quantity: 0, revenue: 0 }
-      row.quantity += item.quantity
-      row.revenue += item.quantity * item.unitPrice
-      services.set(key, row)
-    })
-  })
-  const serviceRows = [...services.values()].toSorted((a, b) => b.revenue - a.revenue).slice(0, 6)
-  const maxService = Math.max(1, ...serviceRows.map((row) => row.revenue))
-
-  const vets = new Map<string, { visits: number; revenue: number }>()
-  encounters.forEach((encounter) => {
-    const row = vets.get(encounter.attendingId) ?? { visits: 0, revenue: 0 }
-    row.visits += 1
-    vets.set(encounter.attendingId, row)
-  })
-  postedInvoices.forEach((invoice) => {
-    const encounter = invoice.encounterId ? data.encounters.find((item) => item.id === invoice.encounterId) : undefined
-    if (!encounter) return
-    const row = vets.get(encounter.attendingId) ?? { visits: 0, revenue: 0 }
-    row.revenue += invoiceTotals(invoice, data.clinic.vatRate, data.payments).total
-    vets.set(encounter.attendingId, row)
-  })
-  const vetRows = [...vets.entries()]
-    .map(([id, row]) => ({ id, name: data.users.find((user) => user.id === id)?.name ?? globalI18n._(msg`Unassigned`), visits: row.visits, revenue: row.revenue }))
-    .toSorted((a, b) => b.revenue - a.revenue || b.visits - a.visits)
-  const maxVetRevenue = Math.max(1, ...vetRows.map((row) => row.revenue))
-
-  // The selector owns the "low" rule (reorderLevel > 0 guard); the report
-  // re-sorts by severity ratio for display.
-  const stockRows = lowStockItems(data.inventoryItems, data.inventoryLots)
-    .toSorted((a, b) => a.onHand / Math.max(a.item.reorderLevel, 1) - b.onHand / Math.max(b.item.reorderLevel, 1))
-    .slice(0, 6)
-  const stockValue = stockValuation(data.inventoryLots)
-  const expiringLots = lotsExpiringWithin(data.inventoryLots, 30)
-
-  return {
-    range,
-    period,
-    periodLabel: periodLabel(period),
-    trend: buildTrend(data, range, period, now),
-    metrics: {
-      collected,
-      paymentCount: payments.length,
-      outstanding,
-      openInvoiceCount: open.length,
-      visitCount: encounters.length,
-      openVisits,
-      completedAppointments,
-      totalAppointments: appointments.length,
-      noShows,
-      completionRate,
-      billed,
-      vat,
-      avgVisit,
-    },
-    statusRows,
-    maxStatus,
-    serviceRows,
-    maxService,
-    vetRows,
-    maxVetRevenue,
-    stockRows,
-    stockValue,
-    expiringLots,
+const bucketLabel = (label: BucketLabel): string => {
+  switch (label.kind) {
+    case 'hour':
+      return String(label.hour).padStart(2, '0')
+    case 'month':
+      return globalI18n._(MONTHS[label.month])
+    case 'weekday':
+      return globalI18n._(WEEKDAYS[label.weekday])
+    case 'day':
+      return String(label.day)
   }
 }
+
+const formatPeriodLabel = (label: ReportPeriodLabel): string => {
+  if (label.start === null) return globalI18n._(msg`All activity through ${label.end}`)
+  return label.start === label.end ? label.start : `${label.start} – ${label.end}`
+}
+
+const vetName = (data: ClinicState, id: string): string =>
+  data.users.find((user) => user.id === id)?.name ?? globalI18n._(msg`Unassigned`)
 
 /* ---------- CSV export ---------- */
 
@@ -297,7 +91,7 @@ const exportReport = (report: ReturnType<typeof buildReport>, data: ClinicState)
   const lines: string[] = [
     csvCell(csvLabel(msg`Vettera clinic report`)),
     [csvCell(csvLabel(msg`Clinic`)), csvCell(data.clinic.name)].join(','),
-    [csvCell(csvLabel(msg`Period`)), csvCell(report.periodLabel)].join(','),
+    [csvCell(csvLabel(msg`Period`)), csvCell(formatPeriodLabel(report.periodLabel))].join(','),
     [csvCell(csvLabel(msg`Generated`)), csvCell(new Date().toISOString())].join(','),
     '',
     csvCell(csvLabel(msg`Summary`)),
@@ -313,12 +107,12 @@ const exportReport = (report: ReturnType<typeof buildReport>, data: ClinicState)
     csvCell(csvLabel(msg`Revenue trend`)),
     [csvCell(csvLabel(msg`Bucket`)), csvCell(csvLabel(msg`Collected`)), csvCell(csvLabel(msg`Billed`))].join(','),
     ...report.trend.buckets.map((bucket) =>
-      [csvCell(bucket.label), csvCell(csvMoney(bucket.collected)), csvCell(csvMoney(bucket.billed))].join(','),
+      [csvCell(bucketLabel(bucket.label)), csvCell(csvMoney(bucket.collected)), csvCell(csvMoney(bucket.billed))].join(','),
     ),
     '',
     csvCell(csvLabel(msg`Appointments by status`)),
     [csvCell(csvLabel(msg`Status`)), csvCell(csvLabel(msg`Count`))].join(','),
-    ...report.statusRows.map((row) => [csvCell(row.label), csvCell(row.count)].join(',')),
+    ...report.statusRows.map((row) => [csvCell(csvLabel(STATUS_LABELS[row.status])), csvCell(row.count)].join(',')),
     '',
     csvCell(csvLabel(msg`Top services`)),
     [csvCell(csvLabel(msg`Service`)), csvCell(csvLabel(msg`Quantity`)), csvCell(csvLabel(msg`Revenue`))].join(','),
@@ -329,7 +123,7 @@ const exportReport = (report: ReturnType<typeof buildReport>, data: ClinicState)
     csvCell(csvLabel(msg`Veterinarian activity`)),
     [csvCell(csvLabel(msg`Veterinarian`)), csvCell(csvLabel(msg`Visits`)), csvCell(csvLabel(msg`Revenue`))].join(','),
     ...report.vetRows.map((row) =>
-      [csvCell(row.name), csvCell(row.visits), csvCell(csvMoney(row.revenue))].join(','),
+      [csvCell(vetName(data, row.id)), csvCell(row.visits), csvCell(csvMoney(row.revenue))].join(','),
     ),
     '',
     csvCell(csvLabel(msg`Inventory attention`)),
@@ -391,10 +185,9 @@ export const ReportsView = () => {
   const { t, i18n } = useLingui()
   const { data } = useClinic()
   const [range, setRange] = useState<ReportRange>('30d')
-  // Report labels are translated inside buildReport, so the language change is
-  // intentionally a rebuild trigger even though the callback never reads it.
-  // oxlint-disable-next-line react-hooks/exhaustive-deps, react/memo-dependencies
-  const report = useMemo(() => buildReport(data, range), [data, range, i18n.locale])
+  // The model is translation-free; labels translate at render time, so a
+  // language switch re-renders without rebuilding the report.
+  const report = useMemo(() => buildReport(data, range), [data, range])
   const { metrics } = report
 
   const metricCards = [
@@ -458,7 +251,7 @@ export const ReportsView = () => {
             </button>
           ))}
         </div>
-        <span className="text-[11px] text-[var(--ink-muted)]">{report.periodLabel}</span>
+        <span className="text-[11px] text-[var(--ink-muted)]">{formatPeriodLabel(report.periodLabel)}</span>
       </div>
       <div className="stat-grid report-stat-grid">
         {metricCards.map((metric) => (
@@ -474,7 +267,7 @@ export const ReportsView = () => {
       </div>
 
       <div className="grid grid-cols-[1.55fr_1fr] gap-[18px] [&>*]:min-w-0 max-[900px]:grid-cols-1">
-        <Panel title={t`Revenue trend`} description={t`Collected payments against billed invoices · ${report.trend.caption}`}>
+        <Panel title={t`Revenue trend`} description={t`Collected payments against billed invoices · ${globalI18n._(TREND_CAPTIONS[report.trend.captionKey])}`}>
           <div className="mb-2.5 flex justify-end gap-3.5 text-[10px] text-[var(--ink-muted)]" aria-hidden>
             <span className="inline-flex items-center gap-[5px]">
               <i className={`inline-block h-[7px] w-[7px] rounded-[2px] ${BAR_TONE.teal}`} /> <Trans>Collected</Trans>
@@ -491,7 +284,7 @@ export const ReportsView = () => {
                 <div
                   className="group flex min-w-[14px] flex-1 basis-0 flex-col items-center gap-1.5 max-[600px]:min-w-0"
                   key={bucket.key}
-                  title={t`${bucket.label} · ${formatMoney(bucket.collected)} collected · ${formatMoney(bucket.billed)} billed`}
+                  title={t`${bucketLabel(bucket.label)} · ${formatMoney(bucket.collected)} collected · ${formatMoney(bucket.billed)} billed`}
                 >
                   <div className="flex h-[140px] w-full items-end justify-center gap-0.5 border-b border-[var(--line)]">
                     <span
@@ -504,7 +297,7 @@ export const ReportsView = () => {
                     />
                   </div>
                   <small className="whitespace-nowrap text-[9px] text-[var(--ink-muted)] max-[600px]:text-[8px]">
-                    {bucket.showLabel ? bucket.label : ''}
+                    {bucket.showLabel ? bucketLabel(bucket.label) : ''}
                   </small>
                 </div>
               ))}
@@ -541,10 +334,10 @@ export const ReportsView = () => {
             <div className="flex flex-col gap-3">
               {report.statusRows.map((row) => (
                 <div className={BAR_ROW} key={row.status}>
-                  <span className={BAR_LABEL}>{row.label}</span>
+                  <span className={BAR_LABEL}>{i18n._(STATUS_LABELS[row.status])}</span>
                   <div className={BAR_TRACK}>
                     <span
-                      className={`${BAR_FILL} ${BAR_TONE[row.tone]}`}
+                      className={`${BAR_FILL} ${BAR_TONE[STATUS_TONE[row.status]]}`}
                       style={{ width: `${Math.max(4, (row.count / report.maxStatus) * 100)}%` }}
                     />
                   </div>
@@ -596,16 +389,18 @@ export const ReportsView = () => {
                 <span><Trans>Visits</Trans></span>
                 <span className="text-right"><Trans>Revenue</Trans></span>
               </div>
-              {report.vetRows.map((row) => (
+              {report.vetRows.map((row) => {
+                const name = vetName(data, row.id)
+                return (
                 <div
                   className="grid grid-cols-[1.55fr_0.55fr_0.9fr] items-center gap-2.5 border-b border-[var(--row-border)] py-2.5 last:border-b-0"
                   key={row.id}
                 >
                   <div className="flex min-w-0 items-center gap-2">
                     <div className="grid h-[26px] w-[26px] place-items-center rounded-[7px] bg-[var(--avatar-bg)] text-[10px] font-bold text-[var(--teal-dark)]">
-                      {initials(row.name)}
+                      {initials(name)}
                     </div>
-                    <strong className="truncate text-[11px]">{row.name}</strong>
+                    <strong className="truncate text-[11px]">{name}</strong>
                   </div>
                   <span className="text-[11px] text-[var(--table-fg)]">{row.visits}</span>
                   <span className="text-right text-[11px] text-[var(--table-fg)]">
@@ -615,7 +410,8 @@ export const ReportsView = () => {
                     </span>
                   </span>
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </Panel>

@@ -77,8 +77,9 @@ migration — new UI should use Tailwind utilities with token classes
 ## Target deltas (in-flight refactoring candidates)
 
 Plan of record: `docs/plans/2026-10-29-frontend-refactor.md`. Phases 0, 1,
-2, 5 and 6 are done; phase 3 is partially done (see below); phase 4 (deep
-UI primitives — modal/data-table/stat-card) is still planned. Each phase
+2, 3, 5 and 6 are done (phase 3 leaves one worklist selector open — see
+below); phase 4 (deep UI primitives — modal/data-table/stat-card) is still
+planned. Each phase
 marks its delta **done** in the same PR that lands it — these docs never
 trail the code they describe.
 
@@ -107,17 +108,18 @@ trail the code they describe.
   (code + message, rendered by shell/rejection-banner.tsx), and one role
   matrix — `format.can()` — behind both the reducer and `usePermission`
   (veterinarian no longer holds inventory.write).
-- Read model — **partially done**: `lib/vet/catalog.ts` (billable +
-  dispensable catalogs) and `lib/vet/selectors.ts` (outstandingBalance,
-  lowStockItems with the reorderLevel>0 guard, vaccinationOverdue,
-  latestDueByPatient) are live and unit-tested; Billing, Dashboard,
-  Inventory, Reports, Records and NotificationCenter consume them.
-  Calendar slot math (weekDays, hour grid, snapMinute, ghostSegment,
-  labels) lives in `lib/vet/schedule.ts` with tests — ScheduleView keeps
-  only the DOM-coupled pointer helpers. **Open**: `lib/vet/report.ts`
-  (move the reports model out of the view, translation-free) and a
-  translation-free worklist FACTS selector so NotificationCenter drops its
-  i18n-in-memo workaround.
+- Read model — **done for data, one gap left**: `lib/vet/catalog.ts`
+  (billable + dispensable catalogs), `lib/vet/selectors.ts`
+  (outstandingBalance, lowStockItems with the reorderLevel>0 guard,
+  vaccinationOverdue, latestDueByPatient) and `lib/vet/report.ts` (period
+  windows, trend buckets, metrics, rankings — **translation-free**: labels
+  leave as descriptors such as `{kind:'weekday'}` / `TrendCaptionKey`, the
+  view translates them) are live and unit-tested. Calendar slot math lives
+  in `lib/vet/schedule.ts` with tests; ScheduleView keeps only the
+  DOM-coupled pointer helpers. Consumers: Billing, Dashboard, Inventory,
+  Reports, Records, NotificationCenter. **Open**: a translation-free
+  worklist FACTS selector so NotificationCenter drops its i18n-in-memo
+  workaround.
 - Deep UI primitives — **planned (phase 4)**: `components/ui/modal|data-table|
   stat-card` replace 9 hand-rolled dialogs, 6 tables, 3 stat cards
   (per decision 0008).

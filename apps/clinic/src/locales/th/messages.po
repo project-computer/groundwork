@@ -143,7 +143,7 @@ msgstr "{0} · {1}"
 msgid "{0} · {1} · drag to another slot to reschedule"
 msgstr "{0} · {1} · ลากไปช่องเวลาอื่นเพื่อเลื่อนนัด"
 
-#. placeholder {0}: bucket.label
+#. placeholder {0}: bucketLabel(bucket.label)
 #. placeholder {1}: formatMoney(bucket.collected)
 #. placeholder {2}: formatMoney(bucket.billed)
 #: src/features/vet/reports/index.tsx
@@ -215,7 +215,7 @@ msgstr "{0} นาที"
 msgid "{0} open · {1} closed"
 msgstr "เปิด {0} · ปิดแล้ว {1}"
 
-#. placeholder {0}: openInvoices.length
+#. placeholder {0}: open.length
 #: src/features/vet/billing/index.tsx
 msgid "{0} open invoices"
 msgstr "ใบแจ้งหนี้ค้างชำระ {0} ใบ"
@@ -408,10 +408,10 @@ msgstr "ปรับยอด"
 msgid "All"
 msgstr "ทั้งหมด"
 
-#. placeholder {0}: formatDate(period.end.toISOString())
+#. placeholder {0}: label.end
 #: src/features/vet/reports/index.tsx
 msgid "All activity through {0}"
-msgstr "กิจกรรมทั้งหมดจนถึง {0}"
+msgstr ""
 
 #: src/features/vet/dashboard/index.tsx
 msgid "All changes saved"
@@ -917,7 +917,7 @@ msgstr "การซิงค์ผ่านคลาวด์"
 msgid "Collected"
 msgstr "รับชำระแล้ว"
 
-#. placeholder {0}: report.trend.caption
+#. placeholder {0}: globalI18n._(TREND_CAPTIONS[report.trend.captionKey])
 #: src/features/vet/reports/index.tsx
 msgid "Collected payments against billed invoices · {0}"
 msgstr "การชำระเงินของใบแจ้งหนี้ที่ออกบิลแล้ว · {0}"

@@ -143,7 +143,7 @@ msgstr "{0} · {1}"
 msgid "{0} · {1} · drag to another slot to reschedule"
 msgstr "{0} · {1} · drag to another slot to reschedule"
 
-#. placeholder {0}: bucket.label
+#. placeholder {0}: bucketLabel(bucket.label)
 #. placeholder {1}: formatMoney(bucket.collected)
 #. placeholder {2}: formatMoney(bucket.billed)
 #: src/features/vet/reports/index.tsx
@@ -215,7 +215,7 @@ msgstr "{0} min"
 msgid "{0} open · {1} closed"
 msgstr "{0} open · {1} closed"
 
-#. placeholder {0}: openInvoices.length
+#. placeholder {0}: open.length
 #: src/features/vet/billing/index.tsx
 msgid "{0} open invoices"
 msgstr "{0} open invoices"
@@ -408,7 +408,7 @@ msgstr "adjustment"
 msgid "All"
 msgstr "All"
 
-#. placeholder {0}: formatDate(period.end.toISOString())
+#. placeholder {0}: label.end
 #: src/features/vet/reports/index.tsx
 msgid "All activity through {0}"
 msgstr "All activity through {0}"
@@ -917,7 +917,7 @@ msgstr "Cloud synchronization"
 msgid "Collected"
 msgstr "Collected"
 
-#. placeholder {0}: report.trend.caption
+#. placeholder {0}: globalI18n._(TREND_CAPTIONS[report.trend.captionKey])
 #: src/features/vet/reports/index.tsx
 msgid "Collected payments against billed invoices · {0}"
 msgstr "Collected payments against billed invoices · {0}"
