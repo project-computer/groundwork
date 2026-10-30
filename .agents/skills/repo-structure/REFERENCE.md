@@ -112,8 +112,10 @@ trail the code they describe.
   lowStockItems with the reorderLevel>0 guard, vaccinationOverdue,
   latestDueByPatient) are live and unit-tested; Billing, Dashboard,
   Inventory, Reports, Records and NotificationCenter consume them.
-  **Open**: `lib/vet/report.ts` (move the reports model out of the view,
-  translation-free), schedule slot math into `lib/vet/schedule.ts`, and a
+  Calendar slot math (weekDays, hour grid, snapMinute, ghostSegment,
+  labels) lives in `lib/vet/schedule.ts` with tests — ScheduleView keeps
+  only the DOM-coupled pointer helpers. **Open**: `lib/vet/report.ts`
+  (move the reports model out of the view, translation-free) and a
   translation-free worklist FACTS selector so NotificationCenter drops its
   i18n-in-memo workaround.
 - Deep UI primitives — **planned (phase 4)**: `components/ui/modal|data-table|

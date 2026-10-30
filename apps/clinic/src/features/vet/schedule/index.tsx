@@ -6,43 +6,27 @@ import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/f
 import { useClinic, usePermission } from '@/lib/vet/store'
 import { compareTime, formatDate, formatTime, monthGrid, shiftDays, shiftMonth, statusLabel, statusTone, todayKey } from '@/lib/vet/format'
 import { DatePicker } from '@/components/vet/date-picker'
-import { findAppointmentConflict, isPastSlot, type AppointmentSlot } from '@/lib/vet/schedule'
-
-const CLINIC_TZ_SUFFIX = '+07:00'
+import {
+  apptDay,
+  CLINIC_TZ_SUFFIX,
+  dayLabel,
+  DEFAULT_SLOT_MIN,
+  findAppointmentConflict,
+  ghostSegment,
+  HOURS,
+  isPastSlot,
+  monthLabel,
+  shortDayLabel,
+  SLOT_LATEST_START_MIN,
+  snapMinute,
+  weekDays,
+  type AppointmentSlot,
+  type SlotDraft,
+} from '@/lib/vet/schedule'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
-/** Appointment timestamps share the clinic-offset convention used by seeds and bookings. */
-const apptDay = (iso: string) => iso.slice(0, 10)
-
-const weekDays = (iso: string): string[] => {
-  const d = new Date(`${iso}T12:00:00Z`)
-  const weekday = d.getUTCDay() // 0 = Sunday
-  const monday = shiftDays(iso, weekday === 0 ? -6 : 1 - weekday)
-  return Array.from({ length: 7 }, (_, i) => shiftDays(monday, i))
-}
-
-const dayLabel = (iso: string) =>
-  new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })
-
-const shortDayLabel = (iso: string) =>
-  new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })
-
-const HOUR_START = 8
-const HOUR_END = 18
-const HOURS = Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => HOUR_START + i)
-
 /** Drag-to-create resolution and the duration used for a plain click on an empty slot. */
-const SLOT_SNAP_MIN = 15
-const DEFAULT_SLOT_MIN = 30
-/** Latest a slot may start inside an hour, so a single snapped step still fits. */
-const SLOT_LATEST_START_MIN = 60 - SLOT_SNAP_MIN
-
-const snapMinute = (minute: number): number =>
-  Math.min(60, Math.max(0, Math.round(minute / SLOT_SNAP_MIN) * SLOT_SNAP_MIN))
-
-const minutesLabel = (abs: number): string => `${pad(Math.floor(abs / 60) % 24)}:${pad(abs % 60)}`
-
 /** Minutes past the hour (0–60) for a pointer position inside an hour slot. */
 const minuteAtPointer = (slot: HTMLElement, clientY: number): number => {
   const rect = slot.getBoundingClientRect()
@@ -64,37 +48,7 @@ const locateSlot = (container: HTMLElement, clientY: number): { iso: string; hou
   return nearest
 }
 
-/** Active drag-to-create selection in minutes from midnight. */
-interface SlotDraft {
-  iso: string
-  startAbs: number
-  endAbs: number
-}
-
-interface SlotSegment {
-  top: number
-  height: number
-  label: string | null
-}
-
-/** Overlap of the active selection with one hour slot, for rendering the ghost. */
-const ghostSegment = (draft: SlotDraft | null, iso: string, hour: number): SlotSegment | null => {
-  if (!draft || draft.iso !== iso) return null
-  const from = Math.max(draft.startAbs, hour * 60)
-  const to = Math.min(draft.endAbs, hour * 60 + 60)
-  if (to <= from) return null
-  const anchored = draft.startAbs >= hour * 60 && draft.startAbs < hour * 60 + 60
-  return {
-    top: ((from - hour * 60) / 60) * 100,
-    height: ((to - from) / 60) * 100,
-    label: anchored ? (draft.endAbs === draft.startAbs ? minutesLabel(draft.startAbs) : `${minutesLabel(draft.startAbs)}–${minutesLabel(draft.endAbs)}`) : null,
-  }
-}
-
 const WEEKDAY_HEADERS = [msg`Mon`, msg`Tue`, msg`Wed`, msg`Thu`, msg`Fri`, msg`Sat`, msg`Sun`]
-
-const monthLabel = (iso: string) =>
-  new Date(`${iso.slice(0, 7)}-01T12:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
 
 interface BookingDraft {
   patientId: string
