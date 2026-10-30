@@ -45,7 +45,7 @@ apps/sidecar/                 Go clinic-core: local SQLite + sync engine
 │   ├── sync/                 engine · entities (registry) · merge · client
 │   └── db/                   SQLite open + migration runner (discovers *.sql)
 ├── migrations/               0001–0005 (0004 sync_meta is sidecar-only)
-└── scripts/build-sidecar.sh  → bin/clinic-core (bundled by Tauri)
+└── bin/clinic-core           build output; staged by the root Makefile
 
 backend/                      Go cloud API (Fiber + Postgres), sync only
 ├── cmd/api · cmd/reminder
@@ -141,6 +141,19 @@ lands it — these docs never trail the code they describe.
 - Sidecar `store.Validate` becomes the single document validator — partially
   superseded: the three guards are now aligned and fixture-pinned; full
   consolidation behind the sidecar remains optional.
+
+## Build orchestration
+
+The root `Makefile` is the entrypoint for anything that crosses language
+boundaries (`make lint`, `make test`, `make test-go`, `make sidecar`,
+`make test-pages`, `make ci`). All JS tooling lives entirely inside
+`apps/clinic`: its `package.json`, `pnpm-lock.yaml`, `node_modules`, and
+`knip.jsonc` (knip is an app devDependency, run via
+`pnpm -C apps/clinic exec knip`). The repo root has no package.json,
+lockfile, or workspace file — Make is the only root task surface. Tauri's
+`beforeDevCommand`/`beforeBuildCommand` go through
+`make -C ../.. sidecar`, which only rebuilds when the sidecar's Go sources
+changed.
 
 ## Known debt (checked, deliberate)
 

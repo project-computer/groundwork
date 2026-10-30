@@ -17,10 +17,10 @@ probably belongs in a component test.
 Run them:
 
 ```sh
-pnpm test:pages                # from repo root
-pnpm --filter @vet/clinic test:pages   # or from apps/clinic
-pnpm --filter @vet/clinic exec playwright test --ui   # interactive UI mode
-pnpm --filter @vet/clinic exec playwright test --headed e2e/pages/clinic-shell.spec.ts  # single file, visible browser
+make test-pages                # from repo root
+pnpm test:pages                # or from apps/clinic
+pnpm exec playwright test --ui   # interactive UI mode
+pnpm exec playwright test --headed e2e/pages/clinic-shell.spec.ts  # single file, visible browser
 ```
 
 Notes:

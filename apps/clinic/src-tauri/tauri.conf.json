@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "com.vetclinic.desktop",
   "build": {
-    "beforeDevCommand": "pnpm sidecar && pnpm dev",
+    "beforeDevCommand": "make -C ../.. sidecar && pnpm dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm sidecar && pnpm build",
+    "beforeBuildCommand": "make -C ../.. sidecar && pnpm build",
     "frontendDist": "../dist"
   },
   "app": {

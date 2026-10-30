@@ -112,7 +112,7 @@ The plan is written against this reality — do not re-implement what is done.
 | Frontend | **React 19 + TypeScript + Vite 8** SPA (not Next.js) | `frontend/`, entry `src/main.tsx`, routing moves to `src/app/router.tsx` (§6b) |
 | UI kit | **Primer React** (locked — no shadcn/ui, no Tailwind) + lucide-react + Recharts | v36 — styled-components is a required peer dep. Design tokens from `@primer/primitives`, `ThemeProvider` in `src/app/providers.tsx`. App code must not import styled-components directly (only Primer's `sx` prop) |
 | State/data | **TanStack Query 5** + native **fetch** via `apiFetch()` (no axios) + react-hook-form + **zod** | TanStack Query owns server state (cache, dedupe, retry, invalidation); `shared/api/client.ts` owns the HTTP layer; hooks per feature: `src/features/<domain>/api.ts` (§6b) |
-| Lint | **oxlint** | `pnpm lint` |
+| Lint | **oxlint** | `make lint-ts` (root Makefile) |
 | Package manager | **pnpm** | |
 | Backend | **Go 1.25 + Fiber v3** (not NestJS/Laravel) | `backend/cmd/api/main.go` |
 | Backend layers | handlers → service → repository → models | strict layering, one file per entity |
@@ -271,7 +271,7 @@ Workstreams are re-scoped against existing code. "Exists" items become **verify 
 ### Tasks
 1. Create `docs/API.md` from **existing** routes (source: `cmd/api/main.go`) — document actual conventions (§9 below).
 2. Create `docs/ERD.md` from **existing** schema (source: `backend/migrations/000001_init_schema.up.sql`).
-3. Add GitHub Actions: backend job (`go vet`, `go test ./...`, `go build`), frontend job (`pnpm lint`, `tsc -b`, `pnpm build`).
+3. Add GitHub Actions calling the root Makefile targets (`make lint`, `make test`).
 4. Add MinIO service to `compose.yaml` + bucket bootstrap script.
 5. Add first Go tests + Vitest setup so CI has something to run.
 6. Create branch protection + PR template.

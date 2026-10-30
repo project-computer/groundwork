@@ -31,7 +31,7 @@ pnpm test:browser             # component + screenshot
 npx vitest run src/components/ui/switch.component.test.tsx
 ```
 
-From the repo root: `pnpm test:ts` runs every workspace's tests.
+From the repo root: `make test-ts` runs the clinic app's full test suite.
 
 ## Writing a component test (browser project)
 

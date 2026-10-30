@@ -16,29 +16,40 @@ Android/iOS later (Tauri mobile), and web later (same UI, IndexedDB adapter).
 
 ## Prerequisites
 
-- Node 20+ and pnpm
+- Node 20+ and pnpm (JS package manager — used inside `apps/clinic` only)
 - Go 1.27+
 - Rust stable (Tauri 2 prerequisites: webkit2gtk on Linux)
+- GNU make — the task runner across all languages
 
 ## Commands
 
+`make` is the entrypoint for everything that crosses language boundaries;
+`make help` prints the current list. All JS tooling (pnpm, lockfile,
+node_modules) lives inside `apps/clinic` — the repo root has no JS.
+
 ```bash
-pnpm install                  # install all deps
-pnpm sidecar                  # build the Go sidecar (also runs before Tauri)
-pnpm dev                      # Vite dev server (browser, localStorage)
-pnpm -C apps/clinic tauri dev # desktop shell (sidecar + SQLite)
-pnpm build                    # web build
-pnpm lint                     # oxlint + knip (unused files, deps, exports)
-pnpm lint:go                  # go vet + golangci-lint (backend)
-pnpm fmt:go                   # gofmt the backend
-pnpm vuln:go                  # govulncheck (known Go CVEs reachable from code)
-pnpm lint:rust                # cargo fmt --check + clippy -D warnings (Tauri shell)
-pnpm fmt:rust                 # rustfmt the Tauri shell
-pnpm knip                     # knip only
-pnpm test                     # TS + Go + Rust tests
-pnpm test:ts                  # TS only
-pnpm test:go                  # sidecar + cloud API
-pnpm test:rust                # Rust only
+make install    # pnpm install (all JS deps)
+make help       # list every target
+
+make dev        # Vite dev server (browser, localStorage)
+make tauri      # desktop shell (builds the sidecar first, then SQLite)
+make build      # web build
+
+make sidecar    # build + stage the Go sidecar binary (incremental)
+
+make lint       # every linter (TS + Go + Rust)
+make lint-ts    # oxlint + knip (unused files, deps, exports)
+make lint-go    # backend: go vet + golangci-lint + gofmt check
+make lint-rust  # Tauri shell: cargo fmt --check + clippy -D warnings
+make fmt        # format everything (fmt-go, fmt-rust)
+make vuln-go    # govulncheck (known Go CVEs reachable from code)
+
+make test       # TS + Go + Rust tests (builds the sidecar first)
+make test-ts    # vitest (unit + component + screenshot)
+make test-go    # go test -race in every Go module (sidecar + cloud backend)
+make test-rust  # cargo tests for the Tauri shell
+make test-pages # Playwright page tests
+make ci         # exactly what the CI workflow runs
 ```
 
 ## Languages (English / Thai)
@@ -52,8 +63,8 @@ toggle is in the top bar and the choice persists per device (`vet.locale`,
 defaults to the OS language).
 
 ```bash
-pnpm -C apps/clinic i18n:extract   # sync catalogs with source (new strings appear in both PO files)
-pnpm -C apps/clinic i18n:compile   # validate ICU syntax of the catalogs (strict)
+make i18n-extract    # sync catalogs with source (new strings appear in both PO files)
+make i18n-compile    # validate ICU syntax of the catalogs (strict)
 ```
 
 Workflow for new UI strings: write the English source string inside a

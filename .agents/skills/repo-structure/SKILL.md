@@ -118,7 +118,9 @@ A test that needs many mocks is a signal the seam is in the wrong place.
 ## Style gate
 
 - Functions are arrow function expressions — see the `code-standard` skill.
-- `pnpm lint` = oxlint (errors fail) + knip (warnings). CI runs it.
+- Root tasks live in the Makefile (`make lint-ts` = oxlint + knip); CI
+  calls make targets. pnpm is for JS inside `apps/clinic` only — the repo
+  root has no package.json, lockfile, or workspace file.
 - `pnpm -C apps/clinic lint:strict` = oxlint `--deny-warnings`; use it when
   cleaning a file so warnings don't accumulate.
 
@@ -131,4 +133,4 @@ A test that needs many mocks is a signal the seam is in the wrong place.
 - [ ] Document shape / entity type updated in **all** copies
 - [ ] New invariant lives in the reducer, not the UI
 - [ ] Dialogs/tables/stats use `Modal`/`DataTable`/`StatCard`, not new markup
-- [ ] Test placed per the table above; `pnpm lint` passes
+- [ ] Test placed per the table above; `make lint-ts` passes

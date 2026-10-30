@@ -14,7 +14,7 @@ Deploy the VetCare clinic frontend POC to Cloudflare Pages (free tier) as a stat
 1. Build (always from repo root):
 
 ```bash
-pnpm --filter @vet/clinic build
+make build
 ```
 
 2. Ensure the SPA fallback exists so react-router deep links work:

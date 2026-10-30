@@ -17,39 +17,22 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install JS deps
-        run: pnpm install --frozen-lockfile
+        run: pnpm -C apps/clinic install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm lint
+      - name: Lint (TS)
+        run: make lint-ts
 
-      - name: TS tests
-        run: pnpm test:ts
+      - name: Tests (TS)
+        run: make test-ts
 
-      - name: Go lint
-        run: |
-          go vet ./...
-          go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 run ./...
-        working-directory: backend
-
-      - name: Go format check
-        run: |
-          unformatted=$(gofmt -l .)
-          if [ -n "$unformatted" ]; then
-            echo "Files need gofmt:"
-            echo "$unformatted"
-            exit 1
-          fi
-        working-directory: backend
+      - name: Lint (Go)
+        run: make lint-go
 
       - name: Go vulnerability scan
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
-        working-directory: backend
+        run: make vuln-go
 
       - name: Go tests
-        run: go test -race ./...
-        working-directory: backend
+        run: make test-go
 
-      - name: Rust lint
-        run: |
-          cargo fmt --check --manifest-path apps/clinic/src-tauri/Cargo.toml
-          cargo clippy --manifest-path apps/clinic/src-tauri/Cargo.toml --all-targets -- -D warnings
+      - name: Lint (Rust)
+        run: make lint-rust

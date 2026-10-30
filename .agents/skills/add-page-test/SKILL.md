@@ -19,7 +19,7 @@ cargo tests.
 
 ## Before writing
 
-1. Run `pnpm test:pages` first to confirm a green baseline.
+1. Run `make test-pages` first to confirm a green baseline.
 2. Check `clinic-shell.spec.ts` — if the view is already covered, stop.
 
 ## Writing the test
@@ -56,8 +56,8 @@ Conventions:
 ## Verify
 
 ```sh
-pnpm --filter @vet/clinic test:pages        # run all page tests
-pnpm --filter @vet/clinic exec playwright test e2e/pages/<file>.spec.ts   # just the new file
+make test-pages                             # run all page tests (repo root)
+pnpm -C apps/clinic exec playwright test e2e/pages/<file>.spec.ts   # just the new file
 ```
 
 All tests must pass before finishing. If the dev server port 1420 is busy, Playwright reuses the running instance.
