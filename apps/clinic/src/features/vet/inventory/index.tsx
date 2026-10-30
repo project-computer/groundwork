@@ -198,7 +198,7 @@ export const Inventory = () => {
           </div>
           {items.map((item) => {
             const onHand = itemOnHand(item.id, data.inventoryLots)
-            const low = onHand <= item.reorderLevel
+            const low = item.reorderLevel > 0 && onHand <= item.reorderLevel
             const lots = data.inventoryLots.filter((l) => l.itemId === item.id)
             return (
               <div key={item.id}>

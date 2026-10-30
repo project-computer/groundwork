@@ -4,6 +4,7 @@ import { Trans, useLingui } from '@lingui/react/macro'
 import { DatePicker } from '@/components/vet/date-picker'
 import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic } from '@/lib/vet/store'
+import { dispensableCatalog } from '@/lib/vet/catalog'
 import { compareTime, formatDate, itemOnHand, sexLabel, speciesLabel, statusLabel } from '@/lib/vet/format'
 import type { Vitals } from '@/lib/vet/types'
 
@@ -50,15 +51,7 @@ export const Consultations = ({ onOpen }: { onOpen: (encounterId: string) => voi
   }
   // Dispensable catalog: live inventory items (medicine/vaccine) plus legacy
   // medication products so historical prescriptions still resolve.
-  const catalog = useMemo(
-    () => [
-      ...data.inventoryItems
-        .filter((i) => i.category === 'medicine' || i.category === 'vaccine')
-        .map((i) => ({ id: i.id, name: i.name, unit: i.unit })),
-      ...data.products.filter((p) => p.kind === 'medication').map((p) => ({ id: p.id, name: p.name, unit: p.unit })),
-    ],
-    [data.inventoryItems, data.products],
-  )
+  const catalog = useMemo(() => dispensableCatalog(data), [data.inventoryItems, data.products])
   const selectedRx = catalog.find((c) => c.id === rxItemId)
   /** Units left for an inventory item after what this visit already prescribed. */
   const stockLeft = (itemId: string) => {

@@ -3,6 +3,8 @@ import { Plural, Trans, useLingui } from '@lingui/react/macro'
 import { BarChart3, ClipboardList, CreditCard, Plus, X } from 'lucide-react'
 import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
+import { billableCatalog } from '@/lib/vet/catalog'
+import { openInvoices, outstandingBalance } from '@/lib/vet/selectors'
 import { compareTime, formatMoney as formatCurrency, formatDate, formatTime, invoiceTotals, statusLabel, statusTone, todayKey } from '@/lib/vet/format'
 import { ReceiptDialog } from './receipt-dialog'
 
@@ -32,19 +34,10 @@ export const Billing = () => {
   const [voidInvoiceId, setVoidInvoiceId] = useState<string | null>(null)
 
   // Billable catalog: legacy products (services & medications) plus live inventory items.
-  const catalog = useMemo(
-    () => [
-      ...data.products.map((p) => ({ id: p.id, name: p.name, unitPrice: p.unitPrice, unit: p.unit })),
-      ...data.inventoryItems.map((i) => ({ id: i.id, name: i.name, unitPrice: i.sellingPrice, unit: i.unit })),
-    ],
-    [data.products, data.inventoryItems],
-  )
+  const catalog = useMemo(() => billableCatalog(data), [data])
 
-  const openInvoices = data.invoices.filter((i) => i.status !== 'paid' && i.status !== 'void')
-  const outstanding = openInvoices.reduce(
-    (sum, invoice) => sum + invoiceTotals(invoice, data.clinic.vatRate, data.payments).balance,
-    0,
-  )
+  const open = openInvoices(data.invoices)
+  const outstanding = outstandingBalance(data.invoices, data.clinic.vatRate, data.payments)
   const collectedToday = data.payments
     .filter((p) => p.receivedAt.startsWith(today))
     .reduce((sum, p) => sum + p.amount, 0)
@@ -55,7 +48,7 @@ export const Billing = () => {
   )
 
   const stats = [
-    { label: t`Outstanding balance`, value: formatCurrency(outstanding), note: t`${openInvoices.length} open invoices`, icon: CreditCard, tone: 'teal' },
+    { label: t`Outstanding balance`, value: formatCurrency(outstanding), note: t`${open.length} open invoices`, icon: CreditCard, tone: 'teal' },
     { label: t`Collected today`, value: formatCurrency(collectedToday), note: t`${data.payments.filter((p) => p.receivedAt.startsWith(today)).length} payments`, icon: Plus, tone: 'violet' },
     { label: t`Draft invoices`, value: String(drafts.length), note: t`Ready to post`, icon: ClipboardList, tone: 'amber' },
     { label: t`Billed all time`, value: formatCurrency(billedTotal), note: t`${data.invoices.length} invoices`, icon: BarChart3, tone: 'teal' },

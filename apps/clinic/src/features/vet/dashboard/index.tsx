@@ -3,8 +3,9 @@ import { Plural, Trans, useLingui } from '@lingui/react/macro'
 import { CalendarDays, ClipboardList, CreditCard, Package, Plus, ShieldCheck, Stethoscope, Wifi } from 'lucide-react'
 import { Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, type View } from '@/lib/vet/store'
-import { formatMoney as formatCurrency, formatDate, formatTime, invoiceTotals, itemOnHand, lotsExpiringWithin, mostUsedItems, statusLabel, statusTone, todayKey, vaccinationsDue } from '@/lib/vet/format'
+import { formatMoney as formatCurrency, formatDate, formatTime, lotsExpiringWithin, mostUsedItems, statusLabel, statusTone, todayKey, vaccinationsDue } from '@/lib/vet/format'
 import { categoryLabel } from '../inventory'
+import { lowStockItems, outstandingBalance, vaccinationOverdue } from '@/lib/vet/selectors'
 
 const greeting = (now = new Date()) => {
   const hour = now.getHours()
@@ -35,9 +36,7 @@ export const Dashboard = ({
   const today = todayKey()
   const firstName = user.name.replace(/^Dr\.\s*/, '').split(' ')[0]
   const todaysAppointments = data.appointments.filter((a) => a.startsAt.startsWith(today))
-  const outstanding = data.invoices
-    .filter((i) => i.status !== 'paid' && i.status !== 'void')
-    .reduce((sum, invoice) => sum + invoiceTotals(invoice, data.clinic.vatRate, data.payments).balance, 0)
+  const outstanding = outstandingBalance(data.invoices, data.clinic.vatRate, data.payments)
   const dueVaccinations = vaccinationsDue(data.vaccinations)
   return (
     <>
@@ -185,10 +184,7 @@ export const Dashboard = ({
           }
         >
           <div className="activity-list">
-            {data.inventoryItems
-              .map((item) => ({ item, onHand: itemOnHand(item.id, data.inventoryLots) }))
-              .filter(({ item, onHand }) => item.reorderLevel > 0 && onHand <= item.reorderLevel)
-              .toSorted((a, b) => a.onHand - b.onHand)
+            {lowStockItems(data.inventoryItems, data.inventoryLots)
               .slice(0, 5)
               .map(({ item, onHand }) => (
                 <div className="activity-row" key={item.id}>
@@ -200,7 +196,7 @@ export const Dashboard = ({
                   <Pill tone="warn" dot><Trans>Low</Trans></Pill>
                 </div>
               ))}
-            {data.inventoryItems.filter((i) => i.reorderLevel > 0 && itemOnHand(i.id, data.inventoryLots) <= i.reorderLevel).length === 0 && (
+            {lowStockItems(data.inventoryItems, data.inventoryLots).length === 0 && (
               <p className="empty-state"><Trans>Every item is above its reorder level.</Trans></p>
             )}
           </div>
@@ -248,7 +244,7 @@ export const Dashboard = ({
           <div className="activity-list">
             {vaccinationsDue(data.vaccinations, 30).map((v) => {
               const patient = data.patients.find((p) => p.id === v.patientId)
-              const overdue = v.nextDueAt! < today
+              const overdue = vaccinationOverdue(v.nextDueAt, today)
               const patientName = patient?.name ?? t`Patient`
               return (
                 <div className="activity-row" key={v.id}>

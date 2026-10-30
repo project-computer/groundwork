@@ -13,7 +13,8 @@ import {
 } from 'lucide-react'
 import { Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic } from '@/lib/vet/store'
-import { formatDate, formatMoney, initials, invoiceTotals, itemOnHand, lotsExpiringWithin, stockValuation, todayKey } from '@/lib/vet/format'
+import { formatDate, formatMoney, initials, invoiceTotals, lotsExpiringWithin, stockValuation, todayKey } from '@/lib/vet/format'
+import { lowStockItems, openInvoices, outstandingBalance } from '@/lib/vet/selectors'
 import type { AppointmentStatus, ClinicState } from '@/lib/vet/types'
 
 /* ---------- period helpers ---------- */
@@ -198,11 +199,8 @@ const buildReport = (data: ClinicState, range: ReportRange) => {
   const vat = totals.reduce((sum, total) => sum + total.tax, 0)
   const avgVisit = encounters.length ? Math.round(billed / encounters.length) : 0
 
-  const openInvoices = data.invoices.filter((invoice) => invoice.status !== 'paid' && invoice.status !== 'void')
-  const outstanding = openInvoices.reduce(
-    (sum, invoice) => sum + invoiceTotals(invoice, data.clinic.vatRate, data.payments).balance,
-    0,
-  )
+  const open = openInvoices(data.invoices)
+  const outstanding = outstandingBalance(data.invoices, data.clinic.vatRate, payments)
 
   const completedAppointments = appointments.filter((appointment) => appointment.status === 'completed').length
   const noShows = appointments.filter((appointment) => appointment.status === 'no_show').length
@@ -248,9 +246,9 @@ const buildReport = (data: ClinicState, range: ReportRange) => {
     .toSorted((a, b) => b.revenue - a.revenue || b.visits - a.visits)
   const maxVetRevenue = Math.max(1, ...vetRows.map((row) => row.revenue))
 
-  const stockRows = data.inventoryItems
-    .map((item) => ({ item, onHand: itemOnHand(item.id, data.inventoryLots) }))
-    .filter((row) => row.onHand <= row.item.reorderLevel)
+  // The selector owns the "low" rule (reorderLevel > 0 guard); the report
+  // re-sorts by severity ratio for display.
+  const stockRows = lowStockItems(data.inventoryItems, data.inventoryLots)
     .toSorted((a, b) => a.onHand / Math.max(a.item.reorderLevel, 1) - b.onHand / Math.max(b.item.reorderLevel, 1))
     .slice(0, 6)
   const stockValue = stockValuation(data.inventoryLots)
@@ -265,7 +263,7 @@ const buildReport = (data: ClinicState, range: ReportRange) => {
       collected,
       paymentCount: payments.length,
       outstanding,
-      openInvoiceCount: openInvoices.length,
+      openInvoiceCount: open.length,
       visitCount: encounters.length,
       openVisits,
       completedAppointments,

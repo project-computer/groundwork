@@ -6,6 +6,7 @@ import { DatePicker } from '@/components/vet/date-picker'
 import { Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
 import { compareTime, formatDate, statusTone, todayKey } from '@/lib/vet/format'
+import { vaccinationOverdue } from '@/lib/vet/selectors'
 import { ImportCaseDialog } from './import-case-dialog'
 /**
  * Medical records View: the encounters table (the Medical Record read
@@ -111,8 +112,6 @@ const Vaccinations = () => {
   const [lotNumber, setLotNumber] = useState('')
   const [administeredAt, setAdministeredAt] = useState(todayKey())
   const [nextDueAt, setNextDueAt] = useState('')
-  // Captured once per mount: the "overdue" column refreshes when the view remounts.
-  const [nowIso] = useState(() => new Date().toISOString())
 
   const record = () => {
     if (!patientId || !vaccineName.trim()) return
@@ -137,7 +136,7 @@ const Vaccinations = () => {
     .map((v) => {
       const patient = data.patients.find((p) => p.id === v.patientId)
       const vet = data.users.find((u) => u.id === v.vetId)
-      const overdue = v.nextDueAt ? v.nextDueAt < nowIso : false
+      const overdue = vaccinationOverdue(v.nextDueAt)
       return Object.assign({}, v, { patient, vet, overdue })
     })
 

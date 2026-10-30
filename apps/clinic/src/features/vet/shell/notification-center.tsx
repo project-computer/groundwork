@@ -3,11 +3,11 @@ import { Plural, Trans, useLingui } from '@lingui/react/macro'
 import { Bell, X } from 'lucide-react'
 import { Pill } from '@/components/vet/fields'
 import { useClinic, type View } from '@/lib/vet/store'
-import { formatDate, itemOnHand, lotsExpiringWithin, todayKey, vaccinationsDue } from '@/lib/vet/format'
+import { formatDate, lotsExpiringWithin, todayKey, vaccinationsDue } from '@/lib/vet/format'
+import { latestDueByPatient, lowStockItems, vaccinationOverdue } from '@/lib/vet/selectors'
 
 type SetView = (view: View) => void
 
-/** One actionable item in the notification center worklist. */
 /** One actionable item in the notification center worklist. */
 interface Reminder {
   id: string
@@ -28,15 +28,8 @@ export const NotificationCenter = ({ setView }: { setView: SetView }) => {
     const items: Reminder[] = []
 
     // Overdue vaccinations: a patient's latest next-due date in the past.
-    const latestDue = new Map<string, string>()
-    for (const v of data.vaccinations) {
-      if (!v.nextDueAt) continue
-      const current = latestDue.get(v.patientId)
-      if (!current || v.nextDueAt > current) latestDue.set(v.patientId, v.nextDueAt)
-    }
-    for (const [patientId, due] of latestDue) {
-      const dueKey = due.slice(0, 10)
-      if (dueKey < today) {
+    for (const [patientId, due] of latestDueByPatient(data.vaccinations)) {
+      if (vaccinationOverdue(due, today)) {
         const patient = data.patients.find((p) => p.id === patientId)
         items.push({
           id: `vax-overdue-${patientId}`,
@@ -60,19 +53,16 @@ export const NotificationCenter = ({ setView }: { setView: SetView }) => {
       })
     }
 
-    // Low stock: on-hand at or below a non-zero reorder level.
-    for (const item of data.inventoryItems) {
-      if (item.reorderLevel <= 0) continue
-      const onHand = itemOnHand(item.id, data.inventoryLots)
-      if (onHand <= item.reorderLevel) {
-        items.push({
-          id: `stock-low-${item.id}`,
-          tone: 'warn',
-          title: t`Low stock — ${item.name}`,
-          detail: t`${onHand} ${item.unit} left (reorder at ${item.reorderLevel})`,
-          view: 'inventory',
-        })
-      }
+    // Low stock: on-hand at or below a non-zero reorder level (one rule,
+    // shared with Dashboard, Inventory and Reports).
+    for (const { item, onHand } of lowStockItems(data.inventoryItems, data.inventoryLots)) {
+      items.push({
+        id: `stock-low-${item.id}`,
+        tone: 'warn',
+        title: t`Low stock — ${item.name}`,
+        detail: t`${onHand} ${item.unit} left (reorder at ${item.reorderLevel})`,
+        view: 'inventory',
+      })
     }
 
     // Lots expiring within 30 days.
