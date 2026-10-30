@@ -9,8 +9,13 @@ apps/clinic/                  Tauri 2 + React + TS desktop app
 │   ├── components/
 │   │   ├── ui/               Base UI primitives (button, card, input, tabs…)
 │   │   └── vet/fields.tsx    shared vet form fields
-│   ├── features/vet/         main views (shell, schedule, reports, records,
-│   │                         settings, workspace, dialogs) + component tests
+│   ├── features/vet/         folder per View — shell/, dashboard/, owners/,
+│   │                         consultations/, billing/, inventory/, records/,
+│   │                         schedule/, reports/, staff/, settings/,
+│   │                         workspace/ — dialogs and component tests
+│   │                         beside their View; lock-screen, pin-dialog,
+│   │                         language-toggle, save-error-banner and
+│   │                         error-boundary stay top-level
 │   ├── lib/
 │   │   ├── vet/              domain: store.tsx (reducer + hooks), types.ts,
 │   │   │                     backend.ts (sidecar HTTP), auth, backup, format,
@@ -84,10 +89,13 @@ trail the code they describe.
   order, the plan preference, and the shape guards. Drift: `store.tsx` now
   imports `runSync` from `backend.ts` — the sync seam delta below restores
   the zero-transport claim.
-- `features/vet/` — **planned (phase 1)**: split clinic-shell.tsx (2,768
-  lines, 10 components) into folder-per-View modules; shell keeps only
-  ClinicApp + wiring; StaffView + TeamPanel merge into one `staff/` module;
-  pet→patient / encounter→Visit renames ride the moves (CSS classes last).
+- `features/vet/` — **done**: clinic-shell.tsx (2,768 lines, 10 components)
+  dissolved into folder-per-View modules — shell/, dashboard/, owners/,
+  consultations/, billing/, inventory/, records/, schedule/, reports/,
+  staff/, settings/, workspace/ — with dialogs and tests beside. StaffView
+  and TeamPanel are colocated in staff/ (deep dedup of their shared member
+  form is still open). pet→patient / encounter→Visit renames rode the
+  moves; CSS `pet-*` classes remain for the phase 6 sweep.
 - Write-path invariants enforced in the reducer — **planned (phase 2)**:
   stock floor in `addPrescription`, `recordPayment` computes `settles`
   itself, one refund/void formula, one role matrix (`usePermission` derives

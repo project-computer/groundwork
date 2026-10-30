@@ -100,6 +100,7 @@ A test that needs many mocks is a signal the seam is in the wrong place.
 ## Pre-flight checklist
 
 - [ ] New code sits in the folder named by [REFERENCE.md](REFERENCE.md)
+- [ ] New Views live in `features/vet/<view>/` — one folder per View, dialogs and `*.component.test.tsx` beside
 - [ ] No UI import reaches past the store (oxlint enforces)
 - [ ] Migrations identical across both dirs and listed in `db.rs`
 - [ ] Document shape / entity type updated in **all** copies
