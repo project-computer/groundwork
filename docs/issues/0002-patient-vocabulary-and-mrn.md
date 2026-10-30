@@ -22,7 +22,7 @@ Frontend:
 
 - [ ] `psql \d+` (or equivalent) confirms no `pets` table and no `pet_id` column remain.
 - [ ] Every patient row has an MRN matching `^PT-\d{4}-\d{4}$`.
-- [ ] `grep -rn 'pet_id\|pets\b\|\bPet\b' backend/internal` returns 0 hits in model/repo/service/handler code.
+- [ ] `grep -rn 'pet_id\|pets\b\|\bPet\b' server/internal` returns 0 hits in model/repo/service/handler code.
 - [ ] Patients page renders and lists patients; visiting `/records` redirects to `/medical-records`; Queue page shows all queued visits regardless of type.
 - [ ] `visitsApi.queue` and `useVisitQueue` no longer exist.
 - [ ] `date_of_birth` form widget renders on Patient edit/create.

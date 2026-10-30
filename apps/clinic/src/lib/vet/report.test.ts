@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildReport, REPORT_RANGES, REPORT_STATUS_ORDER, reportPeriod } from './report'
+import { buildReport, csvCell, csvMoney, REPORT_RANGES, REPORT_STATUS_ORDER, reportPeriod } from './report'
 import { seedState } from './seed'
 import { shiftDays, todayKey } from './format'
 import type { ClinicState } from './types'
@@ -123,5 +123,13 @@ describe('buildReport metrics and rankings', () => {
 
   it('exposes one report range per segmented control entry', () => {
     expect(REPORT_RANGES).toEqual(['today', '7d', '30d', 'month', 'year', 'all'])
+  })
+
+  it('escapes CSV cells and formats money for the export', () => {
+    expect(csvCell('Plain')).toBe('"Plain"')
+    expect(csvCell('Say "hi"')).toBe('"Say ""hi"""')
+    expect(csvCell(42)).toBe('"42"')
+    expect(csvMoney(12345)).toBe('123.45')
+    expect(csvMoney(5)).toBe('0.05')
   })
 })

@@ -3,9 +3,10 @@ node_modules/
 
 # Build output
 apps/clinic/dist/
+apps/landing/dist/
 apps/clinic/src-tauri/target/
 apps/clinic/src-tauri/binaries/
-backend/bin/
+server/bin/
 
 # Environment files
 .env
@@ -27,8 +28,8 @@ Thumbs.db
 *.swo
 
 # Go
-backend/tmp/
-backend/uploads/
+server/tmp/
+server/uploads/
 
 # Docker volumes
 postgres_data/
@@ -46,3 +47,6 @@ __screenshots__/**/*-failed-*.png
 
 # Go sidecar artifacts
 apps/sidecar/bin/
+
+# Cloudflare (deploy tooling artifacts)
+.wrangler/

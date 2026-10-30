@@ -20,7 +20,7 @@ Store API (src/lib/vet/store.tsx — same API on every platform)
    |     sync engine: entity outbox + pull cursor
    |         |
    |         v
-   |     Go cloud API (backend/) — /api/v1/sync/push|pull
+   |     Go cloud API (server/) — /api/v1/sync/push|pull
    |
    +---> Tauri fallback (sidecar missing): invoke() -> Rust commands
    |         (apps/clinic/src-tauri/src/clinic.rs) -> same SQLite file

@@ -1,14 +1,15 @@
 # Root task runner for the polyglot repo (TypeScript + Go + Rust).
 #
-# All JS tooling (pnpm, lockfile, node_modules, knip) lives inside
-# `apps/clinic`; Make is the one orchestrator that reaches across
-# languages. `make help` lists everything; targets with a language suffix
-# (`lint-go`, `test-ts`) are the building blocks, the bare verbs (`lint`,
-# `test`, `ci`) run them all.
+# All JS tooling (pnpm, lockfile, node_modules) lives inside the JS apps
+# (`apps/clinic`, `apps/landing`); Make is the one orchestrator that reaches
+# across languages. `make help` lists everything; targets with a language
+# suffix (`lint-go`, `test-ts`) are the building blocks, the bare verbs
+# (`lint`, `test`, `ci`) run them all.
 
 CLINIC  := apps/clinic
+LANDING := apps/landing
 SIDECAR := apps/sidecar
-BACKEND := backend
+SERVER  := server
 TAURI   := $(CLINIC)/src-tauri
 
 # Target triple for staging the sidecar binary where Tauri expects it.
@@ -23,10 +24,10 @@ GOVULN   := golang.org/x/vuln/cmd/govulncheck@v1.9.0
 SHELL := bash
 .DELETE_ON_ERROR:
 
-.PHONY: help install dev build tauri sidecar
-.PHONY: lint lint-ts lint-go lint-rust
+.PHONY: help install dev dev-landing build build-landing tauri sidecar
+.PHONY: lint lint-ts lint-landing lint-go lint-rust
 .PHONY: fmt fmt-go fmt-rust
-.PHONY: test test-ts test-go test-rust test-pages vuln-go
+.PHONY: test test-ts test-landing test-go test-rust test-pages vuln-go
 .PHONY: i18n-extract i18n-compile ci
 
 help: ## list targets and what they do
@@ -34,14 +35,22 @@ help: ## list targets and what they do
 
 # ---------- day-to-day ----------
 
-install: ## install JS deps (pnpm, inside apps/clinic)
+install: ## install JS deps (pnpm, inside apps/clinic and apps/landing)
 	pnpm -C $(CLINIC) install
+	pnpm -C $(LANDING) install
 
 dev: ## Vite dev server (browser, localStorage adapter)
 	pnpm -C $(CLINIC) dev
 
-build: ## production web build (tsc + vite)
+dev-landing: ## download page dev server (port 1421)
+	pnpm -C $(LANDING) dev
+
+build: ## production web build (tsc + vite, clinic + landing)
 	pnpm -C $(CLINIC) build
+	pnpm -C $(LANDING) build
+
+build-landing: ## production build of the download page
+	pnpm -C $(LANDING) build
 
 tauri: ## desktop shell (sidecar + SQLite), via the Tauri CLI
 	pnpm -C $(CLINIC) tauri dev
@@ -61,16 +70,19 @@ $(SIDECAR_BIN): $(SIDECAR_SRC) $(SIDECAR)/go.mod | $(TAURI)/binaries
 
 # ---------- linting & formatting ----------
 
-lint: lint-ts lint-go lint-rust ## every linter (TS, Go, Rust)
+lint: lint-ts lint-landing lint-go lint-rust ## every linter (TS, Go, Rust)
 
 lint-ts: ## oxlint in apps/clinic + knip (unused files/exports)
 	pnpm -C $(CLINIC) lint
 	pnpm -C $(CLINIC) exec knip
 
-lint-go: ## backend: go vet + golangci-lint + gofmt check
-	cd $(BACKEND) && go vet ./...
-	cd $(BACKEND) && go run $(GOLANGCI) run ./...
-	@unformatted=$$(cd $(BACKEND) && gofmt -l .); \
+lint-landing: ## oxlint in apps/landing
+	pnpm -C $(LANDING) lint:strict
+
+lint-go: ## server: go vet + golangci-lint + gofmt check
+	cd $(SERVER) && go vet ./...
+	cd $(SERVER) && go run $(GOLANGCI) run ./...
+	@unformatted=$$(cd $(SERVER) && gofmt -l .); \
 	if [ -n "$$unformatted" ]; then \
 		echo 'Files need gofmt:'; echo "$$unformatted"; exit 1; \
 	fi
@@ -81,25 +93,28 @@ lint-rust: ## Tauri shell: cargo fmt --check + clippy -D warnings
 
 fmt: fmt-go fmt-rust ## format everything
 
-fmt-go: ## gofmt the backend
-	cd $(BACKEND) && gofmt -w .
+fmt-go: ## gofmt the server
+	cd $(SERVER) && gofmt -w .
 
 fmt-rust: ## rustfmt the Tauri shell
 	cargo fmt --manifest-path $(TAURI)/Cargo.toml
 
-vuln-go: ## govulncheck — reachable known CVEs in the backend
-	cd $(BACKEND) && go run $(GOVULN) ./...
+vuln-go: ## govulncheck — reachable known CVEs in the server
+	cd $(SERVER) && go run $(GOVULN) ./...
 
 # ---------- tests ----------
 
-test: test-ts test-go test-rust ## every test suite (builds the sidecar first)
+test: test-ts test-landing test-go test-rust ## every test suite (builds the sidecar first)
 
 test-ts: ## vitest in apps/clinic (unit + component + screenshot)
 	pnpm -C $(CLINIC) test
 
-test-go: ## go test -race in every Go module (sidecar + cloud backend)
+test-landing: ## vitest in apps/landing (unit)
+	pnpm -C $(LANDING) test
+
+test-go: ## go test -race in every Go module (sidecar + cloud server)
 	cd $(SIDECAR) && go test -race ./...
-	cd $(BACKEND) && go test -race ./...
+	cd $(SERVER) && go test -race ./...
 
 test-rust: ## cargo tests for the Tauri shell (stages the sidecar first)
 	$(MAKE) sidecar
@@ -118,4 +133,4 @@ i18n-compile: ## compile catalogs, strict ICU validation
 
 # ---------- CI ----------
 
-ci: lint-ts test-ts lint-go vuln-go test-go lint-rust ## exactly what the CI workflow runs
+ci: lint-ts lint-landing test-ts test-landing lint-go vuln-go test-go lint-rust ## exactly what the CI workflow runs

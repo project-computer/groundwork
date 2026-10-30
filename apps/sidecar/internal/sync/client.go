@@ -15,7 +15,7 @@ import (
 
 const defaultClinicID = "clinic-01"
 
-// Client talks to the cloud sync API (backend/).
+// Client talks to the cloud sync API (server/).
 type Client struct {
 	BaseURL  string
 	Token    string

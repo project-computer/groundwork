@@ -71,6 +71,23 @@
               },
               {
                 "group": [
+                  "../billing/*",
+                  "../consultations/*",
+                  "../dashboard/*",
+                  "../inventory/*",
+                  "../owners/*",
+                  "../records/*",
+                  "../reports/*",
+                  "../schedule/*",
+                  "../settings/*",
+                  "../shell/*",
+                  "../staff/*",
+                  "../workspace/*"
+                ],
+                "message": "Import the View's public API ('../<view>'), not its internals."
+              },
+              {
+                "group": [
                   "@/lib/vet/backend",
                   "@/lib/vet/persistence",
                   "@/lib/vet/seed"

@@ -7,7 +7,9 @@
 - Status: executed 2026-10-29/30 — all phases (0–6) are done. Remaining
   open item: StaffView/TeamPanel form dedup (deliberately deferred). See the
   target deltas in `.agents/skills/repo-structure/REFERENCE.md` for the live
-  state.
+  state. Follow-up plan of record:
+  [2026-10-30-architecture-alignment.md](2026-10-30-architecture-alignment.md)
+  (absorbs the `refactor.md` review; carries the staff dedup as Phase B).
 
 ## Decisions locked at planning time
 

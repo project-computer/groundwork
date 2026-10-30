@@ -7,8 +7,10 @@ import { useClinic, usePermission } from '@/lib/vet/store'
 import { billableCatalog } from '@/lib/vet/catalog'
 import { openInvoices, outstandingBalance } from '@/lib/vet/selectors'
 import { compareTime, formatMoney as formatCurrency, formatDate, formatTime, invoiceTotals, statusLabel, statusTone, todayKey } from '@/lib/vet/format'
+import { PaymentDialog } from './payment-dialog'
 import { ReceiptDialog } from './receipt-dialog'
-import { Modal } from '@/components/vet/modal'
+import { RefundDialog } from './refund-dialog'
+import { VoidInvoiceDialog } from './void-dialog'
 
 /**
  * Billing & payments View: stat cards, the invoice table and the payment,
@@ -27,12 +29,8 @@ export const Billing = () => {
   const [addItemCatalogId, setAddItemCatalogId] = useState('')
   const [addItemQuantity, setAddItemQuantity] = useState('1')
   const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | null>(null)
-  const [payAmount, setPayAmount] = useState('')
-  const [payMethod, setPayMethod] = useState<'cash' | 'card' | 'promptpay' | 'transfer'>('cash')
   const [receiptInvoiceId, setReceiptInvoiceId] = useState<string | null>(null)
   const [refundPaymentId, setRefundPaymentId] = useState<string | null>(null)
-  const [refundAmount, setRefundAmount] = useState('')
-  const [refundNote, setRefundNote] = useState('')
   const [voidInvoiceId, setVoidInvoiceId] = useState<string | null>(null)
 
   // Billable catalog: legacy products (services & medications) plus live inventory items.
@@ -57,40 +55,6 @@ export const Billing = () => {
   ] as const
 
   const sortedInvoices = data.invoices.toSorted((a, b) => compareTime(b.createdAt, a.createdAt))
-  const paymentInvoice = data.invoices.find((i) => i.id === paymentInvoiceId)
-  const voidInvoice = data.invoices.find((i) => i.id === voidInvoiceId)
-  const paymentBalance = paymentInvoice ? invoiceTotals(paymentInvoice, data.clinic.vatRate, data.payments).balance : 0
-  const refundPayment = data.payments.find((p) => p.id === refundPaymentId)
-  const refundedSoFar = refundPayment
-    ? data.payments.filter((p) => p.refundOf === refundPayment.id).reduce((sum, p) => sum + Math.abs(p.amount), 0)
-    : 0
-  const refundable = refundPayment ? refundPayment.amount - refundedSoFar : 0
-
-  const submitPayment = () => {
-    const amount = Math.round(Number(payAmount) * 100)
-    if (!paymentInvoice || !Number.isFinite(amount) || amount <= 0 || amount > paymentBalance) return
-    dispatch({
-      type: 'recordPayment',
-      payment: { invoiceId: paymentInvoice.id, amount, method: payMethod },
-    })
-    setPaymentInvoiceId(null)
-    setPayAmount('')
-  }
-
-  const submitRefund = () => {
-    const amount = Math.round(Number(refundAmount) * 100)
-    if (!refundPayment || !Number.isFinite(amount) || amount <= 0 || amount > refundable || !refundNote.trim()) return
-    dispatch({
-      type: 'refundPayment',
-      invoiceId: refundPayment.invoiceId,
-      paymentId: refundPayment.id,
-      amount,
-      note: refundNote,
-    })
-    setRefundPaymentId(null)
-    setRefundAmount('')
-    setRefundNote('')
-  }
 
   return (
     <>
@@ -230,10 +194,7 @@ export const Billing = () => {
                         className="small-button"
                         disabled={!billing.allowed}
                         title={billing.reason || undefined}
-                        onClick={() => {
-                          setPaymentInvoiceId(invoice.id)
-                          setPayAmount((totals.balance / 100).toFixed(2))
-                        }}
+                        onClick={() => setPaymentInvoiceId(invoice.id)}
                       >
                         <Trans>Record payment</Trans>
                       </button>
@@ -326,11 +287,7 @@ export const Billing = () => {
                   {canRefund && (
                     <button
                       className="small-button"
-                      onClick={() => {
-                        setRefundPaymentId(payment.id)
-                        setRefundAmount(((payment.amount - refunded) / 100).toFixed(2))
-                        setRefundNote('')
-                      }}
+                      onClick={() => setRefundPaymentId(payment.id)}
                     >
                       <Trans>Refund</Trans>
                     </button>
@@ -343,113 +300,12 @@ export const Billing = () => {
         </div>
       </Panel>
 
-      {paymentInvoice && (
-        <Modal
-          label={t`Record payment for ${paymentInvoice.number}`}
-          title={<Trans>Record payment — {paymentInvoice.number}</Trans>}
-          subtitle={<Trans>Balance due {formatCurrency(paymentBalance)} · partial payments are supported</Trans>}
-          onClose={() => setPaymentInvoiceId(null)}
-        >
-          <div className="form-grid">
-            <Field label={t`Amount (THB)`} htmlFor="pay-amount">
-              <input id="pay-amount" type="number" min="0" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
-            </Field>
-            <Field label={t`Method`} htmlFor="pay-method">
-              <NativeSelect id="pay-method" value={payMethod} onChange={(e) => setPayMethod(e.target.value as typeof payMethod)}>
-                <option value="cash">{t`Cash`}</option>
-                <option value="card">{t`Card`}</option>
-                <option value="promptpay">{t`PromptPay`}</option>
-                <option value="transfer">{t`Bank transfer`}</option>
-              </NativeSelect>
-            </Field>
-          </div>
-          <div className="panel-footer">
-            <button className="button secondary" onClick={() => setPaymentInvoiceId(null)}>
-              <Trans>Cancel</Trans>
-            </button>
-            <button
-              className="button primary"
-              onClick={submitPayment}
-              disabled={!(Number(payAmount) > 0) || Math.round(Number(payAmount) * 100) > paymentBalance}
-            >
-              <Trans>Record payment</Trans>
-            </button>
-          </div>
-        </Modal>
-      )}
+      {paymentInvoiceId && <PaymentDialog invoiceId={paymentInvoiceId} onClose={() => setPaymentInvoiceId(null)} />}
       {receiptInvoiceId && (
         <ReceiptDialog invoiceId={receiptInvoiceId} onClose={() => setReceiptInvoiceId(null)} />
       )}
-      {refundPayment && (
-        <Modal
-          label={t`Refund payment on ${data.invoices.find((i) => i.id === refundPayment.invoiceId)?.number ?? t`invoice`}`}
-          title={<Trans>Refund payment</Trans>}
-          subtitle={
-            <Trans>{formatCurrency(refundPayment.amount)} recorded on {formatDate(refundPayment.receivedAt)} · up to{' '}
-            {formatCurrency(refundable)} refundable</Trans>
-          }
-          onClose={() => setRefundPaymentId(null)}
-        >
-          <div className="form-grid">
-            <Field label={t`Refund amount (THB)`} htmlFor="refund-amount">
-              <input
-                id="refund-amount"
-                type="number"
-                min="0"
-                step="0.01"
-                value={refundAmount}
-                onChange={(e) => setRefundAmount(e.target.value)}
-              />
-            </Field>
-            <Field label={t`Reason (recorded on the receipt)`} htmlFor="refund-note">
-              <input
-                id="refund-note"
-                value={refundNote}
-                onChange={(e) => setRefundNote(e.target.value)}
-                placeholder={t`e.g. Dispensed the wrong strength…`}
-              />
-            </Field>
-          </div>
-          <p className="form-hint">
-            <Trans>Refunds are appended to the payment ledger; the original payment and the receipt stay unchanged.</Trans>
-          </p>
-          <div className="panel-footer">
-            <button className="button secondary" onClick={() => setRefundPaymentId(null)}>
-              <Trans>Cancel</Trans>
-            </button>
-            <button
-              className="button primary"
-              onClick={submitRefund}
-              disabled={!(Number(refundAmount) > 0) || Math.round(Number(refundAmount) * 100) > refundable || !refundNote.trim()}
-            >
-              <Trans>Record refund</Trans>
-            </button>
-          </div>
-        </Modal>
-      )}
-      {voidInvoice && (
-        <Modal
-          label={t`Void ${voidInvoice.number}`}
-          title={<Trans>Void {voidInvoice.number}?</Trans>}
-          subtitle={<Trans>No payments are held against this invoice. Voiding cannot be undone.</Trans>}
-          onClose={() => setVoidInvoiceId(null)}
-        >
-          <div className="panel-footer">
-            <button className="button secondary" onClick={() => setVoidInvoiceId(null)}>
-              <Trans>Keep invoice</Trans>
-            </button>
-            <button
-              className="button primary"
-              onClick={() => {
-                dispatch({ type: 'voidInvoice', invoiceId: voidInvoice.id })
-                setVoidInvoiceId(null)
-              }}
-            >
-              <Trans>Void invoice</Trans>
-            </button>
-          </div>
-        </Modal>
-      )}
+      {refundPaymentId && <RefundDialog paymentId={refundPaymentId} onClose={() => setRefundPaymentId(null)} />}
+      {voidInvoiceId && <VoidInvoiceDialog invoiceId={voidInvoiceId} onClose={() => setVoidInvoiceId(null)} />}
     </>
   )
 }

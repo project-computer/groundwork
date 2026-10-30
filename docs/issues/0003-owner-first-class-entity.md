@@ -13,7 +13,7 @@ Backend: `models.Owner` + repository + service + handler. Updates to patient han
 
 Frontend: `pages/Owners.tsx` (list, search by name/phone), `pages/OwnerDetail.tsx` (lists their patients, visit history timeline), edit/create forms. Adjust `pages/Patients.tsx` to show linked owner instead of inline fields.
 
-Per ADR-0001, cardinality is **1-to-many**; the `secondary_contact` JSON slot handles joint-custody cases without a join table.
+Per ADR-0016, cardinality is **1-to-many**; the `secondary_contact` JSON slot handles joint-custody cases without a join table.
 
 ## Acceptance criteria
 

@@ -1,5 +1,5 @@
 {
-  "$comment": "Sync entity registry. Single source of truth binding outbox entityType strings to ClinicState collection keys (topLevel) and encounter sub-keys (nested). apps/sidecar/internal/sync/entities.go and backend/internal/service/sync_service.go must both match this file exactly.",
+  "$comment": "Sync entity registry. Single source of truth binding outbox entityType strings to ClinicState collection keys (topLevel) and encounter sub-keys (nested). apps/sidecar/internal/sync/entities.go and server/internal/service/sync_service.go must both match this file exactly.",
   "topLevel": {
     "owner": "owners",
     "patient": "patients",

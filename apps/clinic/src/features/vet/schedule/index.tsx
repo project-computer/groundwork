@@ -1,12 +1,11 @@
 import { useMemo, useRef, useState, type DragEvent, type PointerEvent } from 'react'
-import { msg, plural } from '@lingui/core/macro'
-import { Plural, Trans, useLingui } from '@lingui/react/macro'
-import { AlertTriangle, CalendarPlus, ChevronLeft, ChevronRight, DoorOpen, Stethoscope, UserX, X } from 'lucide-react'
-import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
+import { plural } from '@lingui/core/macro'
+import { Trans, useLingui } from '@lingui/react/macro'
+import { CalendarPlus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Panel, PageHeader } from '@/components/vet/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
-import { compareTime, formatDate, formatTime, monthGrid, shiftDays, shiftMonth, statusLabel, statusTone, todayKey } from '@/lib/vet/format'
+import { compareTime, formatTime, shiftDays, shiftMonth, todayKey } from '@/lib/vet/format'
 import { DatePicker } from '@/components/vet/date-picker'
-import { Modal } from '@/components/vet/modal'
 import {
   apptDay,
   CLINIC_TZ_SUFFIX,
@@ -15,7 +14,6 @@ import {
   findAppointmentConflict,
   ghostSegment,
   HOURS,
-  isPastSlot,
   monthLabel,
   shortDayLabel,
   SLOT_LATEST_START_MIN,
@@ -24,6 +22,18 @@ import {
   type AppointmentSlot,
   type SlotDraft,
 } from '@/lib/vet/schedule'
+import { AppointmentCard } from './appointment-card'
+import { BookingDialog, type BookingDialogState, type BookingDraft } from './booking-dialog'
+import { MonthCalendar } from './month-calendar'
+import { UpcomingList } from './upcoming-list'
+import { WaitingQueue } from './waiting-queue'
+
+/**
+ * Appointments & queue View — the calendar composition root (day / week /
+ * month grids, drag-to-reschedule, drag-to-book pointer machinery). The
+ * appointment card, waiting queue, upcoming list, walk-in form and booking
+ * dialog live in their own files beside (2026-10-30 plan, phase C).
+ */
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -49,25 +59,13 @@ const locateSlot = (container: HTMLElement, clientY: number): { iso: string; hou
   return nearest
 }
 
-const WEEKDAY_HEADERS = [msg`Mon`, msg`Tue`, msg`Wed`, msg`Thu`, msg`Fri`, msg`Sat`, msg`Sun`]
-
-interface BookingDraft {
-  patientId: string
-  date: string
-  time: string
-  durationMin: number
-  reason: string
-  vetId: string
-}
-
 export const ScheduleView = () => {
-  const { t, i18n } = useLingui()
-  const { data, session, dispatch } = useClinic()
+  const { t } = useLingui()
+  const { data, dispatch } = useClinic()
   const permission = usePermission('appointments.write')
   const [dayIso, setDayIso] = useState(todayKey())
   const [mode, setMode] = useState<'day' | 'week' | 'month'>('day')
-  const [dialog, setDialog] = useState<{ mode: 'book' | 'reschedule'; appointmentId?: string; draft: BookingDraft; override: boolean } | null>(null)
-  const [walkInOpen, setWalkInOpen] = useState(false)
+  const [dialog, setDialog] = useState<BookingDialogState | null>(null)
   const [dragId, setDragId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [slotDraft, setSlotDraft] = useState<SlotDraft | null>(null)
@@ -132,7 +130,7 @@ export const ScheduleView = () => {
     endDrag()
   }
 
-  const vets = data.users.filter((u) => u.role === 'veterinarian')
+  const defaultVet = data.users.find((u) => u.role === 'veterinarian')
 
   const dayAppointments = useMemo(
     () =>
@@ -157,23 +155,6 @@ export const ScheduleView = () => {
     .toSorted((a, b) => compareTime(a.startsAt, b.startsAt))
     .slice(0, 6)
 
-  // Live clash check for the open dialog: the user must acknowledge a
-  // double-booking before the save button unlocks.
-  const draftSlot: AppointmentSlot | null =
-    dialog && dialog.draft.date && dialog.draft.time
-      ? {
-          vetId: dialog.draft.vetId,
-          startsAt: `${dialog.draft.date}T${dialog.draft.time}:00${CLINIC_TZ_SUFFIX}`,
-          durationMin: dialog.draft.durationMin,
-        }
-      : null
-  const dialogConflict = draftSlot ? findAppointmentConflict(data.appointments, draftSlot, dialog?.appointmentId) : undefined
-  const conflictPatient = dialogConflict ? data.patients.find((p) => p.id === dialogConflict.patientId) : undefined
-  const conflictVet = dialogConflict ? data.users.find((u) => u.id === dialogConflict.vetId) : undefined
-  const conflictVetName = conflictVet?.name ?? t`This vet`
-  const conflictPatientName = conflictPatient?.name ?? t`Another patient`
-  const dialogInPast = draftSlot ? isPastSlot(draftSlot) : false
-
   const openBookingAt = (iso: string, time: string, durationMin: number) => {
     setDialog({
       mode: 'book',
@@ -184,7 +165,7 @@ export const ScheduleView = () => {
         time,
         durationMin,
         reason: '',
-        vetId: vets[0]?.id ?? '',
+        vetId: defaultVet?.id ?? '',
       },
     })
   }
@@ -288,35 +269,6 @@ export const ScheduleView = () => {
     dispatch({ type: 'rescheduleAppointment', id: appointmentId, startsAt: slot.startsAt, durationMin: slot.durationMin })
   }
 
-  const submitDialog = () => {
-    if (!dialog) return
-    const { mode: dialogMode, appointmentId, draft } = dialog
-    if (!draft.patientId || !draft.date || !draft.time) return
-    // A clash is only saved once the user has explicitly acknowledged it.
-    if (dialogConflict && !dialog.override) return
-    const startsAt = `${draft.date}T${draft.time}:00${CLINIC_TZ_SUFFIX}`
-    if (dialogMode === 'book') {
-      dispatch({
-        type: 'bookAppointment',
-        appointment: {
-          patientId: draft.patientId,
-          startsAt,
-          durationMin: draft.durationMin,
-          reason: draft.reason || 'Consultation',
-          vetId: draft.vetId || vets[0]?.id || data.users[0]?.id || '',
-        },
-      })
-    } else if (appointmentId) {
-      dispatch({ type: 'rescheduleAppointment', id: appointmentId, startsAt, durationMin: draft.durationMin })
-    }
-    setDialog(null)
-  }
-
-  const submitWalkIn = (patientId: string, reason: string) => {
-    if (!patientId) return
-    dispatch({ type: 'walkIn', patientId, reason, vetId: session.currentUserId })
-  }
-
   return (
     <>
       <PageHeader
@@ -388,58 +340,20 @@ export const ScheduleView = () => {
                           {ghost.label && <span>{ghost.label}</span>}
                         </div>
                       )}
-                      {inSlot.map((a) => {
-                        const patient = data.patients.find((p) => p.id === a.patientId)
-                        const vet = data.users.find((u) => u.id === a.vetId)
-                        const draggable = canDrag(a)
-                        return (
-                          <div
-                            className={`cal-appt status-${a.status}${dragId === a.id ? ' dragging' : ''}`}
-                            key={a.id}
-                            draggable={draggable}
-                            onDragStart={(e) => startDrag(e, a.id)}
-                            onDragEnd={endDrag}
-                            title={draggable ? t`Drag to another hour to reschedule` : undefined}
-                          >
-                            <div className="appointment-main">
-                              <strong>
-                                {patient?.name ?? <Trans>Unknown</Trans>} <span className="cal-time-chip">{formatTime(a.startsAt)} · <Trans>{a.durationMin}min</Trans></span>
-                              </strong>
-                              <span>
-                                {a.reason} · {vet?.name ?? <Trans>Unassigned</Trans>}
-                              </span>
-                            </div>
-                            <Pill tone={statusTone(a.status)} dot>
-                              {statusLabel(a.status)}
-                            </Pill>
-                            <div className="cal-actions">
-                              {a.status === 'booked' && (
-                                <button className="small-button" onClick={() => dispatch({ type: 'setAppointmentStatus', id: a.id, status: 'checked_in' })} disabled={!permission.allowed}>
-                                  <Trans>Check in</Trans>
-                                </button>
-                              )}
-                              {(a.status === 'booked' || a.status === 'checked_in') && (
-                                <button className="small-button" onClick={() => dispatch({ type: 'startEncounter', appointmentId: a.id })} disabled={!permission.allowed}>
-                                  <Stethoscope size={13} /> <Trans>Start</Trans>
-                                </button>
-                              )}
-                              {a.status === 'booked' && (
-                                <>
-                                  <button className="text-button" onClick={() => openReschedule(a.id)} disabled={!permission.allowed}>
-                                    <Trans>Reschedule</Trans>
-                                  </button>
-                                  <button className="text-button" onClick={() => dispatch({ type: 'setAppointmentStatus', id: a.id, status: 'no_show' })} disabled={!permission.allowed} title={t`Mark no-show`}>
-                                    <UserX size={13} /> <Trans>No-show</Trans>
-                                  </button>
-                                  <button className="text-button" onClick={() => dispatch({ type: 'setAppointmentStatus', id: a.id, status: 'cancelled' })} disabled={!permission.allowed}>
-                                    <Trans>Cancel</Trans>
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
+                      {inSlot.map((a) => (
+                        <AppointmentCard
+                          key={a.id}
+                          appointment={a}
+                          patient={data.patients.find((p) => p.id === a.patientId)}
+                          vet={data.users.find((u) => u.id === a.vetId)}
+                          draggable={canDrag(a)}
+                          dragging={dragId === a.id}
+                          disabled={!permission.allowed}
+                          onReschedule={openReschedule}
+                          onDragStart={startDrag}
+                          onDragEnd={endDrag}
+                        />
+                      ))}
                     </div>
                   </div>
                 )
@@ -447,56 +361,8 @@ export const ScheduleView = () => {
             </div>
           </Panel>
           <div className="side-stack">
-            <Panel title={t`Waiting queue`} description={t`Checked-in patients waiting for the vet`}>
-              <div className="appointment-list">
-                {waiting.length === 0 && <p className="empty-state"><Trans>No one waiting right now.</Trans></p>}
-                {waiting.map((a) => {
-                  const patient = data.patients.find((p) => p.id === a.patientId)
-                  return (
-                    <div className="appointment-row" key={a.id}>
-                      <div className="patient-mini">{patient?.name.slice(0, 1)}</div>
-                      <div className="appointment-main">
-                        <strong>{patient?.name}</strong>
-                        <span><Trans>Since {formatTime(a.startsAt)}</Trans></span>
-                      </div>
-                      <button className="small-button" onClick={() => dispatch({ type: 'startEncounter', appointmentId: a.id })} disabled={!permission.allowed}>
-                        <Stethoscope size={13} /> <Trans>Start</Trans>
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="panel-footer">
-                {walkInOpen ? (
-                  <WalkInForm patients={data.patients} onCancel={() => setWalkInOpen(false)} onSubmit={submitWalkIn} disabled={!permission.allowed} />
-                ) : (
-                  <button className="button secondary" onClick={() => setWalkInOpen(true)} disabled={!permission.allowed}>
-                    <DoorOpen size={16} /> <Trans>Add walk-in</Trans>
-                  </button>
-                )}
-              </div>
-            </Panel>
-            <Panel title={t`Upcoming`} description={t`Next booked appointments after this day`}>
-              <div className="appointment-list">
-                {upcoming.length === 0 && <p className="empty-state"><Trans>Nothing booked ahead.</Trans></p>}
-                {upcoming.map((a) => {
-                  const patient = data.patients.find((p) => p.id === a.patientId)
-                  return (
-                    <div className="appointment-row" key={a.id}>
-                      <div className="appointment-main">
-                        <strong>{patient?.name}</strong>
-                        <span>
-                          {formatDate(a.startsAt)} · {formatTime(a.startsAt)} · {a.reason}
-                        </span>
-                      </div>
-                      <button className="text-button" onClick={() => openReschedule(a.id)} disabled={!permission.allowed}>
-                        <Trans>Reschedule</Trans>
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            </Panel>
+            <WaitingQueue waiting={waiting} />
+            <UpcomingList upcoming={upcoming} onReschedule={openReschedule} />
           </div>
         </div>
       ) : mode === 'week' ? (
@@ -563,162 +429,17 @@ export const ScheduleView = () => {
            </div>
          </Panel>
       ) : (
-        <Panel title={monthLabel(dayIso)} description={t`Appointments per day — select a day to open it`}>
-          <div className="month-grid" role="grid" aria-label={t`${monthLabel(dayIso)} calendar`}>
-            {WEEKDAY_HEADERS.map((label) => (
-              <div className="month-head" key={label.id}>{i18n._(label)}</div>
-            ))}
-            {monthGrid(dayIso).map((iso) => {
-              const list = weekAppointments.get(iso) ?? []
-              const inMonth = iso.slice(0, 7) === dayIso.slice(0, 7)
-              return (
-                <button
-                  className={`month-cell ${iso === todayKey() ? 'today' : ''} ${inMonth ? '' : 'outside'}`}
-                  key={iso}
-                  onClick={() => {
-                    setDayIso(iso)
-                    setMode('day')
-                  }}
-                  aria-label={t`${dayLabel(iso)} — ${plural(list.length, { one: '# appointment', other: '# appointments' })}`}
-                >
-                  <span className="month-day">{Number(iso.slice(8))}</span>
-                  {list.length > 0 && <span className="month-count">{list.length}</span>}
-                </button>
-              )
-            })}
-          </div>
-        </Panel>
+        <MonthCalendar
+          dayIso={dayIso}
+          byDay={weekAppointments}
+          onSelectDay={(iso) => {
+            setDayIso(iso)
+            setMode('day')
+          }}
+        />
       )}
 
-      {dialog && (
-        <Modal
-          label={dialog.mode === 'book' ? t`Book appointment` : t`Reschedule appointment`}
-          title={dialog.mode === 'book' ? <Trans>Book appointment</Trans> : <Trans>Reschedule appointment</Trans>}
-          subtitle={<Trans>Appointments are saved to the local clinic database.</Trans>}
-          onClose={() => setDialog(null)}
-        >
-          <div className="form-grid">
-            <Field label={t`Patient`} htmlFor="bk-patient">
-              <NativeSelect
-                id="bk-patient"
-                value={dialog.draft.patientId}
-                disabled={dialog.mode === 'reschedule'}
-                onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, patientId: e.target.value } })}
-              >
-                {data.patients.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} — {data.owners.find((o) => o.id === p.ownerId)?.name}
-                  </option>
-                ))}
-              </NativeSelect>
-            </Field>
-            <Field label={t`Veterinarian`} htmlFor="bk-vet">
-              <NativeSelect id="bk-vet" value={dialog.draft.vetId} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, vetId: e.target.value } })}>
-                {vets.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name}
-                  </option>
-                ))}
-              </NativeSelect>
-            </Field>
-            <Field label={t`Date`} htmlFor="bk-date">
-              <DatePicker
-                id="bk-date"
-                label={t`Appointment date`}
-                value={dialog.draft.date}
-                onChange={(date) => setDialog({ ...dialog, draft: { ...dialog.draft, date } })}
-              />
-            </Field>
-            <Field label={t`Time`} htmlFor="bk-time">
-              <input id="bk-time" type="time" value={dialog.draft.time} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, time: e.target.value } })} />
-            </Field>
-            <Field label={t`Duration`} htmlFor="bk-duration">
-              <NativeSelect id="bk-duration" value={dialog.draft.durationMin} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, durationMin: Number(e.target.value) } })}>
-                {[...new Set([15, 20, 30, 45, 60, dialog.draft.durationMin])].toSorted((a, b) => a - b).map((m) => (
-                  <option key={m} value={m}>
-                    <Plural value={m} one="# minute" other="# minutes" />
-                  </option>
-                ))}
-              </NativeSelect>
-            </Field>
-            <Field label={t`Reason`} htmlFor="bk-reason">
-              <input id="bk-reason" value={dialog.draft.reason} placeholder={t`e.g. Annual vaccination…`} onChange={(e) => setDialog({ ...dialog, draft: { ...dialog.draft, reason: e.target.value } })} />
-            </Field>
-          </div>
-          {dialogConflict && (
-            <div className="form-warning" role="alert">
-              <AlertTriangle size={15} />
-              <div>
-                <strong>
-                  {t`${conflictVetName} is already booked at ${formatTime(dialogConflict.startsAt)}`}
-                </strong>
-                <span>
-                  {conflictPatientName} · {dialogConflict.reason} · <Trans>{dialogConflict.durationMin} min</Trans>
-                </span>
-                <label className="form-warning-override">
-                  <input
-                    type="checkbox"
-                    checked={dialog.override}
-                    onChange={(e) => setDialog({ ...dialog, override: e.target.checked })}
-                  />
-                  <Trans>Book anyway — double-book this veterinarian</Trans>
-                </label>
-              </div>
-            </div>
-          )}
-          {dialogInPast && !dialogConflict && (
-            <p className="form-hint">
-              <Trans>This appointment starts in the past. Saving is allowed for record-keeping.</Trans>
-            </p>
-          )}
-          <div className="panel-footer">
-            <button className="button secondary" onClick={() => setDialog(null)}>
-              <Trans>Cancel</Trans>
-            </button>
-            <button
-              className="button primary"
-              onClick={submitDialog}
-              disabled={!dialog.draft.patientId || !dialog.draft.date || !dialog.draft.time || (!!dialogConflict && !dialog.override)}
-            >
-              {dialog.mode === 'book' ? <Trans>Book appointment</Trans> : <Trans>Save new time</Trans>}
-            </button>
-          </div>
-        </Modal>
-      )}
+      {dialog && <BookingDialog state={dialog} onChange={setDialog} onClose={() => setDialog(null)} />}
     </>
-  )
-}
-
-const WalkInForm = ({
-  patients,
-  onSubmit,
-  onCancel,
-  disabled,
-}: {
-  patients: { id: string; name: string }[]
-  onSubmit: (patientId: string, reason: string) => void
-  onCancel: () => void
-  disabled: boolean
-}) => {
-  const { t } = useLingui()
-  const [patientId, setPatientId] = useState(patients[0]?.id ?? '')
-  const [reason, setReason] = useState('')
-  return (
-    <div className="walkin-form">
-      <NativeSelect value={patientId} onChange={(e) => setPatientId(e.target.value)} aria-label={t`Walk-in patient`}>
-        {patients.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </NativeSelect>
-      <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t`e.g. Nail trim…`} aria-label={t`Walk-in reason`} />
-      <button className="button primary" disabled={disabled || !patientId} onClick={() => { onSubmit(patientId, reason); onCancel() }}>
-        <Trans>Add</Trans>
-      </button>
-      <button className="icon-button" onClick={onCancel} aria-label={t`Cancel walk-in`}>
-        <X size={15} />
-      </button>
-    </div>
   )
 }

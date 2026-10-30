@@ -25,7 +25,7 @@ Go sidecar clinic-core (desktop/, bundled externalBin)
    - push outbox entities + pull-by-version
    |  HTTPS (Bearer token)
    v
-Go cloud API (backend/) — /api/v1/sync/push, /api/v1/sync/pull
+Go cloud API (server/) — /api/v1/sync/push, /api/v1/sync/pull
 ```
 
 - Rust shell spawns the sidecar, reads `LISTENING http://127.0.0.1:<port>`,
@@ -72,7 +72,7 @@ Go cloud API (backend/) — /api/v1/sync/push, /api/v1/sync/pull
   concurrent edit. The old simulated acknowledgement remains only for the
   browser demo.
 
-### Cloud API (`backend/`)
+### Cloud API (`server/`)
 
 - Migration `000002_sync`: `sync_entities` keyed by
   `(clinic_id, entity_type, entity_id)` plus a shared `sync_version_seq`.
@@ -94,9 +94,9 @@ Go cloud API (backend/) — /api/v1/sync/push, /api/v1/sync/pull
 - `apps/sidecar/`: migrations, document API (round trip, validation, CORS, 503
   when unconfigured), sync engine (nested parent ids, outbox pruning,
   LWW/stale rejection, nested delete, conflict adoption, cursor advance).
-- `backend/`: sync handler (batch accept, validation, cursor parsing,
+- `server/`: sync handler (batch accept, validation, cursor parsing,
   clinic header). Repository/DB behaviour needs a live Postgres to exercise.
-- Go tests (`apps/sidecar/`, `backend/`) pass; the frontend browser suite is
+- Go tests (`apps/sidecar/`, `server/`) pass; the frontend browser suite is
   being refactored in parallel.
 
 ## Deferred

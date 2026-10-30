@@ -1,22 +1,14 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
-import { Check, KeyRound, Lock, ShieldCheck } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import type { MessageDescriptor } from '@lingui/core'
 import { msg } from '@lingui/core/macro'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Field, NativeSelect, Pill, ReadOnlyNote } from '@/components/vet/fields'
 import { Modal } from '@/components/vet/modal'
-import { TeamPanel } from '../staff/team-panel'
-import { useClinic, usePermission, type View } from '@/lib/vet/store'
-import { hasPin } from '@/lib/vet/auth'
-import {
-  initials,
-  PERMISSIONS,
-  permissionLabel,
-  permissionsFor,
-  roleDescription,
-  roleLabel,
-  ROLES,
-} from '@/lib/vet/format'
+import { AccountPanel } from './account-panel'
+import { ClinicPanel } from './clinic-panel'
+import { RolesPanel } from './roles-panel'
+import { TeamPanel, useSwitchAccount } from '../staff'
+import { useClinic, type View } from '@/lib/vet/store'
+import { roleLabel } from '@/lib/vet/format'
 import type { StaffUser } from '@/lib/vet/types'
 import { PinDialog } from '../pin-dialog'
 
@@ -29,13 +21,12 @@ const TABS: { id: WorkspaceTab; label: MessageDescriptor }[] = [
   { id: 'roles', label: msg`Roles & permissions` },
 ]
 
-const TIMEZONES = ['Asia/Bangkok', 'Asia/Ho_Chi_Minh', 'Asia/Vientiane', 'Asia/Phnom_Penh', 'Asia/Yangon', 'Asia/Kuala_Lumpur', 'Asia/Singapore', 'UTC']
-const CURRENCIES = ['THB', 'USD', 'EUR', 'LAK', 'VND', 'KHR', 'MMK', 'SGD']
-
 /**
  * Clinic and user management: identity, the signed-in account, team roster and
  * the role/permission matrix. Opened from the clinic card in the sidebar and
- * from the account avatar in the top bar.
+ * from the account avatar in the top bar. Panels live in their own files
+ * beside (2026-10-30 plan, phase C); the team panel is the staff feature's
+ * second surface, imported through its public API.
  */
 export const WorkspaceDialog = ({
   initialTab,
@@ -46,21 +37,15 @@ export const WorkspaceDialog = ({
   onClose: () => void
   onNavigate: (view: View) => void
 }) => {
-  const { data, user, dispatch } = useClinic()
+  const { data, user } = useClinic()
   const { t, i18n } = useLingui()
   const [tab, setTab] = useState<WorkspaceTab>(initialTab)
   const [pinFor, setPinFor] = useState<StaffUser | null>(null)
 
   // Signing in as another member is instant until they set a PIN; after that
-  // the lock screen verifies the credential. Mirrors Staff & Permissions.
-  const switchAccount = (member: StaffUser) => {
-    if (!hasPin(member)) {
-      dispatch({ type: 'signIn', userId: member.id })
-      onClose()
-      return
-    }
-    dispatch({ type: 'session', patch: { locked: true, currentUserId: member.id } })
-  }
+  // the lock screen verifies the credential. Shared with Staff & Permissions
+  // (staff/member-form.tsx) through the staff feature's public API.
+  const switchAccount = useSwitchAccount(onClose)
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -105,376 +90,5 @@ export const WorkspaceDialog = ({
 
       {pinFor && <PinDialog member={pinFor} onClose={() => setPinFor(null)} />}
     </Modal>
-  )
-}
-
-/* ---------- Clinic identity ---------- */
-
-const ClinicPanel = () => {
-  const { data, dispatch } = useClinic()
-  const { t } = useLingui()
-  const manage = usePermission('clinic.manage')
-  const [name, setName] = useState(data.clinic.name)
-  const [timezone, setTimezone] = useState(data.clinic.timezone)
-  const [currency, setCurrency] = useState(data.clinic.currency)
-  const [vat, setVat] = useState(String(Math.round(data.clinic.vatRate * 1000) / 10))
-  const [address, setAddress] = useState(data.clinic.address ?? '')
-  const [phone, setPhone] = useState(data.clinic.phone ?? '')
-  const [email, setEmail] = useState(data.clinic.email ?? '')
-  const [saved, setSaved] = useState(false)
-
-  const vatNumber = Number(vat)
-  const vatValid = vat.trim() !== '' && Number.isFinite(vatNumber) && vatNumber >= 0 && vatNumber <= 100
-  const valid = name.trim() !== '' && vatValid
-
-  const save = (event: FormEvent) => {
-    event.preventDefault()
-    if (!valid || !manage.allowed) return
-    dispatch({
-      type: 'updateClinic',
-      patch: {
-        name: name.trim(),
-        timezone,
-        currency,
-        vatRate: vatNumber / 100,
-        address: address.trim(),
-        phone: phone.trim(),
-        email: email.trim(),
-      },
-    })
-    setSaved(true)
-  }
-
-  const field =
-    (setter: (value: string) => void) =>
-    (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setter(e.target.value)
-      setSaved(false)
-    }
-
-  return (
-    <form className="workspace-panel" onSubmit={save}>
-      {!manage.allowed && <ReadOnlyNote reason={manage.reason} />}
-      <div className="workspace-grid">
-        <Field label={t`Clinic name`} htmlFor="clinic-name" className="workspace-wide">
-          <input
-            id="clinic-name"
-            value={name}
-            onChange={field(setName)}
-            disabled={!manage.allowed}
-            placeholder={t`e.g. Baan Sathorn Animal Clinic…`}
-            required
-          />
-        </Field>
-        <Field label={t`Timezone`} htmlFor="clinic-timezone">
-          <NativeSelect
-            id="clinic-timezone"
-            value={timezone}
-            onChange={(e) => {
-              setTimezone(e.target.value)
-              setSaved(false)
-            }}
-            disabled={!manage.allowed}
-          >
-            {TIMEZONES.map((zone) => (
-              <option key={zone} value={zone}>
-                {zone}
-              </option>
-            ))}
-          </NativeSelect>
-        </Field>
-        <Field label={t`Currency`} htmlFor="clinic-currency">
-          <NativeSelect
-            id="clinic-currency"
-            value={currency}
-            onChange={(e) => {
-              setCurrency(e.target.value)
-              setSaved(false)
-            }}
-            disabled={!manage.allowed}
-          >
-            {CURRENCIES.map((code) => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </NativeSelect>
-        </Field>
-        <Field label={t`VAT rate (%)`} htmlFor="clinic-vat">
-          <input
-            id="clinic-vat"
-            type="number"
-            min="0"
-            max="100"
-            step="0.1"
-            inputMode="decimal"
-            value={vat}
-            onChange={field(setVat)}
-            disabled={!manage.allowed}
-            aria-invalid={!vatValid}
-          />
-        </Field>
-        <Field label={t`Phone`} htmlFor="clinic-phone">
-          <input
-            id="clinic-phone"
-            value={phone}
-            onChange={field(setPhone)}
-            disabled={!manage.allowed}
-            autoComplete="off"
-            inputMode="tel"
-            placeholder={t`e.g. 02 234 5678…`}
-          />
-        </Field>
-        <Field label={t`Email`} htmlFor="clinic-email" className="workspace-wide">
-          <input
-            id="clinic-email"
-            type="email"
-            value={email}
-            onChange={field(setEmail)}
-            disabled={!manage.allowed}
-            autoComplete="off"
-            placeholder={t`e.g. hello@clinic.vet…`}
-          />
-        </Field>
-        <Field label={t`Address`} htmlFor="clinic-address" className="workspace-wide">
-          <textarea
-            id="clinic-address"
-            rows={2}
-            value={address}
-            onChange={field(setAddress)}
-            disabled={!manage.allowed}
-            placeholder={t`Street, district, city, postal code…`}
-          />
-        </Field>
-      </div>
-      <div className="workspace-actions">
-        <span className="workspace-hint">
-          {manage.allowed ? (
-            <Trans>Shown across the workspace and on printed documents.</Trans>
-          ) : (
-            <Trans>Only a clinic admin can change clinic identity.</Trans>
-          )}
-        </span>
-        {saved && manage.allowed && (
-          <Pill tone="ok" dot>
-            <Trans>Saved locally</Trans>
-          </Pill>
-        )}
-        <button className="button primary" type="submit" disabled={!manage.allowed || !valid || saved}>
-          <Trans>Save clinic</Trans>
-        </button>
-      </div>
-    </form>
-  )
-}
-
-/* ---------- Signed-in account ---------- */
-
-const AccountPanel = ({ onSetPin, onClose }: { onSetPin: () => void; onClose: () => void }) => {
-  const { session, user, dispatch } = useClinic()
-  const { t } = useLingui()
-  const [name, setName] = useState(user.name)
-  const [email, setEmail] = useState(user.email ?? '')
-  const [phone, setPhone] = useState(user.phone ?? '')
-  const [saved, setSaved] = useState(false)
-
-  const dirty = name.trim() !== user.name || email.trim() !== (user.email ?? '') || phone.trim() !== (user.phone ?? '')
-  const writable = session.lanOnline
-
-  const save = (event: FormEvent) => {
-    event.preventDefault()
-    if (!name.trim() || !writable) return
-    dispatch({ type: 'updateStaff', id: user.id, name: name.trim(), email: email.trim(), phone: phone.trim() })
-    setSaved(true)
-  }
-
-  return (
-    <div className="workspace-panel">
-      <div className="workspace-account">
-        <div className="avatar workspace-account-avatar">{initials(user.name)}</div>
-        <div>
-          <strong>{user.name}</strong>
-          <span>
-            {roleLabel[user.role]} · {hasPin(user) ? <Trans>PIN protected</Trans> : <Trans>No PIN set</Trans>}
-          </span>
-        </div>
-        <Pill tone="info">{session.locked ? <Trans>Locked</Trans> : <Trans>Signed in</Trans>}</Pill>
-      </div>
-
-      {!writable && <ReadOnlyNote reason={t`Offline from clinic server — account changes are read-only`} />}
-
-      <form onSubmit={save}>
-        <div className="workspace-grid">
-          <Field label={t`Full name`} htmlFor="account-name" className="workspace-wide">
-            <input
-              id="account-name"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value)
-                setSaved(false)
-              }}
-              disabled={!writable}
-              autoComplete="off"
-            />
-          </Field>
-          <Field label={t`Email`} htmlFor="account-email">
-            <input
-              id="account-email"
-              type="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value)
-                setSaved(false)
-              }}
-              disabled={!writable}
-              autoComplete="off"
-            />
-          </Field>
-          <Field label={t`Phone`} htmlFor="account-phone">
-            <input
-              id="account-phone"
-              value={phone}
-              onChange={(e) => {
-                setPhone(e.target.value)
-                setSaved(false)
-              }}
-              disabled={!writable}
-              autoComplete="off"
-              inputMode="tel"
-            />
-          </Field>
-        </div>
-        <div className="workspace-actions">
-          <span className="workspace-hint">
-            {writable ? <Trans>Your teammates see this name on notes and the audit trail.</Trans> : ''}
-          </span>
-          {saved && !dirty && (
-            <Pill tone="ok" dot>
-              <Trans>Profile saved</Trans>
-            </Pill>
-          )}
-          <button className="button primary" type="submit" disabled={!writable || !dirty || !name.trim()}>
-            <Trans>Save profile</Trans>
-          </button>
-        </div>
-      </form>
-
-      <div className="workspace-section">
-        <div className="workspace-section-head">
-          <div>
-            <strong><Trans>Authentication</Trans></strong>
-            <span><Trans>This device unlocks with your staff PIN.</Trans></span>
-          </div>
-          <KeyRound size={17} />
-        </div>
-        <div className="workspace-actions">
-          <span className="workspace-hint">
-            {hasPin(user) ? (
-              <Trans>A PIN is set for this account.</Trans>
-            ) : (
-              <Trans>Set a PIN so this account is protected on shared terminals.</Trans>
-            )}
-          </span>
-          <button className="button secondary" type="button" onClick={onSetPin}>
-            {hasPin(user) ? <Trans>Change PIN</Trans> : <Trans>Set PIN</Trans>}
-          </button>
-          <button
-            className="button secondary"
-            type="button"
-            onClick={() => {
-              onClose()
-              dispatch({ type: 'session', patch: { locked: true } })
-            }}
-          >
-            <Lock size={15} /> <Trans>Lock screen</Trans>
-          </button>
-        </div>
-      </div>
-
-      <div className="workspace-section">
-        <div className="workspace-section-head">
-          <div>
-            <strong><Trans>Permissions from your role</Trans></strong>
-            <span>
-              {roleLabel[user.role]} — {roleDescription[user.role]}
-            </span>
-          </div>
-          <ShieldCheck size={17} />
-        </div>
-        <div className="perm-list workspace-perms">
-          {permissionsFor(user.role).map((permission) => (
-            <span key={permission} className="perm-tag">
-              {permissionLabel[permission]}
-            </span>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ---------- Role / permission matrix ---------- */
-
-const RolesPanel = () => {
-  const { user } = useClinic()
-  const { t } = useLingui()
-  return (
-    <div className="workspace-panel">
-      <p className="workspace-lede">
-        <Trans>Every role is a fixed set of permissions. Assign a member's role from the Team tab; their access updates immediately.</Trans>
-      </p>
-      <div className="workspace-matrix-wrap">
-        <table className="role-matrix">
-          <thead>
-            <tr>
-              <th scope="col"><Trans>Permission</Trans></th>
-              {ROLES.map((role) => (
-                <th key={role} scope="col" className={role === user.role ? 'is-current' : undefined}>
-                  {roleLabel[role]}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {PERMISSIONS.map((permission) => (
-              <tr key={permission}>
-                <th scope="row">
-                  {permissionLabel[permission]}
-                  <code>{permission}</code>
-                </th>
-                {ROLES.map((role) => (
-                  <td key={role} className={role === user.role ? 'is-current' : undefined}>
-                    {permissionsFor(role).includes(permission) ? (
-                      <span className="matrix-yes" aria-label={t`Allowed`}>
-                        <Check size={14} />
-                      </span>
-                    ) : (
-                      <span className="matrix-no" aria-label={t`Not allowed`}>
-                        —
-                      </span>
-                    )}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="workspace-role-notes">
-        {ROLES.map((role) => (
-          <p key={role}>
-            <strong>{roleLabel[role]}</strong>
-            <span>{roleDescription[role]}</span>
-          </p>
-        ))}
-      </div>
-      <div className="workspace-actions">
-        <span className="workspace-hint">
-          <Trans>
-            You are signed in as {roleLabel[user.role]}. {permissionsFor(user.role).length} of {PERMISSIONS.length} permissions.
-          </Trans>
-        </span>
-      </div>
-    </div>
   )
 }

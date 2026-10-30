@@ -17,13 +17,15 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install JS deps
-        run: pnpm -C apps/clinic install --frozen-lockfile
+        run: |
+          pnpm -C apps/clinic install --frozen-lockfile
+          pnpm -C apps/landing install --frozen-lockfile
 
       - name: Lint (TS)
-        run: make lint-ts
+        run: make lint-ts lint-landing
 
       - name: Tests (TS)
-        run: make test-ts
+        run: make test-ts test-landing
 
       - name: Lint (Go)
         run: make lint-go

@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
-import { i18n as globalI18n, type MessageDescriptor } from '@lingui/core'
-import { msg } from '@lingui/core/macro'
+import { i18n as globalI18n } from '@lingui/core'
 import { Plural, Trans, useLingui } from '@lingui/react/macro'
 import {
   AlertTriangle,
@@ -14,139 +13,10 @@ import {
 import { StatCard } from '@/components/vet/data-table'
 import { Panel, PageHeader, Pill } from '@/components/vet/fields'
 import { useClinic } from '@/lib/vet/store'
-import { formatMoney, initials, todayKey } from '@/lib/vet/format'
-import { buildReport, type BucketLabel, type ReportPeriodLabel, type ReportRange, type TrendCaptionKey } from '@/lib/vet/report'
-import type { AppointmentStatus, ClinicState } from '@/lib/vet/types'
-
-/* ---------- labels (the report model itself is translation-free) ---------- */
-
-const RANGES = [
-  { id: 'today', label: msg`Today` },
-  { id: '7d', label: msg`7 days` },
-  { id: '30d', label: msg`30 days` },
-  { id: 'month', label: msg`This month` },
-  { id: 'year', label: msg`This year` },
-  { id: 'all', label: msg`All time` },
-] as const
-
-type BarTone = 'teal' | 'blue' | 'violet' | 'amber' | 'red' | 'muted'
-
-const MONTHS = [msg`Jan`, msg`Feb`, msg`Mar`, msg`Apr`, msg`May`, msg`Jun`, msg`Jul`, msg`Aug`, msg`Sep`, msg`Oct`, msg`Nov`, msg`Dec`]
-const WEEKDAYS = [msg`Sun`, msg`Mon`, msg`Tue`, msg`Wed`, msg`Thu`, msg`Fri`, msg`Sat`]
-
-const STATUS_LABELS: Record<AppointmentStatus, MessageDescriptor> = {
-  booked: msg`Booked`,
-  checked_in: msg`Checked in`,
-  in_consult: msg`In consult`,
-  completed: msg`Completed`,
-  cancelled: msg`Cancelled`,
-  no_show: msg`No-show`,
-}
-
-const STATUS_TONE: Record<AppointmentStatus, BarTone> = {
-  booked: 'blue',
-  checked_in: 'violet',
-  in_consult: 'violet',
-  completed: 'teal',
-  cancelled: 'muted',
-  no_show: 'red',
-}
-
-const TREND_CAPTIONS: Record<TrendCaptionKey, MessageDescriptor> = {
-  hourly: msg`Hourly · 08:00–19:00`,
-  'monthly-year': msg`Monthly · this year`,
-  'monthly-12m': msg`Monthly · last 12 months`,
-  'daily-7d': msg`Daily · last 7 days`,
-  'daily-period': msg`Daily · selected period`,
-}
-
-const bucketLabel = (label: BucketLabel): string => {
-  switch (label.kind) {
-    case 'hour':
-      return String(label.hour).padStart(2, '0')
-    case 'month':
-      return globalI18n._(MONTHS[label.month])
-    case 'weekday':
-      return globalI18n._(WEEKDAYS[label.weekday])
-    case 'day':
-      return String(label.day)
-  }
-}
-
-const formatPeriodLabel = (label: ReportPeriodLabel): string => {
-  if (label.start === null) return globalI18n._(msg`All activity through ${label.end}`)
-  return label.start === label.end ? label.start : `${label.start} – ${label.end}`
-}
-
-const vetName = (data: ClinicState, id: string): string =>
-  data.users.find((user) => user.id === id)?.name ?? globalI18n._(msg`Unassigned`)
-
-/* ---------- CSV export ---------- */
-
-const csvCell = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`
-const csvMoney = (minor: number) => (minor / 100).toFixed(2)
-const csvLabel = (message: MessageDescriptor) => globalI18n._(message)
-
-const exportReport = (report: ReturnType<typeof buildReport>, data: ClinicState) => {
-  const { metrics } = report
-  const lines: string[] = [
-    csvCell(csvLabel(msg`Vettera clinic report`)),
-    [csvCell(csvLabel(msg`Clinic`)), csvCell(data.clinic.name)].join(','),
-    [csvCell(csvLabel(msg`Period`)), csvCell(formatPeriodLabel(report.periodLabel))].join(','),
-    [csvCell(csvLabel(msg`Generated`)), csvCell(new Date().toISOString())].join(','),
-    '',
-    csvCell(csvLabel(msg`Summary`)),
-    [csvCell(csvLabel(msg`Metric`)), csvCell(csvLabel(msg`Value`))].join(','),
-    [csvCell(csvLabel(msg`Payments collected`)), csvCell(csvMoney(metrics.collected))].join(','),
-    [csvCell(csvLabel(msg`Billed`)), csvCell(csvMoney(metrics.billed))].join(','),
-    [csvCell(csvLabel(msg`VAT`)), csvCell(csvMoney(metrics.vat))].join(','),
-    [csvCell(csvLabel(msg`Outstanding balance`)), csvCell(csvMoney(metrics.outstanding))].join(','),
-    [csvCell(csvLabel(msg`Visits`)), csvCell(metrics.visitCount)].join(','),
-    [csvCell(csvLabel(msg`Average per visit`)), csvCell(csvMoney(metrics.avgVisit))].join(','),
-    [csvCell(csvLabel(msg`Appointment completion (%)`)), csvCell(metrics.completionRate)].join(','),
-    '',
-    csvCell(csvLabel(msg`Revenue trend`)),
-    [csvCell(csvLabel(msg`Bucket`)), csvCell(csvLabel(msg`Collected`)), csvCell(csvLabel(msg`Billed`))].join(','),
-    ...report.trend.buckets.map((bucket) =>
-      [csvCell(bucketLabel(bucket.label)), csvCell(csvMoney(bucket.collected)), csvCell(csvMoney(bucket.billed))].join(','),
-    ),
-    '',
-    csvCell(csvLabel(msg`Appointments by status`)),
-    [csvCell(csvLabel(msg`Status`)), csvCell(csvLabel(msg`Count`))].join(','),
-    ...report.statusRows.map((row) => [csvCell(csvLabel(STATUS_LABELS[row.status])), csvCell(row.count)].join(',')),
-    '',
-    csvCell(csvLabel(msg`Top services`)),
-    [csvCell(csvLabel(msg`Service`)), csvCell(csvLabel(msg`Quantity`)), csvCell(csvLabel(msg`Revenue`))].join(','),
-    ...report.serviceRows.map((row) =>
-      [csvCell(row.name), csvCell(row.quantity), csvCell(csvMoney(row.revenue))].join(','),
-    ),
-    '',
-    csvCell(csvLabel(msg`Veterinarian activity`)),
-    [csvCell(csvLabel(msg`Veterinarian`)), csvCell(csvLabel(msg`Visits`)), csvCell(csvLabel(msg`Revenue`))].join(','),
-    ...report.vetRows.map((row) =>
-      [csvCell(vetName(data, row.id)), csvCell(row.visits), csvCell(csvMoney(row.revenue))].join(','),
-    ),
-    '',
-    csvCell(csvLabel(msg`Inventory attention`)),
-    [csvCell(csvLabel(msg`Item`)), csvCell(csvLabel(msg`On hand`)), csvCell(csvLabel(msg`Reorder level`)), csvCell(csvLabel(msg`Unit`))].join(','),
-    ...report.stockRows.map((row) =>
-      [csvCell(row.item.name), csvCell(row.onHand), csvCell(row.item.reorderLevel), csvCell(row.item.unit)].join(','),
-    ),
-    '',
-    csvCell(csvLabel(msg`Stock valuation`)),
-    [csvCell(csvLabel(msg`Metric`)), csvCell(csvLabel(msg`Value`))].join(','),
-    [csvCell(csvLabel(msg`Inventory value at cost`)), csvCell(csvMoney(report.stockValue))].join(','),
-    [csvCell(csvLabel(msg`Lots expiring within 30 days`)), csvCell(report.expiringLots.length)].join(','),
-  ]
-
-  const blob = new Blob([`\uFEFF${lines.join('\r\n')}`], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = `vettera-report-${report.range}-${todayKey()}.csv`
-  anchor.click()
-  URL.revokeObjectURL(url)
-}
+import { formatMoney, initials } from '@/lib/vet/format'
+import { buildReport, type ReportRange } from '@/lib/vet/report'
+import { exportReport } from './export-csv'
+import { bucketLabel, formatPeriodLabel, RANGES, STATUS_LABELS, STATUS_TONE, TREND_CAPTIONS, vetName } from './labels'
 
 /* ---------- view ---------- */
 

@@ -53,7 +53,7 @@ src/lib/vet/persistence.ts                            (the persistence seam)
   that is present but not an array is rejected.
 - Sync unit is an **entity** (`entityType` + `entityId`). The registry's home
   is `fixtures/sync-entities.json`; `apps/sidecar/internal/sync/entities.go`
-  and `backend/internal/service/sync_service.go` are pinned to it by tests on
+  and `server/internal/service/sync_service.go` are pinned to it by tests on
   both sides.
 
 ## Migrations

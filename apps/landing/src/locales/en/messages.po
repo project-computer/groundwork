@@ -1,0 +1,176 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-10-30 18:03+0700\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: en\n"
+
+#: src/app/App.tsx
+msgid "© 2026 Vettera — local-first clinic management"
+msgstr "© 2026 Vettera — local-first clinic management"
+
+#: src/app/App.tsx
+msgid "All platforms"
+msgstr "All platforms"
+
+#: src/components/landing/download-card.tsx
+msgid "AppImage"
+msgstr "AppImage"
+
+#: src/components/landing/download-card.tsx
+msgid "Apple silicon"
+msgstr "Apple silicon"
+
+#: src/app/App.tsx
+msgid "Appointments"
+msgstr "Appointments"
+
+#: src/components/landing/product-card.tsx
+msgid "Available now"
+msgstr "Available now"
+
+#: src/app/App.tsx
+msgid "Billing & payments"
+msgstr "Billing & payments"
+
+#: src/components/landing/product-card.tsx
+msgid "Coming soon"
+msgstr "Coming soon"
+
+#: src/app/App.tsx
+msgid "Day and week calendar with walk-ins, conflict checks and reminders."
+msgstr "Day and week calendar with walk-ins, conflict checks and reminders."
+
+#: src/components/landing/download-card.tsx
+msgid "Debian package"
+msgstr "Debian package"
+
+#: src/components/landing/download-card.tsx
+#: src/components/landing/product-card.tsx
+msgid "Download"
+msgstr "Download"
+
+#. placeholder {0}: PLATFORM_NAME[platform]
+#: src/app/App.tsx
+msgid "Download for {0}"
+msgstr "Download for {0}"
+
+#: src/app/App.tsx
+msgid "Download Vettera Clinic"
+msgstr "Download Vettera Clinic"
+
+#: src/app/App.tsx
+msgid "Hospital & clinic management"
+msgstr "Hospital & clinic management"
+
+#: src/components/landing/product-card.tsx
+msgid "Hospital management for larger teams — wards and IPD, departments and multi-branch, on the same records core."
+msgstr "Hospital management for larger teams — wards and IPD, departments and multi-branch, on the same records core."
+
+#: src/components/landing/product-card.tsx
+msgid "In development"
+msgstr "In development"
+
+#: src/components/landing/download-card.tsx
+msgid "Installer"
+msgstr "Installer"
+
+#: src/components/landing/download-card.tsx
+msgid "Intel"
+msgstr "Intel"
+
+#. placeholder {0}: localeLabel[locale]
+#. placeholder {1}: localeLabel[next]
+#: src/components/landing/language-toggle.tsx
+msgid "Language: {0} — switch to {1}"
+msgstr "Language: {0} — switch to {1}"
+
+#: src/app/App.tsx
+msgid "Ledger-accurate invoices, receipts, refunds and outstanding balances."
+msgstr "Ledger-accurate invoices, receipts, refunds and outstanding balances."
+
+#: src/app/App.tsx
+msgid "Lot-level stock with expiry dates, reorder alerts and a full movement ledger."
+msgstr "Lot-level stock with expiry dates, reorder alerts and a full movement ledger."
+
+#: src/components/landing/download-card.tsx
+msgid "macOS 12 or later"
+msgstr "macOS 12 or later"
+
+#: src/app/App.tsx
+msgid "Medical records"
+msgstr "Medical records"
+
+#: src/components/landing/download-card.tsx
+msgid "MSI package"
+msgstr "MSI package"
+
+#: src/app/App.tsx
+msgid "Offline-first · local SQLite · sync optional"
+msgstr "Offline-first · local SQLite · sync optional"
+
+#: src/app/App.tsx
+msgid "One medical timeline per patient — visits, vaccinations and vitals in order."
+msgstr "One medical timeline per patient — visits, vaccinations and vitals in order."
+
+#: src/app/App.tsx
+msgid "One platform for clinics and hospitals."
+msgstr "One platform for clinics and hospitals."
+
+#: src/components/landing/product-card.tsx
+msgid "Optional multi-branch sync and CaseTransfer between clinics, with encrypted backups."
+msgstr "Optional multi-branch sync and CaseTransfer between clinics, with encrypted backups."
+
+#: src/app/App.tsx
+msgid "Pharmacy & inventory"
+msgstr "Pharmacy & inventory"
+
+#: src/app/App.tsx
+msgid "Pick your platform. The installer bundles Vettera Clinic and its local database engine — first launch walks you through workspace setup."
+msgstr "Pick your platform. The installer bundles Vettera Clinic and its local database engine — first launch walks you through workspace setup."
+
+#: src/app/App.tsx
+msgid "Products"
+msgstr "Products"
+
+#: src/app/App.tsx
+msgid "Start with the clinic workspace today — every product shares the same records core, so your data grows with you."
+msgstr "Start with the clinic workspace today — every product shares the same records core, so your data grows with you."
+
+#: src/components/landing/product-card.tsx
+msgid "The local-first clinic workspace — medical records, appointments, pharmacy and billing on your desktop."
+msgstr "The local-first clinic workspace — medical records, appointments, pharmacy and billing on your desktop."
+
+#: src/components/landing/download-card.tsx
+msgid "This device"
+msgstr "This device"
+
+#: src/components/landing/download-card.tsx
+msgid "Ubuntu 22.04 / glibc 2.31+ · 64-bit"
+msgstr "Ubuntu 22.04 / glibc 2.31+ · 64-bit"
+
+#: src/components/landing/product-card.tsx
+msgid "Vettera in your pocket — rounds, schedules and vaccination reminders via LINE and SMS."
+msgstr "Vettera in your pocket — rounds, schedules and vaccination reminders via LINE and SMS."
+
+#: src/app/App.tsx
+msgid "Vettera keeps patient records, appointments, pharmacy and billing in one local-first workspace — no account, no server setup. One suite for clinics and hospitals, from desktop to cloud."
+msgstr "Vettera keeps patient records, appointments, pharmacy and billing in one local-first workspace — no account, no server setup. One suite for clinics and hospitals, from desktop to cloud."
+
+#: src/app/App.tsx
+msgid "What’s inside"
+msgstr "What’s inside"
+
+#: src/components/landing/download-card.tsx
+msgid "Windows 10 or later · 64-bit"
+msgstr "Windows 10 or later · 64-bit"
+
+#: src/app/App.tsx
+msgid "Windows 10+ · macOS 12+ · Ubuntu 22.04+ — SHA-256 checksums ship with every release"
+msgstr "Windows 10+ · macOS 12+ · Ubuntu 22.04+ — SHA-256 checksums ship with every release"
+
+#: src/app/App.tsx
+msgid "Your clinic data stays in a local SQLite file on your machine; cloud sync is always optional."
+msgstr "Your clinic data stays in a local SQLite file on your machine; cloud sync is always optional."

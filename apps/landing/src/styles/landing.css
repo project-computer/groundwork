@@ -1,0 +1,556 @@
+/* Vettera design tokens — copied verbatim from apps/clinic/src/styles/base.css.
+   Keep the two blocks in sync; the clinic app is the source of truth. */
+:root {
+  --font-plex-sans: 'IBM Plex Sans', 'IBM Plex Sans Thai', 'Noto Sans Thai', ui-sans-serif, system-ui, sans-serif;
+  --font-plex-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --ink: #18343d;
+  --ink-muted: #6c8185;
+  --line: #dfe9e8;
+  --paper: #fff;
+  --surface: #fff;
+  --canvas: #f5f9f8;
+  --teal: #168778;
+  --teal-dark: #0f655b;
+  --teal-soft: #e4f3ef;
+  --teal-wash: #edf8f4;
+  --teal-wash-border: #c8e7de;
+  --teal-line: #cde9e1;
+  --navy: #203c48;
+  --amber: #b7791f;
+  --amber-soft: #fff1d7;
+  --violet: #7662bd;
+  --violet-soft: #ede9f8;
+  --blue: #477ca2;
+  --blue-soft: #e4eff8;
+  --shadow: 0 10px 30px rgba(24, 52, 61, 0.05);
+  --chip-bg: #f8fcfb;
+  --nav-badge-bg: #cce8e1;
+  --row-border: #edf2f1;
+  --topbar-bg: rgba(255, 255, 255, 0.75);
+  --radius: 0.75rem;
+}
+.dark {
+  --ink: #dbeae7;
+  --ink-muted: #a3bcb8;
+  --line: #22403e;
+  --paper: #0f2120;
+  --surface: #0f2120;
+  --canvas: #0a1514;
+  --teal: #2fa78f;
+  --teal-dark: #7ccfb9;
+  --teal-soft: #12332c;
+  --teal-wash: #10302a;
+  --teal-wash-border: #1e4a40;
+  --teal-line: #1e4a40;
+  --navy: #0c1c1e;
+  --amber: #d9a441;
+  --amber-soft: #33270f;
+  --violet: #9f8ce0;
+  --violet-soft: #241f38;
+  --blue: #6ea6c7;
+  --blue-soft: #12242f;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --chip-bg: #122524;
+  --nav-badge-bg: #1a4038;
+  --row-border: #1a2f2e;
+  --topbar-bg: rgba(10, 21, 20, 0.75);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --ink: #dbeae7;
+    --ink-muted: #a3bcb8;
+    --line: #22403e;
+    --paper: #0f2120;
+    --surface: #0f2120;
+    --canvas: #0a1514;
+    --teal: #2fa78f;
+    --teal-dark: #7ccfb9;
+    --teal-soft: #12332c;
+    --teal-wash: #10302a;
+    --teal-wash-border: #1e4a40;
+    --teal-line: #1e4a40;
+    --navy: #0c1c1e;
+    --amber: #d9a441;
+    --amber-soft: #33270f;
+    --violet: #9f8ce0;
+    --violet-soft: #241f38;
+    --blue: #6ea6c7;
+    --blue-soft: #12242f;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    --chip-bg: #122524;
+    --nav-badge-bg: #1a4038;
+    --row-border: #1a2f2e;
+    --topbar-bg: rgba(10, 21, 20, 0.75);
+  }
+}
+
+/* ---------- element resets (mirrors base.css) ---------- */
+* {
+  box-sizing: border-box;
+  border-color: var(--line);
+}
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--canvas);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+}
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+[id] {
+  scroll-margin-top: 84px;
+}
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ---------- header (same language as the app shell topbar/brand) ---------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--line);
+  background: var(--topbar-bg);
+  backdrop-filter: blur(10px);
+}
+.header-inner {
+  max-width: 1120px;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 24px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--teal);
+  color: white;
+}
+.brand strong {
+  display: block;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+.brand span {
+  display: block;
+  font-size: 10px;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.icon-button {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  transition: background-color 0.15s, color 0.15s;
+}
+.icon-button:hover {
+  background: var(--teal-soft);
+  color: var(--teal-dark);
+}
+.version-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 10px;
+  background: var(--nav-badge-bg);
+  color: var(--teal-dark);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+/* ---------- buttons (mirrors shell.css .button) ---------- */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  padding: 9px 13px;
+  font-size: 13px;
+  font-weight: 650;
+  /* Anchors render as .button too — without this they fall back to the
+     browser link blue, which clashes badly in dark mode. */
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+.button.primary {
+  background: var(--teal);
+  color: white;
+  border-color: var(--teal);
+}
+.button.primary:hover {
+  background: var(--teal-dark);
+}
+.button.secondary {
+  background: var(--surface);
+  color: var(--ink);
+}
+.button:not(.primary):hover {
+  border-color: color-mix(in srgb, var(--teal) 45%, var(--line));
+  color: var(--teal-dark);
+}
+.button.small {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.button.large {
+  padding: 12px 18px;
+  font-size: 14px;
+  border-radius: 10px;
+}
+
+/* ---------- hero ---------- */
+.hero {
+  max-width: 720px;
+  margin: auto;
+  padding: 88px 24px 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+.hero h1 {
+  margin: 0;
+  font-size: clamp(34px, 6vw, 54px);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+.hero .lede {
+  margin: 0;
+  max-width: 560px;
+  color: var(--ink-muted);
+  font-size: 16px;
+  line-height: 1.55;
+}
+.cta-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.hero-note {
+  margin: 4px 0 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+/* ---------- sections & download cards ---------- */
+.section {
+  max-width: 1120px;
+  margin: auto;
+  padding: 40px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.section h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+.section-lede {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 13.5px;
+  max-width: 640px;
+  line-height: 1.5;
+}
+.download-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 4px;
+}
+.download-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.download-card.detected {
+  border-color: color-mix(in srgb, var(--teal) 55%, var(--line));
+  background: color-mix(in srgb, var(--teal-wash) 55%, var(--paper));
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.card-head strong {
+  display: block;
+  font-size: 14px;
+}
+.card-tile {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+}
+.card-tile.windows {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+.card-tile.macos {
+  background: var(--violet-soft);
+  color: var(--violet);
+}
+.card-tile.linux {
+  background: var(--teal-soft);
+  color: var(--teal-dark);
+}
+.platform-note {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+.detected-chip {
+  margin-left: auto;
+  border-radius: 10px;
+  background: var(--amber-soft);
+  color: var(--amber);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+.file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--row-border);
+}
+.file-meta {
+  min-width: 0;
+}
+.file-meta strong {
+  display: block;
+  font-size: 12.5px;
+}
+.file-name {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-muted);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- products ---------- */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 13px;
+  margin-top: 4px;
+}
+.product-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 17px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow);
+}
+.product-card.available {
+  border-color: color-mix(in srgb, var(--teal) 45%, var(--line));
+  background: color-mix(in srgb, var(--teal-wash) 45%, var(--paper));
+}
+.product-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.product-head strong {
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+.product-card > p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.product-card .button {
+  margin-top: auto;
+  align-self: flex-start;
+}
+.card-tile.hospital {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+.card-tile.mobile {
+  background: var(--violet-soft);
+  color: var(--violet);
+}
+.card-tile.cloud {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+.status-chip {
+  margin-left: auto;
+  flex: none;
+  border-radius: 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+.status-chip.available {
+  background: var(--nav-badge-bg);
+  color: var(--teal-dark);
+}
+.status-chip.coming-soon {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+.status-chip.in-development {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+/* ---------- features ---------- */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 13px;
+  margin-top: 4px;
+}
+.feature-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 17px;
+  display: flex;
+  gap: 12px;
+  box-shadow: var(--shadow);
+}
+.feature-tile {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--teal-soft);
+  color: var(--teal-dark);
+}
+.feature-card strong {
+  display: block;
+  font-size: 13px;
+}
+.feature-card p {
+  margin: 4px 0 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ---------- footer ---------- */
+.site-footer {
+  border-top: 1px solid var(--line);
+  margin-top: 40px;
+}
+.footer-inner {
+  max-width: 1120px;
+  margin: auto;
+  padding: 22px 24px 30px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 960px) {
+  .download-grid {
+    grid-template-columns: 1fr;
+  }
+  .feature-grid,
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .hero {
+    padding: 64px 20px 48px;
+  }
+}
+@media (max-width: 560px) {
+  .feature-grid,
+  .product-grid {
+    grid-template-columns: 1fr;
+  }
+  .header-inner {
+    padding: 10px 16px;
+  }
+  .section {
+    padding: 32px 16px 20px;
+  }
+  .cta-row .button {
+    width: 100%;
+  }
+  .file-row {
+    flex-wrap: wrap;
+  }
+  .footer-inner {
+    flex-direction: column;
+  }
+}

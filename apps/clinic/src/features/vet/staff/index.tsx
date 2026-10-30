@@ -8,38 +8,29 @@ import { useClinic, usePermission } from '@/lib/vet/store'
 import { formatDate, permissionsFor, roleLabel, ROLES } from '@/lib/vet/format'
 import { hasPin } from '@/lib/vet/auth'
 import type { StaffUser } from '@/lib/vet/types'
+import { useMemberForm, useSwitchAccount } from './member-form'
+import { MemberActivationButton, MemberPinButton, MemberSignInButton } from './member-row-actions'
 import { PinDialog } from '../pin-dialog'
+
+// The workspace dialog consumes the staff feature through this public API —
+// never its folder internals (2026-10-30 plan, phase D).
+export { TeamPanel } from './team-panel'
+export { useSwitchAccount } from './member-form'
 
 /**
  * Staff & permissions View: add members, change roles, switch accounts,
  * manage PINs and read the audit trail. The workspace dialog's team panel
- * (staff/team-panel.tsx) is the compact second surface onto the same data.
+ * (staff/team-panel.tsx) is the compact second surface onto the same data —
+ * the add form and row actions are shared via member-form / member-row-actions.
  */
 export const StaffView = () => {
   const { data, session, dispatch } = useClinic()
   const { t } = useLingui()
   const manage = usePermission('staff.manage')
-  const [name, setName] = useState('')
-  const [role, setRole] = useState<StaffUser['role']>('reception')
+  const { name, setName, role, setRole, canSubmit, submit } = useMemberForm()
+  const signInAs = useSwitchAccount()
   const [showAllAudit, setShowAllAudit] = useState(false)
   const [pinFor, setPinFor] = useState<StaffUser | null>(null)
-
-  const addStaff = () => {
-    if (!name.trim()) return
-    dispatch({ type: 'addStaff', name, role })
-    setName('')
-    setRole('reception')
-  }
-
-  // Switching accounts is instant until a member sets a PIN; after that the
-  // app locks on that member so the PIN is verified on the lock screen.
-  const signInAs = (member: StaffUser) => {
-    if (!hasPin(member)) {
-      dispatch({ type: 'signIn', userId: member.id })
-      return
-    }
-    dispatch({ type: 'session', patch: { locked: true, currentUserId: member.id } })
-  }
 
   return (
     <>
@@ -55,7 +46,7 @@ export const StaffView = () => {
                 id="staff-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addStaff()}
+                onKeyDown={(e) => e.key === 'Enter' && submit()}
                 placeholder={t`e.g. Anong Srisuk…`}
               />
             </Field>
@@ -69,7 +60,7 @@ export const StaffView = () => {
               </select>
             </Field>
           </div>
-          <button className="button primary" onClick={addStaff} disabled={!name.trim()}>
+          <button className="button primary" onClick={submit} disabled={!canSubmit}>
             <Trans>Add member</Trans>
           </button>
         </Panel>
@@ -134,33 +125,11 @@ export const StaffView = () => {
                   ))}
                 </span>
                 <span>
-                  {!isSelf && user.active && (
-                    <button className="small-button" onClick={() => signInAs(user)}>
-                      <Trans>Sign in as</Trans>
-                    </button>
-                  )}
+                  {!isSelf && user.active && <MemberSignInButton member={user} isSelf={isSelf} onSignIn={signInAs} />}
                 </span>
                 <span style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                  {(manage.allowed || isSelf) && user.active && (
-                    <button
-                      className="small-button"
-                      onClick={() => setPinFor(user)}
-                      aria-label={hasPin(user) ? t`Change PIN for ${user.name}` : t`Set PIN for ${user.name}`}
-                    >
-                      {hasPin(user) ? <Trans>Change PIN</Trans> : <Trans>Set PIN</Trans>}
-                    </button>
-                  )}
-                  {manage.allowed &&
-                    !isSelf &&
-                    (user.active ? (
-                      <button className="small-button" onClick={() => dispatch({ type: 'setStaffActive', id: user.id, active: false })}>
-                        <Trans>Deactivate</Trans>
-                      </button>
-                    ) : (
-                      <button className="small-button" onClick={() => dispatch({ type: 'setStaffActive', id: user.id, active: true })}>
-                        <Trans>Reactivate</Trans>
-                      </button>
-                    ))}
+                  <MemberPinButton member={user} isSelf={isSelf} onSetPin={setPinFor} />
+                  <MemberActivationButton member={user} isSelf={isSelf} />
                 </span>
               </div>
             )

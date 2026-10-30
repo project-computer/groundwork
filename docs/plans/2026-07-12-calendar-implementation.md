@@ -127,13 +127,13 @@ git commit -m "feat: extend useAppointments with date-range and type filtering"
 ## Task 3: Backend date-range filtering for appointments
 
 **Files:**
-- Modify: `backend/internal/models/appointment.go`
-- Modify: `backend/internal/repository/appointment_repository.go`
-- Modify: `backend/internal/handlers/appointment_handler.go`
+- Modify: `server/internal/models/appointment.go`
+- Modify: `server/internal/repository/appointment_repository.go`
+- Modify: `server/internal/handlers/appointment_handler.go`
 
 **Step 1: Extend `AppointmentListQuery` model**
 
-Append to the struct in `backend/internal/models/appointment.go:48`:
+Append to the struct in `server/internal/models/appointment.go:48`:
 
 ```go
 type AppointmentListQuery struct {
@@ -152,7 +152,7 @@ The frontend sends camelCase keys (axios default), and the `query:` tags map the
 
 **Step 2: Add date-range + type filtering in repository**
 
-In `backend/internal/repository/appointment_repository.go:78`, insert these filter blocks between the existing `Date` and `Status` checks (after line 97, before `if query.Status != ""`):
+In `server/internal/repository/appointment_repository.go:78`, insert these filter blocks between the existing `Date` and `Status` checks (after line 97, before `if query.Status != ""`):
 
 ```go
 if query.StartDate != "" && query.EndDate != "" {
@@ -178,7 +178,7 @@ if query.Type != "" {
 
 **Step 3: Wire the new query params in the handler**
 
-In `backend/internal/handlers/appointment_handler.go:60`, extend the `query := models.AppointmentListQuery{...}` literal:
+In `server/internal/handlers/appointment_handler.go:60`, extend the `query := models.AppointmentListQuery{...}` literal:
 
 ```go
 query := models.AppointmentListQuery{
@@ -196,7 +196,7 @@ query := models.AppointmentListQuery{
 **Step 4: Build + vet**
 
 ```bash
-cd backend
+cd server
 go build ./...
 go vet ./...
 ```
@@ -204,7 +204,7 @@ go vet ./...
 **Step 5: Commit**
 
 ```bash
-git add backend/internal/models/appointment.go backend/internal/repository/appointment_repository.go backend/internal/handlers/appointment_handler.go
+git add server/internal/models/appointment.go server/internal/repository/appointment_repository.go server/internal/handlers/appointment_handler.go
 git commit -m "feat: add date-range and type filtering to appointments API"
 ```
 
@@ -850,7 +850,7 @@ pnpm exec tsc -b --noEmit
 **Step 2: Backend build + vet**
 
 ```bash
-cd backend
+cd server
 go build ./...
 go vet ./...
 ```

@@ -10,13 +10,14 @@ Android/iOS later (Tauri mobile), and web later (same UI, IndexedDB adapter).
 | Path | Purpose |
 |---|---|
 | `apps/clinic` | Tauri 2 + React app (the desktop UI) |
+| `apps/landing` | Public download page for the desktop binaries (React + Vite, EN/ไทย) |
 | `apps/sidecar/` | Go sidecar `clinic-core`: local SQLite + sync engine |
-| `backend/` | Go cloud API (Fiber + Postgres) — only needed for cloud sync |
+| `server/` | Go cloud API (Fiber + Postgres) — only needed for cloud sync |
 | `docs/` | Architecture, data model, ADRs, plans |
 
 ## Prerequisites
 
-- Node 20+ and pnpm (JS package manager — used inside `apps/clinic` only)
+- Node 20+ and pnpm (JS package manager — used inside `apps/clinic` and `apps/landing`)
 - Go 1.27+
 - Rust stable (Tauri 2 prerequisites: webkit2gtk on Linux)
 - GNU make — the task runner across all languages
@@ -24,29 +25,30 @@ Android/iOS later (Tauri mobile), and web later (same UI, IndexedDB adapter).
 ## Commands
 
 `make` is the entrypoint for everything that crosses language boundaries;
-`make help` prints the current list. All JS tooling (pnpm, lockfile,
-node_modules) lives inside `apps/clinic` — the repo root has no JS.
+`make help` prints the current list. Each JS app owns its own tooling
+(package.json, lockfile, node_modules) — the repo root has no JS.
 
 ```bash
-make install    # pnpm install (all JS deps)
-make help       # list every target
+make install       # pnpm install (all JS deps, clinic + landing)
+make help          # list every target
 
-make dev        # Vite dev server (browser, localStorage)
-make tauri      # desktop shell (builds the sidecar first, then SQLite)
-make build      # web build
+make dev           # Vite dev server (browser, localStorage)
+make dev-landing   # download page dev server (port 1421)
+make tauri         # desktop shell (builds the sidecar first, then SQLite)
+make build         # web build (clinic + landing)
 
 make sidecar    # build + stage the Go sidecar binary (incremental)
 
 make lint       # every linter (TS + Go + Rust)
 make lint-ts    # oxlint + knip (unused files, deps, exports)
-make lint-go    # backend: go vet + golangci-lint + gofmt check
+make lint-go    # server: go vet + golangci-lint + gofmt check
 make lint-rust  # Tauri shell: cargo fmt --check + clippy -D warnings
 make fmt        # format everything (fmt-go, fmt-rust)
 make vuln-go    # govulncheck (known Go CVEs reachable from code)
 
 make test       # TS + Go + Rust tests (builds the sidecar first)
 make test-ts    # vitest (unit + component + screenshot)
-make test-go    # go test -race in every Go module (sidecar + cloud backend)
+make test-go    # go test -race in every Go module (sidecar + cloud server)
 make test-rust  # cargo tests for the Tauri shell
 make test-pages # Playwright page tests
 make ci         # exactly what the CI workflow runs

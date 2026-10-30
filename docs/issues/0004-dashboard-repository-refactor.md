@@ -2,7 +2,7 @@
 
 ## What to build
 
-`backend/internal/handlers/dashboard_handler.go` runs raw SQL against `*pgxpool.Pool` directly (at least 5 queries today). Lift this into a `repository.DashboardRepository` (raw pgx, consistent with the rest of the repo layer) and a `service.DashboardService` that consumes the repo. Handler becomes thin: parse query params, call service, render response.
+`server/internal/handlers/dashboard_handler.go` runs raw SQL against `*pgxpool.Pool` directly (at least 5 queries today). Lift this into a `repository.DashboardRepository` (raw pgx, consistent with the rest of the repo layer) and a `service.DashboardService` that consumes the repo. Handler becomes thin: parse query params, call service, render response.
 
 No new endpoints, no response shape change, no UI changes. Zero behavior delta visible to callers.
 

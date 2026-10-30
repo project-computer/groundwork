@@ -37,6 +37,20 @@ apps/clinic/                  Tauri 2 + React + TS desktop app
 │   └── migrations/           0001–0003, 0005 (shared, byte-identical to sidecar)
 └── .oxlintrc.json            lint + layering enforcement
 
+apps/landing/                 Public download page (React + Vite + TS)
+├── src/
+│   ├── app/App.tsx           page composition (hero, products, downloads, features)
+│   ├── components/landing/   download-card · theme-toggle ·
+│   │                         language-toggle · icons (inline, no lucide)
+│   ├── lib/
+│   │   ├── downloads.ts      release manifest + detectPlatform (+ tests)
+│   │   ├── i18n.tsx          lingui wrapper, same `vet.locale` key as clinic
+│   │   └── theme.ts          same `clinicbook:theme` key as clinic
+│   └── styles/landing.css    Vettera tokens copied from clinic base.css —
+│                             keep in sync; clinic is the source of truth
+├── src/locales/{en,th}/      lingui catalogs (`pnpm i18n:extract/compile`)
+└── .oxlintrc.json            same func-style rules as clinic
+
 apps/sidecar/                 Go clinic-core: local SQLite + sync engine
 ├── cmd/clinic-core/          entrypoint (loopback HTTP, announces port)
 ├── internal/
@@ -47,17 +61,17 @@ apps/sidecar/                 Go clinic-core: local SQLite + sync engine
 ├── migrations/               0001–0005 (0004 sync_meta is sidecar-only)
 └── bin/clinic-core           build output; staged by the root Makefile
 
-backend/                      Go cloud API (Fiber + Postgres), sync only
+server/                       Go cloud API (Fiber + Postgres), sync only
 ├── cmd/api · cmd/reminder
 ├── internal/
-│   ├── handlers/ · services/ · repository/   (~18 each, three-tier)
+│   ├── handlers/ · service/ · repository/     (~18 each, three-tier)
 │   ├── models/ · middleware/ · utils/ · notifications/
 │   └── service/sync_service.go               entity registry (2nd copy)
 └── migrations/               000001–000011 (cloud schema)
 
 docs/                         architecture.md · data-model.md
-├── decisions/                ADRs 0001–0013
-├── adr/                      ADRs 0001–0004
+├── decisions/                ADRs 0001–0019 (single series; 0016–0019 are
+│                             domain-model ADRs renumbered from the old docs/adr/)
 └── plans/                    point-in-time plans (historical record)
 ```
 
@@ -81,14 +95,16 @@ migration — new UI should use Tailwind utilities with token classes
 
 ## Target deltas (in-flight refactoring candidates)
 
-Plan of record: `docs/plans/2026-10-29-frontend-refactor.md`. All phases
-(0–6) are done. Each phase marks its delta **done** in the same PR that
-lands it — these docs never trail the code they describe.
+Plan of record: `docs/plans/2026-10-30-architecture-alignment.md`
+(follow-up to the executed
+`docs/plans/2026-10-29-frontend-refactor.md`, phases 0–6 all done). Each
+phase marks its delta **done** in the same PR that lands it — these docs
+never trail the code they describe.
 
 - Document shape: **done** — `fixtures/clinic-document.json` + conformance
   tests pin TS, Go and Rust guards; `parseClinicState` normalises legacy docs.
 - Sync entity registry: **done** — `fixtures/sync-entities.json` pins
-  `entities.go` (sidecar) and `sync_service.go` (backend).
+  `entities.go` (sidecar) and `sync_service.go` (server).
 - `src/lib/vet/persistence.ts` — **done**: owns `loadState`/`saveState`, the
   three adapters (sidecar HTTP, Rust invoke, localStorage), the fallback
   order, the plan preference, and the shape guards. Drift: `store.tsx` now
@@ -98,8 +114,9 @@ lands it — these docs never trail the code they describe.
   dissolved into folder-per-View modules — shell/, dashboard/, owners/,
   consultations/, billing/, inventory/, records/, schedule/, reports/,
   staff/, settings/, workspace/ — with dialogs and tests beside. StaffView
-  and TeamPanel are colocated in staff/ (deep dedup of their shared member
-  form is still open). pet→patient / encounter→Visit renames rode the
+  and TeamPanel are colocated in staff/ and share their member form and row
+  actions (member-form.tsx / member-row-actions.tsx, 2026-10-30 phase B).
+  pet→patient / encounter→Visit renames rode the
   moves; CSS `pet-*` classes became `patient-*`/`member-avatar` (phase 6
   sweep, screenshots unchanged).
 - Write-path invariants enforced in the reducer — **done (ADR-0015)**:
@@ -132,8 +149,8 @@ lands it — these docs never trail the code they describe.
   `StatCard` (Dashboard, Billing, Reports). Layout classes stay in the
   stylesheets, keyed off the passed `className`; existing `.modal*`,
   `.table-*`, `.stat-*` hooks are preserved, so screenshots are unchanged.
-  **Open (deferred)**: StaffView/TeamPanel still duplicate the member form —
-  they diverge enough that merging them is its own change.
+  **Resolved (2026-10-30 phase B)**: the StaffView/TeamPanel member form and
+  row actions now share `staff/member-form.tsx` / `staff/member-row-actions.tsx`.
 - `lib/vet/sync.ts` seam — **done**: useSyncWorker owns the debounced push,
   periodic pull, connectivity reset and in-flight mutation lock; the
   ClinicProvider consumes it. store.tsx imports no transport (oxlint now
@@ -142,16 +159,45 @@ lands it — these docs never trail the code they describe.
   superseded: the three guards are now aligned and fixture-pinned; full
   consolidation behind the sidecar remains optional.
 
+2026-10-30 plan deltas (all executed 2026-10-30):
+
+- **Modal focus management — done (Phase A)**: the box takes focus on open,
+  Tab/Shift+Tab wrap inside the dialog (module `dialogStack` — only the top
+  dialog of a nested pair traps), and focus returns to the opener on close.
+  Only markup delta: `tabIndex={-1}` on the box; screenshots unchanged.
+- **StaffView/TeamPanel member-form + row-action dedup — done (Phase B)**:
+  `staff/member-form.tsx` (`useMemberForm`, `useSwitchAccount`) and
+  `staff/member-row-actions.tsx` (sign-in / PIN / activate buttons) sit
+  behind both surfaces; the workspace dialog imports them through
+  `../staff`'s public index — the one sibling-internals import
+  (`../staff/team-panel`) is gone. Residual: the per-row role selects keep
+  their per-surface elements (`select` vs `NativeSelect`).
+- **Split oversized Views — done (Phase C)**: trigger rule stands — a View
+  earns `components/` extraction past ~450 lines or a second dialog.
+  Executed: schedule 724 → 445 (+ appointment-card, booking-dialog,
+  month-calendar, waiting-queue, upcoming-list, walk-in-form), consultations
+  631 → 125
+  (+ closed-encounter, clinical-notes, prescription-panel, vaccination-,
+  vitals-, follow-up panels, patient-snapshot, no-active-consultation),
+  workspace 480 → 94 (+ clinic/account/roles panels), reports 478 → 348
+  (labels.ts + export-csv.ts beside; pure `csvCell`/`csvMoney` moved into
+  `lib/vet/report.ts` with tests), billing 456 → 312 (+ payment, refund and
+  void dialogs beside the receipt).
+- **Sibling-View internals lint tripwire — done (Phase D)**: oxlint denies
+  the twelve `../<view>/*` imports from `src/features/**`; `../<view>` (the
+  public index) stays legal for shell composition and cross-feature reuse
+  (workspace → staff). Verified in both directions — clean tree passes,
+  injected `../staff/team-panel` import errors.
+
 ## Build orchestration
 
 The root `Makefile` is the entrypoint for anything that crosses language
-boundaries (`make lint`, `make test`, `make test-go`, `make sidecar`,
-`make test-pages`, `make ci`). All JS tooling lives entirely inside
-`apps/clinic`: its `package.json`, `pnpm-lock.yaml`, `node_modules`, and
-`knip.jsonc` (knip is an app devDependency, run via
-`pnpm -C apps/clinic exec knip`). The repo root has no package.json,
-lockfile, or workspace file — Make is the only root task surface. Tauri's
-`beforeDevCommand`/`beforeBuildCommand` go through
+boundaries (`make lint`, `make test`, `make sidecar`, `make test-pages`,
+`make ci`). Each JS app owns its tooling entirely (`apps/clinic` and
+`apps/landing` each have a package.json, pnpm-lock.yaml, and node_modules);
+knip is a clinic devDependency and only audits `apps/clinic`. The repo root
+has no package.json, lockfile, or workspace file — Make is the only root task
+surface. Tauri's `beforeDevCommand`/`beforeBuildCommand` go through
 `make -C ../.. sidecar`, which only rebuilds when the sidecar's Go sources
 changed.
 

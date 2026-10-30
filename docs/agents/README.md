@@ -7,7 +7,7 @@ One agent = one brief. Each brief is self-contained; every agent MUST read
 
 1. Read `00-shared-context.md` first.
 2. Work ONLY inside the file boundaries listed in your brief.
-3. Do not modify `frontend/`, `backend/`, `compose.yml`, or the root `Makefile`.
+3. Do not modify `frontend/`, `server/`, `compose.yml`, or the root `Makefile`.
 4. Do not commit unless your brief says so. Never commit secrets.
 5. Run the verification commands listed in your brief and report actual output.
 6. Do not claim tests/builds passed unless you ran them.

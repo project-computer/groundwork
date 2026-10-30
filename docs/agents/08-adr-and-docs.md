@@ -12,7 +12,7 @@ clear, documented decisions.
 1. `docs/decisions/` — concise ADRs (status/date/context/decision/
    consequences, ~1 page each):
    - `0001-desktop-first-tauri.md` — why Tauri 2 local-first desktop MVP;
-     coexistence with the legacy `frontend/`+`backend/` web stack
+     coexistence with the legacy `frontend/`+`server/` web stack
      (untouched, separate product path).
    - `0002-monorepo-layout.md` — root pnpm workspace, apps/packages split,
      why legacy `frontend/` is excluded from the root workspace.

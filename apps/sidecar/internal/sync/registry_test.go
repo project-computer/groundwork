@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// The entity registry is hand-synced with backend/internal/service/sync_service.go.
+// The entity registry is hand-synced with server/internal/service/sync_service.go.
 // fixtures/sync-entities.json is the single source of truth; both sides are
 // pinned to it so adding a type without its counterpart fails a test.
 func TestRegistryMatchesSharedFixture(t *testing.T) {

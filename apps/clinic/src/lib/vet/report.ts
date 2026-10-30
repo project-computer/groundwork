@@ -333,3 +333,11 @@ export const buildReport = (data: ClinicState, range: ReportRange, now = new Dat
     expiringLots,
   }
 }
+
+/* ---------- CSV export helpers (pure) ---------- */
+
+/** Escape one CSV cell — quotes doubled, value always quoted. */
+export const csvCell = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`
+
+/** Minor units (cents) → plain decimal string, the CSV money format. */
+export const csvMoney = (minor: number) => (minor / 100).toFixed(2)

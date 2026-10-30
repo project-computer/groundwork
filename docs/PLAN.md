@@ -40,7 +40,7 @@ The plan is written against this reality — do not re-implement what is done.
 ### Already built
 | Area | Status | Where |
 |---|---|---|
-| Auth: login, JWT access+refresh, logout, change password, profile | ✅ Done | `backend/internal/handlers/auth_handler.go`, routes in `cmd/api/main.go` |
+| Auth: login, JWT access+refresh, logout, change password, profile | ✅ Done | `server/internal/handlers/auth_handler.go`, routes in `cmd/api/main.go` |
 | Users CRUD, roles: `admin / veterinarian / receptionist / pharmacist` | ✅ Done (role = string on `users`) | `users` table, `internal/middleware/auth.go` |
 | Pets CRUD + search + status filters + per-pet history | ✅ Done | `patient_handler.go`, `pets` table |
 | Appointments: book, today list, check-in (creates visit), cancel | ✅ Done | `appointment_handler.go` |
@@ -52,7 +52,7 @@ The plan is written against this reality — do not re-implement what is done.
 | Audit log table | ⚠️ Schema only — not wired | `audit_logs` table |
 | `visit_images` table | ⚠️ Schema only — no upload endpoint | `visit_images` table |
 | Docker Compose (Postgres 18 + API + Nginx frontend), Makefile | ✅ Done | `compose.yaml`, `Makefile` |
-| SQL migrations (up/down) + seed | ✅ Done | `backend/migrations/`, `backend/scripts/seed.sql` |
+| SQL migrations (up/down) + seed | ✅ Done | `server/migrations/`, `server/scripts/seed.sql` |
 
 ### Gaps (drive the workstreams below)
 - ❌ No CI/CD (no `.github/`)
@@ -114,14 +114,14 @@ The plan is written against this reality — do not re-implement what is done.
 | State/data | **TanStack Query 5** + native **fetch** via `apiFetch()` (no axios) + react-hook-form + **zod** | TanStack Query owns server state (cache, dedupe, retry, invalidation); `shared/api/client.ts` owns the HTTP layer; hooks per feature: `src/features/<domain>/api.ts` (§6b) |
 | Lint | **oxlint** | `make lint-ts` (root Makefile) |
 | Package manager | **pnpm** | |
-| Backend | **Go 1.25 + Fiber v3** (not NestJS/Laravel) | `backend/cmd/api/main.go` |
+| Backend | **Go 1.25 + Fiber v3** (not NestJS/Laravel) | `server/cmd/api/main.go` |
 | Backend layers | handlers → service → repository → models | strict layering, one file per entity |
 | DB access | **pgx v5** (raw SQL, no ORM) | |
-| Config | **viper** (`.env`) | `backend/internal/config/config.go` |
+| Config | **viper** (`.env`) | `server/internal/config/config.go` |
 | Validation | **go-playground/validator** | |
 | Auth | JWT (`golang-jwt/v5`) + bcrypt + role middleware | |
 | Database | **PostgreSQL 18** | UUID ext enabled; current PKs are SERIAL |
-| Migrations | Plain SQL `NNNNNN_name.up.sql` / `.down.sql` in `backend/migrations/` | applied via `Makefile` |
+| Migrations | Plain SQL `NNNNNN_name.up.sql` / `.down.sql` in `server/migrations/` | applied via `Makefile` |
 | Cache/Queue | **Redis — Phase 2 only.** Until then, in-process events + Postgres `notifications` table | Fiber runs a single binary; don't add Redis before there's a need |
 | Image Storage | **MinIO (S3-compatible)** in `compose.yaml`; AWS S3 in prod | objects never in Postgres |
 | Infra | Docker Compose now; single VPS acceptable for launch | no Kubernetes |
@@ -138,7 +138,7 @@ The plan is written against this reality — do not re-implement what is done.
 ```
 /VET
   /frontend                 # React 19 + Vite SPA (pnpm) — structure in §6b below
-  /backend                  # Go 1.25 + Fiber v3
+  /server                   # Go 1.25 + Fiber v3
     /cmd/api                # entry point
     /internal
       /handlers             # HTTP handlers (per entity)
@@ -182,7 +182,7 @@ frontend/src/
   shared/                       # cross-cutting, domain-agnostic
     api/
       client.ts                 # fetch wrapper: apiFetch<T>() (auth header, 401 refresh-once, ApiError), withQuery()
-      types.ts                  # response envelope, PaginationMeta (mirrors backend utils/response.go)
+      types.ts                  # response envelope, PaginationMeta (mirrors server utils/response.go)
     lib/                        # formatters: date, currency, phone
     ui/                         # small generic composites over Primer: PageHeader, EmptyState, StatusBadge
   features/                     # one folder per domain — self-contained
@@ -270,7 +270,7 @@ Workstreams are re-scoped against existing code. "Exists" items become **verify 
 
 ### Tasks
 1. Create `docs/API.md` from **existing** routes (source: `cmd/api/main.go`) — document actual conventions (§9 below).
-2. Create `docs/ERD.md` from **existing** schema (source: `backend/migrations/000001_init_schema.up.sql`).
+2. Create `docs/ERD.md` from **existing** schema (source: `server/migrations/000001_init_schema.up.sql`).
 3. Add GitHub Actions calling the root Makefile targets (`make lint`, `make test`).
 4. Add MinIO service to `compose.yaml` + bucket bootstrap script.
 5. Add first Go tests + Vitest setup so CI has something to run.

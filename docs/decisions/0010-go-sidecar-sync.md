@@ -20,7 +20,7 @@ Ship a Go sidecar (`apps/sidecar/`, binary `clinic-core`) inside the Tauri bundl
   validates and stores the clinic document.
 - Exposes a loopback-only HTTP API: `GET/PUT /state`, `POST /sync/run`,
   `GET /sync/status`, `GET /healthz`.
-- Runs push/pull against `backend/`. Push sends entity envelopes extracted
+- Runs push/pull against `server/`. Push sends entity envelopes extracted
   from the outbox; pull merges by server-assigned `serverVersion` (falling
   back to the client version), then prunes acknowledged changes.
 - Rust keeps the shell: it spawns the sidecar, reads the announced port, and

@@ -17,7 +17,7 @@ This repo already contains an UNRELATED prior product:
 
 - `frontend/` — React 19 + Vite + Primer React + styled-components web app
   (has its own `pnpm-workspace.yaml` and lockfile inside `frontend/`).
-- `backend/` — Go + Fiber + PostgreSQL API.
+- `server/` — Go + Fiber + PostgreSQL API.
 - `compose.yml`, `Makefile`, `.env` — support the legacy full-stack app.
 - `docs/PLAN.md`, `docs/plans/` — legacy plan documents for that stack.
 
