@@ -53,19 +53,16 @@ docs/                         architecture.md · data-model.md
 
 ## CSS layout
 
-`src/index.css` is a 17-line import list; **the import order is the cascade
+`src/index.css` is a short import list; **the import order is the cascade
 order — keep it stable**. Partials live in `src/styles/`:
 
 | File | Contents |
 |---|---|
-| `base.css` | Tailwind `@theme`, shadcn tokens, Vettera palette, element resets |
+| `base.css` | Tailwind `@theme`, shadcn tokens, Vettera palette, element resets, the global `@media print` block (receipt `.print-area`) |
 | `shell.css` | app shell, nav, panels, buttons, tables, forms, modals |
 | `schedule.css` | calendar, week grid, walk-in form |
 | `workspace.css` | workspace dialog, role matrix, lock screen |
-| `reports.css` | reports, trend/bar charts |
-| `records.css` | records/billing/staff/inventory tables |
-| `receipt.css` | receipt + `@media print` |
-| `status.css` | banners, notifications, crash screen |
+| `records.css` | records/billing/staff/inventory tables (+ reports mobile seg/stat hooks) |
 
 Two palettes coexist in `base.css` (shadcn oklch + Vettera hex); the Vettera
 block owns `--sidebar-border`. Merge happens per-view during the Tailwind
@@ -74,18 +71,36 @@ migration — new UI should use Tailwind utilities with token classes
 
 ## Target deltas (in-flight refactoring candidates)
 
+Plan of record: `docs/plans/2026-10-29-frontend-refactor.md`. Each phase
+marks its delta **done** in the same PR that lands it — these docs never
+trail the code they describe.
+
 - Document shape: **done** — `fixtures/clinic-document.json` + conformance
   tests pin TS, Go and Rust guards; `parseClinicState` normalises legacy docs.
 - Sync entity registry: **done** — `fixtures/sync-entities.json` pins
   `entities.go` (sidecar) and `sync_service.go` (backend).
 - `src/lib/vet/persistence.ts` — **done**: owns `loadState`/`saveState`, the
   three adapters (sidecar HTTP, Rust invoke, localStorage), the fallback
-  order, the plan preference, and the shape guards. `store.tsx` has zero
-  transport/platform imports; oxlint enforces it.
-- `features/vet/` — split clinic-shell.tsx (2,600+ lines, 8 components) into
-  per-view files; shell keeps only ClinicApp + wiring.
-- One catalog module (`lib/vet/catalog.ts`) for prescribable/billable items;
-  stock and refund invariants enforced in the reducer.
+  order, the plan preference, and the shape guards. Drift: `store.tsx` now
+  imports `runSync` from `backend.ts` — the sync seam delta below restores
+  the zero-transport claim.
+- `features/vet/` — **planned (phase 1)**: split clinic-shell.tsx (2,768
+  lines, 10 components) into folder-per-View modules; shell keeps only
+  ClinicApp + wiring; StaffView + TeamPanel merge into one `staff/` module;
+  pet→patient / encounter→Visit renames ride the moves (CSS classes last).
+- Write-path invariants enforced in the reducer — **planned (phase 2)**:
+  stock floor in `addPrescription`, `recordPayment` computes `settles`
+  itself, one refund/void formula, one role matrix (`usePermission` derives
+  from it), rejections surfaced via `session.lastRejection` (ADR-0015).
+- Read model — **planned (phase 3)**: `lib/vet/catalog.ts` (prescribable/
+  billable items) + `lib/vet/selectors.ts` (outstanding balance, overdue
+  vaccinations, low stock — one home each) + `lib/vet/report.ts`
+  (translation-free, leaves the view file).
+- Deep UI primitives — **planned (phase 4)**: `components/ui/modal|data-table|
+  stat-card` replace 9 hand-rolled dialogs, 6 tables, 3 stat cards
+  (per decision 0008).
+- `lib/vet/sync.ts` seam — **planned (phase 5)**: sync orchestration leaves
+  the ClinicProvider; transports reached via persistence only.
 - Sidecar `store.Validate` becomes the single document validator — partially
   superseded: the three guards are now aligned and fixture-pinned; full
   consolidation behind the sidecar remains optional.

@@ -71,6 +71,11 @@ the reducer, not in a disabled button. If two places compute the same rule,
 one of them is a bug waiting to happen. Use `CONTEXT.md` terms, not synonyms
 (Patient, Owner, Visit, Vaccination, InventoryItem, InventoryLot…).
 
+When the reducer refuses an action it records why — `session.lastRejection`
+(ADR-0015). Never add a new silent `return store` guard. The 2026-10
+frontend refactor (`docs/plans/2026-10-29-frontend-refactor.md`) is moving
+the UI-only copies of these rules home — don't add new ones while it runs.
+
 ## Tests — through the interface
 
 | Area | Location |
