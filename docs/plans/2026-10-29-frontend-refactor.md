@@ -5,7 +5,6 @@
   grilling), aligned with the target deltas already recorded in
   `.agents/skills/repo-structure/REFERENCE.md`
 - Status: executed 2026-10-29/30 — phases 0, 1, 2, 3, 5 and 6 are done;
-  phase 3 leaves only the translation-free worklist FACTS selector open;
   phase 4 (deep UI primitives) is pending. See the target deltas in
   `.agents/skills/repo-structure/REFERENCE.md` for the live state.
 

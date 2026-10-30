@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { I18n } from '@lingui/core'
+import { msg } from '@lingui/core/macro'
 import { Plural, Trans, useLingui } from '@lingui/react/macro'
 import { Bell, X } from 'lucide-react'
 import { Pill } from '@/components/vet/fields'
 import { useClinic, type View } from '@/lib/vet/store'
-import { formatDate, lotsExpiringWithin, todayKey, vaccinationsDue } from '@/lib/vet/format'
-import { latestDueByPatient, lowStockItems, vaccinationOverdue } from '@/lib/vet/selectors'
+import { formatDate } from '@/lib/vet/format'
+import { buildWorklist, type WorklistFact } from '@/lib/vet/worklist'
 
 type SetView = (view: View) => void
 
@@ -17,71 +19,57 @@ interface Reminder {
   view: View
 }
 
+/**
+ * The worklist selector returns facts; every sentence is written here so a
+ * language switch is a plain re-render (only the facts are memoized).
+ */
+const reminderFor = (fact: WorklistFact, i18n: I18n): Reminder => {
+  switch (fact.kind) {
+    case 'vaccination-overdue':
+      return {
+        id: fact.id,
+        tone: fact.tone,
+        title: i18n._(msg`Vaccination overdue — ${fact.patientName ?? i18n._(msg`Unknown patient`)}`),
+        detail: i18n._(msg`Was due ${formatDate(fact.dueAt)}`),
+        view: 'records',
+      }
+    case 'vaccination-due':
+      return {
+        id: fact.id,
+        tone: fact.tone,
+        title: i18n._(msg`Vaccination due — ${fact.patientName ?? i18n._(msg`Unknown`)}`),
+        detail: i18n._(msg`${fact.vaccineName} · due ${formatDate(fact.dueAt)}`),
+        view: 'records',
+      }
+    case 'stock-low':
+      return {
+        id: fact.id,
+        tone: fact.tone,
+        title: i18n._(msg`Low stock — ${fact.itemName}`),
+        detail: i18n._(msg`${fact.onHand} ${fact.unit} left (reorder at ${fact.reorderLevel})`),
+        view: 'inventory',
+      }
+    case 'lot-expiring':
+      return {
+        id: fact.id,
+        tone: fact.tone,
+        title: i18n._(msg`Expiring soon — ${fact.itemName ?? i18n._(msg`Item`)} (${fact.lotNumber})`),
+        detail: i18n._(msg`${fact.quantity} ${fact.unit ?? i18n._(msg`units`)} expire ${formatDate(fact.expiryDate)}`),
+        view: 'inventory',
+      }
+  }
+}
+
 export const NotificationCenter = ({ setView }: { setView: SetView }) => {
   const { data } = useClinic()
   const { t, i18n } = useLingui()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
-  const reminders = useMemo<Reminder[]>(() => {
-    const today = todayKey()
-    const items: Reminder[] = []
-
-    // Overdue vaccinations: a patient's latest next-due date in the past.
-    for (const [patientId, due] of latestDueByPatient(data.vaccinations)) {
-      if (vaccinationOverdue(due, today)) {
-        const patient = data.patients.find((p) => p.id === patientId)
-        items.push({
-          id: `vax-overdue-${patientId}`,
-          tone: 'bad',
-          title: t`Vaccination overdue — ${patient?.name ?? t`Unknown patient`}`,
-          detail: t`Was due ${formatDate(due)}`,
-          view: 'records',
-        })
-      }
-    }
-
-    // Due within 30 days.
-    for (const v of vaccinationsDue(data.vaccinations, 30, today)) {
-      const patient = data.patients.find((p) => p.id === v.patientId)
-      items.push({
-        id: `vax-due-${v.id}`,
-        tone: 'warn',
-        title: t`Vaccination due — ${patient?.name ?? t`Unknown`}`,
-        detail: t`${v.vaccineName} · due ${formatDate(v.nextDueAt!)}`,
-        view: 'records',
-      })
-    }
-
-    // Low stock: on-hand at or below a non-zero reorder level (one rule,
-    // shared with Dashboard, Inventory and Reports).
-    for (const { item, onHand } of lowStockItems(data.inventoryItems, data.inventoryLots)) {
-      items.push({
-        id: `stock-low-${item.id}`,
-        tone: 'warn',
-        title: t`Low stock — ${item.name}`,
-        detail: t`${onHand} ${item.unit} left (reorder at ${item.reorderLevel})`,
-        view: 'inventory',
-      })
-    }
-
-    // Lots expiring within 30 days.
-    for (const lot of lotsExpiringWithin(data.inventoryLots, 30, today)) {
-      const item = data.inventoryItems.find((i) => i.id === lot.itemId)
-      items.push({
-        id: `stock-expiry-${lot.id}`,
-        tone: 'info',
-        title: t`Expiring soon — ${item?.name ?? t`Item`} (${lot.lotNumber})`,
-        detail: t`${lot.quantity} ${item?.unit ?? t`units`} expire ${formatDate(lot.expiryDate!)}`,
-        view: 'inventory',
-      })
-    }
-
-    return items.toSorted((a, b) => a.tone.localeCompare(b.tone) || a.title.localeCompare(b.title))
-    // Reminder titles are translated in this memo, so a language switch is
-    // intentionally a rebuild trigger even though `locale` is never read here.
-    // oxlint-disable-next-line react-hooks/exhaustive-deps, react/memo-dependencies
-  }, [data, t, i18n.locale])
+  // Only the facts are memoized (they are translation-free); the sentences are
+  // rebuilt each render, so a language switch needs no extra dependency.
+  const facts = useMemo(() => buildWorklist(data), [data])
+  const reminders = facts.map((fact) => reminderFor(fact, i18n))
 
   // Close on outside click / Escape.
   useEffect(() => {

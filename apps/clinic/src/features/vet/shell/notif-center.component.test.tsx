@@ -33,6 +33,11 @@ it("surfaces overdue vaccinations and stock warnings, and navigates on click", a
   expect(text).toContain("Low stock — Cohesive bandage 5cm")
   expect(text).toContain("Expiring soon")
 
+  // Overdue patients appear once: the worklist no longer also lists them as
+  // "due soon" (the raw due-window helper has no lower bound).
+  expect(text.split("Vaccination overdue — Tiger").length - 1).toBe(1)
+  expect(text).not.toContain("Vaccination due —")
+
   // Clicking an inventory reminder navigates to Pharmacy & Inventory.
   const lowStockItem = [...(panelEl?.querySelectorAll("button") ?? [])].find((n) => (n.textContent ?? "").includes("Low stock"))
   lowStockItem!.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))

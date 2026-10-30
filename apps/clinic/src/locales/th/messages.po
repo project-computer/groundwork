@@ -150,8 +150,8 @@ msgstr "{0} · {1} · ลากไปช่องเวลาอื่นเพ�
 msgid "{0} · {1} collected · {2} billed"
 msgstr "รับชำระ {0} · {1} · ออกบิล {2}"
 
-#. placeholder {0}: v.vaccineName
-#. placeholder {1}: formatDate(v.nextDueAt!)
+#. placeholder {0}: fact.vaccineName
+#. placeholder {1}: formatDate(fact.dueAt)
 #: src/features/vet/shell/notification-center.tsx
 msgid "{0} · due {1}"
 msgstr "{0} · ครบกำหนด {1}"
@@ -161,12 +161,19 @@ msgstr "{0} · ครบกำหนด {1}"
 msgid "{0} · Here’s what’s happening at the clinic today."
 msgstr "{0} · นี่คือสถานการณ์ของคลินิกในวันนี้"
 
-#. placeholder {0}: lot.quantity
-#. placeholder {1}: item?.unit ?? t`units`
-#. placeholder {2}: formatDate(lot.expiryDate!)
+#. placeholder {0}: fact.quantity
+#. placeholder {1}: fact.unit ?? i18n._(msg`units`)
+#. placeholder {2}: formatDate(fact.expiryDate)
 #: src/features/vet/shell/notification-center.tsx
 msgid "{0} {1} expire {2}"
 msgstr "{0} {1} หมดอายุ {2}"
+
+#. placeholder {0}: fact.onHand
+#. placeholder {1}: fact.unit
+#. placeholder {2}: fact.reorderLevel
+#: src/features/vet/shell/notification-center.tsx
+msgid "{0} {1} left (reorder at {2})"
+msgstr "เหลือ {0} {1} (สั่งเพิ่มที่ {2})"
 
 #. placeholder {0}: lot.quantity
 #. placeholder {1}: lot.expiryDate
@@ -275,12 +282,6 @@ msgstr "{m, plural, other {# นาที}}"
 #: src/features/vet/owners/index.tsx
 msgid "{name} registered."
 msgstr "ลงทะเบียน {name} เรียบร้อยแล้ว"
-
-#. placeholder {0}: item.unit
-#. placeholder {1}: item.reorderLevel
-#: src/features/vet/shell/notification-center.tsx
-msgid "{onHand} {0} left (reorder at {1})"
-msgstr "เหลือ {onHand} {0} (สั่งเพิ่มที่ {1})"
 
 #. placeholder {0}: item.unit
 #. placeholder {1}: item.reorderLevel
@@ -411,7 +412,7 @@ msgstr "ทั้งหมด"
 #. placeholder {0}: label.end
 #: src/features/vet/reports/index.tsx
 msgid "All activity through {0}"
-msgstr ""
+msgstr "กิจกรรมทั้งหมดจนถึง {0}"
 
 #: src/features/vet/dashboard/index.tsx
 msgid "All changes saved"
@@ -1353,8 +1354,8 @@ msgstr "ใกล้หมดอายุ"
 msgid "Expiring soon"
 msgstr "ใกล้หมดอายุ"
 
-#. placeholder {0}: item?.name ?? t`Item`
-#. placeholder {1}: lot.lotNumber
+#. placeholder {0}: fact.itemName ?? i18n._(msg`Item`)
+#. placeholder {1}: fact.lotNumber
 #: src/features/vet/shell/notification-center.tsx
 msgid "Expiring soon — {0} ({1})"
 msgstr "ใกล้หมดอายุ — {0} ({1})"
@@ -1707,7 +1708,7 @@ msgstr "ต่ำ — สั่งเพิ่มที่ {0}"
 msgid "Low stock"
 msgstr "สต๊อกต่ำ"
 
-#. placeholder {0}: item.name
+#. placeholder {0}: fact.itemName
 #: src/features/vet/shell/notification-center.tsx
 msgid "Low stock — {0}"
 msgstr "สต๊อกต่ำ — {0}"
@@ -3137,12 +3138,12 @@ msgstr "ปลดล็อก"
 msgid "Upcoming"
 msgstr "กำลังจะถึง"
 
-#. placeholder {0}: patient?.name ?? t`Unknown`
+#. placeholder {0}: fact.patientName ?? i18n._(msg`Unknown`)
 #: src/features/vet/shell/notification-center.tsx
 msgid "Vaccination due — {0}"
 msgstr "ถึงกำหนดฉีดวัคซีน — {0}"
 
-#. placeholder {0}: patient?.name ?? t`Unknown patient`
+#. placeholder {0}: fact.patientName ?? i18n._(msg`Unknown patient`)
 #: src/features/vet/shell/notification-center.tsx
 msgid "Vaccination overdue — {0}"
 msgstr "เลยกำหนดฉีดวัคซีน — {0}"
@@ -3283,7 +3284,7 @@ msgstr "ผู้ป่วย walk-in"
 msgid "Walk-in reason"
 msgstr "เหตุผลที่มารักษา"
 
-#. placeholder {0}: formatDate(due)
+#. placeholder {0}: formatDate(fact.dueAt)
 #: src/features/vet/shell/notification-center.tsx
 msgid "Was due {0}"
 msgstr "กำหนดเดิม {0}"

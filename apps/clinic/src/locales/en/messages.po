@@ -150,8 +150,8 @@ msgstr "{0} · {1} · drag to another slot to reschedule"
 msgid "{0} · {1} collected · {2} billed"
 msgstr "{0} · {1} collected · {2} billed"
 
-#. placeholder {0}: v.vaccineName
-#. placeholder {1}: formatDate(v.nextDueAt!)
+#. placeholder {0}: fact.vaccineName
+#. placeholder {1}: formatDate(fact.dueAt)
 #: src/features/vet/shell/notification-center.tsx
 msgid "{0} · due {1}"
 msgstr "{0} · due {1}"
@@ -161,12 +161,19 @@ msgstr "{0} · due {1}"
 msgid "{0} · Here’s what’s happening at the clinic today."
 msgstr "{0} · Here’s what’s happening at the clinic today."
 
-#. placeholder {0}: lot.quantity
-#. placeholder {1}: item?.unit ?? t`units`
-#. placeholder {2}: formatDate(lot.expiryDate!)
+#. placeholder {0}: fact.quantity
+#. placeholder {1}: fact.unit ?? i18n._(msg`units`)
+#. placeholder {2}: formatDate(fact.expiryDate)
 #: src/features/vet/shell/notification-center.tsx
 msgid "{0} {1} expire {2}"
 msgstr "{0} {1} expire {2}"
+
+#. placeholder {0}: fact.onHand
+#. placeholder {1}: fact.unit
+#. placeholder {2}: fact.reorderLevel
+#: src/features/vet/shell/notification-center.tsx
+msgid "{0} {1} left (reorder at {2})"
+msgstr "{0} {1} left (reorder at {2})"
 
 #. placeholder {0}: lot.quantity
 #. placeholder {1}: lot.expiryDate
@@ -275,12 +282,6 @@ msgstr "{m, plural, one {# minute} other {# minutes}}"
 #: src/features/vet/owners/index.tsx
 msgid "{name} registered."
 msgstr "{name} registered."
-
-#. placeholder {0}: item.unit
-#. placeholder {1}: item.reorderLevel
-#: src/features/vet/shell/notification-center.tsx
-msgid "{onHand} {0} left (reorder at {1})"
-msgstr "{onHand} {0} left (reorder at {1})"
 
 #. placeholder {0}: item.unit
 #. placeholder {1}: item.reorderLevel
@@ -1353,8 +1354,8 @@ msgstr "expiring"
 msgid "Expiring soon"
 msgstr "Expiring soon"
 
-#. placeholder {0}: item?.name ?? t`Item`
-#. placeholder {1}: lot.lotNumber
+#. placeholder {0}: fact.itemName ?? i18n._(msg`Item`)
+#. placeholder {1}: fact.lotNumber
 #: src/features/vet/shell/notification-center.tsx
 msgid "Expiring soon — {0} ({1})"
 msgstr "Expiring soon — {0} ({1})"
@@ -1707,7 +1708,7 @@ msgstr "Low — reorder at {0}"
 msgid "Low stock"
 msgstr "Low stock"
 
-#. placeholder {0}: item.name
+#. placeholder {0}: fact.itemName
 #: src/features/vet/shell/notification-center.tsx
 msgid "Low stock — {0}"
 msgstr "Low stock — {0}"
@@ -3137,12 +3138,12 @@ msgstr "Unlock"
 msgid "Upcoming"
 msgstr "Upcoming"
 
-#. placeholder {0}: patient?.name ?? t`Unknown`
+#. placeholder {0}: fact.patientName ?? i18n._(msg`Unknown`)
 #: src/features/vet/shell/notification-center.tsx
 msgid "Vaccination due — {0}"
 msgstr "Vaccination due — {0}"
 
-#. placeholder {0}: patient?.name ?? t`Unknown patient`
+#. placeholder {0}: fact.patientName ?? i18n._(msg`Unknown patient`)
 #: src/features/vet/shell/notification-center.tsx
 msgid "Vaccination overdue — {0}"
 msgstr "Vaccination overdue — {0}"
@@ -3283,7 +3284,7 @@ msgstr "Walk-in patient"
 msgid "Walk-in reason"
 msgstr "Walk-in reason"
 
-#. placeholder {0}: formatDate(due)
+#. placeholder {0}: formatDate(fact.dueAt)
 #: src/features/vet/shell/notification-center.tsx
 msgid "Was due {0}"
 msgstr "Was due {0}"
