@@ -8,7 +8,7 @@ import {
   Panel,
   Pill,
   ReadOnlyNote,
-} from "@/components/vet/fields";
+} from "@/components/patterns/fields";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 

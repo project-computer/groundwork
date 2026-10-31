@@ -2,15 +2,15 @@ import { useState } from 'react'
 import { plural } from '@lingui/core/macro'
 import { ShieldCheck } from 'lucide-react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { DataTable } from '@/components/vet/data-table'
-import { Field, Panel, PageHeader } from '@/components/vet/fields'
+import { DataTable } from '@/components/patterns/data-table'
+import { Field, Panel, PageHeader } from '@/components/patterns/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
 import { formatDate, permissionsFor, roleLabel, ROLES } from '@/lib/vet/format'
 import { hasPin } from '@/lib/vet/auth'
 import type { StaffUser } from '@/lib/vet/types'
 import { useMemberForm, useSwitchAccount } from './member-form'
 import { MemberActivationButton, MemberPinButton, MemberSignInButton } from './member-row-actions'
-import { PinDialog } from '../pin-dialog'
+import { PinDialog } from '@/features/vet/session'
 
 // The workspace dialog consumes the staff feature through this public API —
 // never its folder internals (2026-10-30 plan, phase D).

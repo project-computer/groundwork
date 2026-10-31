@@ -2,8 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { useClinic } from '@/lib/vet/store'
 import { createPinCredential, hasPin, isPinFormat, PIN_MAX_LENGTH } from '@/lib/vet/auth'
-import { Field } from '@/components/vet/fields'
-import { Modal } from '@/components/vet/modal'
+import { Field } from '@/components/patterns/fields'
+import { Modal } from '@/components/patterns/modal'
 import type { StaffUser } from '@/lib/vet/types'
 
 /** Admin/self dialog for setting, changing, or removing a member's PIN. */

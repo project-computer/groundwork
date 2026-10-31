@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Field, NativeSelect, Pill, ReadOnlyNote } from '@/components/vet/fields'
+import { Field, NativeSelect, Pill, ReadOnlyNote } from '@/components/patterns/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
 
 const TIMEZONES = ['Asia/Bangkok', 'Asia/Ho_Chi_Minh', 'Asia/Vientiane', 'Asia/Phnom_Penh', 'Asia/Yangon', 'Asia/Kuala_Lumpur', 'Asia/Singapore', 'UTC']

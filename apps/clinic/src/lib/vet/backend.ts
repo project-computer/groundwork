@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import { isTauri } from '@/platform'
+import { isTauri } from '@/lib/platform'
 import type { ClinicState } from './types'
 
 /**

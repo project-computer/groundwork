@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { DoorOpen, Stethoscope } from 'lucide-react'
-import { Panel } from '@/components/vet/fields'
+import { Panel } from '@/components/patterns/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
 import { formatTime } from '@/lib/vet/format'
 import type { Appointment } from '@/lib/vet/types'

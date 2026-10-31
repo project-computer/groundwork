@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { DatePicker } from '@/components/vet/date-picker'
-import { Field, Panel } from '@/components/vet/fields'
+import { DatePicker } from '@/components/patterns/date-picker'
+import { Field, Panel } from '@/components/patterns/fields'
 import { useClinic } from '@/lib/vet/store'
 import type { Encounter } from '@/lib/vet/types'
 

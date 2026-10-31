@@ -33,9 +33,9 @@ import { RecordsView } from '../records'
 import { SettingsView } from '../settings'
 import { StaffView } from '../staff'
 
-import { LockScreen } from '../lock-screen'
-import { LanguageToggle } from '../language-toggle'
-import { SaveErrorBanner } from '../save-error-banner'
+import { LockScreen } from '@/features/vet/session'
+import { LanguageToggle } from '@/features/vet/session'
+import { SaveErrorBanner } from '@/components/patterns/save-error-banner'
 import { RejectionBanner } from './rejection-banner'
 import { WorkspaceDialog, type WorkspaceTab } from '../workspace'
 

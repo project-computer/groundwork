@@ -1,5 +1,5 @@
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Panel } from '@/components/vet/fields'
+import { Panel } from '@/components/patterns/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
 import { formatDate, formatTime } from '@/lib/vet/format'
 import type { Appointment } from '@/lib/vet/types'

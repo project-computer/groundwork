@@ -1,5 +1,5 @@
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Modal } from '@/components/vet/modal'
+import { Modal } from '@/components/patterns/modal'
 import { useClinic } from '@/lib/vet/store'
 
 /**

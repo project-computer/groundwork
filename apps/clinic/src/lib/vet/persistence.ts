@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import { isTauri } from '@/platform'
+import { isTauri } from '@/lib/platform'
 import { fetchState, pushState } from './backend'
 import { formatMrn } from './format'
 import { CLINIC_STATE_COLLECTIONS, type ClinicState, type Patient } from './types'

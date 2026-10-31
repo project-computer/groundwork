@@ -2,10 +2,10 @@ import { useMemo, useRef, useState, type DragEvent, type PointerEvent } from 're
 import { plural } from '@lingui/core/macro'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { CalendarPlus, ChevronLeft, ChevronRight } from 'lucide-react'
-import { Panel, PageHeader } from '@/components/vet/fields'
+import { Panel, PageHeader } from '@/components/patterns/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
 import { compareTime, formatTime, shiftDays, shiftMonth, todayKey } from '@/lib/vet/format'
-import { DatePicker } from '@/components/vet/date-picker'
+import { DatePicker } from '@/components/patterns/date-picker'
 import {
   apptDay,
   CLINIC_TZ_SUFFIX,

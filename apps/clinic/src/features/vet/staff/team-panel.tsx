@@ -1,6 +1,6 @@
 import { Trans, useLingui } from '@lingui/react/macro'
 import { Plus } from 'lucide-react'
-import { Field, NativeSelect, Pill, ReadOnlyNote } from '@/components/vet/fields'
+import { Field, NativeSelect, Pill, ReadOnlyNote } from '@/components/patterns/fields'
 import { useClinic, usePermission, type View } from '@/lib/vet/store'
 import { initials, roleLabel, ROLES } from '@/lib/vet/format'
 import { hasPin } from '@/lib/vet/auth'

@@ -8,7 +8,7 @@ import { seedState } from './seed'
  * error mapping (503 = not configured) and the browser null path.
  */
 
-vi.mock('@/platform', () => ({ isTauri: () => false }))
+vi.mock('@/lib/platform', () => ({ isTauri: () => false }))
 vi.mock('@tauri-apps/api/core', () => ({ invoke: async () => null }))
 
 afterEach(() => {
@@ -78,7 +78,7 @@ const fetchStateViaStubbedBase = async () => {
   }
 }
 const withStubbedDiscovery = async <T>(fn: () => Promise<T>): Promise<T> => {
-  const platform = await import('@/platform')
+  const platform = await import('@/lib/platform')
   const spy = vi.spyOn(platform, 'isTauri').mockReturnValue(true)
   // The module caches its discovery promise; inject a resolved URL once.
   const core = await import('@tauri-apps/api/core')

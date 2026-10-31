@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { KeyRound, Lock, ShieldCheck } from 'lucide-react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Field, Pill, ReadOnlyNote } from '@/components/vet/fields'
+import { Field, Pill, ReadOnlyNote } from '@/components/patterns/fields'
 import { useClinic } from '@/lib/vet/store'
 import { hasPin } from '@/lib/vet/auth'
 import { initials, permissionLabel, permissionsFor, roleDescription, roleLabel } from '@/lib/vet/format'

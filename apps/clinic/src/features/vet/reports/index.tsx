@@ -10,8 +10,8 @@ import {
   TrendingUp,
   Wallet,
 } from 'lucide-react'
-import { StatCard } from '@/components/vet/data-table'
-import { Panel, PageHeader, Pill } from '@/components/vet/fields'
+import { StatCard } from '@/components/patterns/data-table'
+import { Panel, PageHeader, Pill } from '@/components/patterns/fields'
 import { useClinic } from '@/lib/vet/store'
 import { formatMoney, initials } from '@/lib/vet/format'
 import { buildReport, type ReportRange } from '@/lib/vet/report'

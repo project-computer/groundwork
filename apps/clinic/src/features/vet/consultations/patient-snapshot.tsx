@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Panel } from '@/components/vet/fields'
+import { Panel } from '@/components/patterns/fields'
 import { useClinic } from '@/lib/vet/store'
 import { sexLabel } from '@/lib/vet/format'
 import type { Patient } from '@/lib/vet/types'

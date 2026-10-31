@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Field, NativeSelect, Panel, Pill } from '@/components/vet/fields'
+import { Field, NativeSelect, Panel, Pill } from '@/components/patterns/fields'
 import { useClinic } from '@/lib/vet/store'
 import { dispensableCatalog } from '@/lib/vet/catalog'
 import { itemOnHand } from '@/lib/vet/format'

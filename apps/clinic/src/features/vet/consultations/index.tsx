@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/vet/fields'
+import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/patterns/fields'
 import { useClinic } from '@/lib/vet/store'
 import { speciesLabel, statusLabel } from '@/lib/vet/format'
 import { ClosedEncounter } from './closed-encounter'

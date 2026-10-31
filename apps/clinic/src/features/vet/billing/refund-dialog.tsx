@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Field } from '@/components/vet/fields'
-import { Modal } from '@/components/vet/modal'
+import { Field } from '@/components/patterns/fields'
+import { Modal } from '@/components/patterns/modal'
 import { useClinic } from '@/lib/vet/store'
 import { formatMoney as formatCurrency, formatDate } from '@/lib/vet/format'
 

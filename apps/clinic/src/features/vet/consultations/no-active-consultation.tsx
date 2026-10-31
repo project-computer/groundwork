@@ -1,6 +1,6 @@
 import { Stethoscope } from 'lucide-react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Panel, PageHeader } from '@/components/vet/fields'
+import { Panel, PageHeader } from '@/components/patterns/fields'
 import { useClinic } from '@/lib/vet/store'
 import { compareTime, formatDate } from '@/lib/vet/format'
 

@@ -1,5 +1,5 @@
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Panel, PageHeader, Pill } from '@/components/vet/fields'
+import { Panel, PageHeader, Pill } from '@/components/patterns/fields'
 import { useClinic } from '@/lib/vet/store'
 import { formatDate, statusLabel } from '@/lib/vet/format'
 import type { Encounter, Patient } from '@/lib/vet/types'

@@ -1,6 +1,6 @@
 import { msg, plural } from '@lingui/core/macro'
 import { useLingui } from '@lingui/react/macro'
-import { Panel } from '@/components/vet/fields'
+import { Panel } from '@/components/patterns/fields'
 import { monthGrid, todayKey } from '@/lib/vet/format'
 import { dayLabel, monthLabel } from '@/lib/vet/schedule'
 import type { Appointment } from '@/lib/vet/types'

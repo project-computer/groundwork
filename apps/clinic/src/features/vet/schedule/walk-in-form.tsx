@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { X } from 'lucide-react'
-import { NativeSelect } from '@/components/vet/fields'
+import { NativeSelect } from '@/components/patterns/fields'
 
 /** Inline walk-in form under the waiting queue (moved verbatim from index). */
 export const WalkInForm = ({

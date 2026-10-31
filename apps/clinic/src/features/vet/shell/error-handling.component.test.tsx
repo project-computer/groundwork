@@ -4,7 +4,7 @@ import { cleanup, render } from "vitest-browser-react"
 import { page } from "vitest/browser"
 import { useState } from "react"
 import { App } from "@/app/App"
-import { ErrorBoundary } from "@/features/vet/error-boundary"
+import { ErrorBoundary } from "@/app/error-boundary"
 import { seedState } from "@/lib/vet/seed"
 
 const STORAGE_KEY = "clinicbook:state:v1"

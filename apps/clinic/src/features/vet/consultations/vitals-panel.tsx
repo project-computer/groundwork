@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
-import { Field, Panel } from '@/components/vet/fields'
+import { Field, Panel } from '@/components/patterns/fields'
 import { useClinic } from '@/lib/vet/store'
 import type { Encounter, Vitals } from '@/lib/vet/types'
 

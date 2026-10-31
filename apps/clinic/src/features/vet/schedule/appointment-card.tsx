@@ -1,7 +1,7 @@
 import type { DragEvent } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { Stethoscope, UserX } from 'lucide-react'
-import { Pill } from '@/components/vet/fields'
+import { Pill } from '@/components/patterns/fields'
 import { useClinic } from '@/lib/vet/store'
 import { formatTime, statusLabel, statusTone } from '@/lib/vet/format'
 import type { Appointment, Patient, StaffUser } from '@/lib/vet/types'

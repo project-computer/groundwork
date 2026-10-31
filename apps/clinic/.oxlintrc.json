@@ -96,7 +96,7 @@
               },
               {
                 "group": [
-                  "@/platform"
+                  "@/lib/platform"
                 ],
                 "message": "UI must not detect the platform. Go through @/lib/vet/store."
               }
@@ -141,7 +141,7 @@
               },
               {
                 "group": [
-                  "@/platform"
+                  "@/lib/platform"
                 ],
                 "message": "UI must not detect the platform. Go through @/lib/vet/store."
               }
