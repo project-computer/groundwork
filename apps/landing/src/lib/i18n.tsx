@@ -33,13 +33,18 @@ const getStoredLocale = (): Locale => {
  * falls back to the source strings.
  */
 i18n.load({ en: {} })
-const loadedLocales = new Set<Locale>(['en'])
+const loadedLocales = new Set<Locale>([])
 
 const loadLocale = async (locale: Locale): Promise<void> => {
   if (loadedLocales.has(locale)) return
   if (locale === 'th') {
     const { messages } = await import('@/locales/th/messages.po')
     i18n.load({ th: messages })
+  } else {
+    // English needs its *compiled* catalog: production strips macro fallbacks,
+    // so id lookups must hit locales/en/messages.mjs (see clinic, same fix).
+    const { messages } = await import('@/locales/en/messages.mjs')
+    i18n.load({ en: messages })
   }
   loadedLocales.add(locale)
 }

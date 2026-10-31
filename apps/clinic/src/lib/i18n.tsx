@@ -24,21 +24,27 @@ const getStoredLocale = (): Locale => {
 }
 
 /**
- * English is the source locale: message ids are the English strings, so its
- * catalog carries no translations — seed an empty one so activating `en` is
- * always valid and lookups fall back to the source strings. The Thai catalog
+ * Catalog loading. English is the source locale, but production strips the
+ * macro `message` fallbacks — English lookups go by the compiled hash id, so
+ * the *compiled* catalog (`locales/en/messages.mjs`, id -> English) must be
+ * loaded just like Thai's. An empty `{ en: {} }` seed made every English
+ * string render as its raw id on the Cloudflare deploy (dev/tests masked it:
+ * the un-stripped fallback still returned the source text). The Thai catalog
  * is loaded on first use to keep it out of the main bundle. A locale may be
- * activated before its catalog arrives (tests, fast path) — Lingui then also
- * falls back to the source strings.
+ * activated before its catalog arrives — Lingui then falls back to ids until
+ * `initI18n` resolves (main.tsx renders only after that).
  */
 i18n.load({ en: {} })
-const loadedLocales = new Set<Locale>(['en'])
+const loadedLocales = new Set<Locale>([])
 
 const loadLocale = async (locale: Locale): Promise<void> => {
   if (loadedLocales.has(locale)) return
   if (locale === 'th') {
     const { messages } = await import('@/locales/th/messages.po')
     i18n.load({ th: messages })
+  } else {
+    const { messages } = await import('@/locales/en/messages.mjs')
+    i18n.load({ en: messages })
   }
   loadedLocales.add(locale)
 }
