@@ -30,8 +30,8 @@ src/lib/vet/persistence.ts                            (the persistence seam)
 ```
 
 - **UI never imports** `@tauri-apps/*`, `@/lib/vet/backend`,
-  `@/lib/vet/persistence`, `@/lib/vet/seed`, or `@/platform`.
-  **store.tsx never imports** `@tauri-apps/*` or `@/platform` either —
+  `@/lib/vet/persistence`, `@/lib/vet/seed`, or `@/lib/platform`.
+  **store.tsx never imports** `@tauri-apps/*` or `@/lib/platform` either —
   both enforced by `no-restricted-imports` overrides in `.oxlintrc.json`;
   only `backend.ts` and `persistence.ts` may touch transports.
 - **All mutations go through the store reducer.** No component writes state,
@@ -83,7 +83,7 @@ reducer checks it through `can()` — one source for `usePermission` too.
 
 ## UI primitives — one shell per shape
 
-Dialogs, tables and stat tiles go through `components/vet/`:
+Dialogs, tables and stat tiles go through `components/patterns/`:
 
 - `Modal` (`modal.tsx`) owns the backdrop, Escape, heading, close button and
   the accessible name. Dialogs describe content only. Pass
@@ -127,7 +127,10 @@ A test that needs many mocks is a signal the seam is in the wrong place.
 ## Pre-flight checklist
 
 - [ ] New code sits in the folder named by [REFERENCE.md](REFERENCE.md)
-- [ ] New Views live in `features/vet/<view>/` — one folder per View, dialogs and `*.component.test.tsx` beside
+- [ ] New Views live in `features/vet/<view>/` — one folder per View; the
+      View's parts live in `<view>/components/` (dialogs, panels, feature
+      utils), `*.component.test.tsx` at the View root, `index.tsx` exports
+      only the View
 - [ ] No UI import reaches past the store (oxlint enforces)
 - [ ] Migrations identical across both dirs and listed in `db.rs`
 - [ ] Document shape / entity type updated in **all** copies

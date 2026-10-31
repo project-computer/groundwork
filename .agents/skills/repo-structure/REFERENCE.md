@@ -5,19 +5,22 @@
 ```
 apps/clinic/                  Tauri 2 + React + TS desktop app
 ├── src/
-│   ├── app/App.tsx           root component
+│   ├── app/                    App.tsx (root) + error-boundary.tsx — composition
 │   ├── components/
-│   │   ├── ui/               Base UI primitives (button, card, input, tabs…)
-│   │   └── vet/              clinic shells + fields: modal.tsx (the one
-│   │                         dialog shell), data-table.tsx (DataTable +
-│   │                         StatCard), fields.tsx, date-picker.tsx
-│   ├── features/vet/         folder per View — shell/, dashboard/, owners/,
-│   │                         consultations/, billing/, inventory/, records/,
-│   │                         schedule/, reports/, staff/, settings/,
-│   │                         workspace/ — dialogs and component tests
-│   │                         beside their View; lock-screen, pin-dialog,
-│   │                         language-toggle, save-error-banner and
-│   │                         error-boundary stay top-level
+│   │   ├── ui/                 Base UI primitives (button, card, input, tabs…)
+│   │   └── patterns/           clinic shells + fields: modal.tsx (the one
+│   │                           dialog shell), data-table.tsx (DataTable +
+│   │                           StatCard), fields.tsx, date-picker.tsx,
+│   │                           save-error-banner.tsx
+│   ├── features/vet/           folder per View — shell/, dashboard/, owners/,
+│   │                           consultations/, billing/, inventory/, records/,
+│   │                           schedule/, reports/, staff/, settings/,
+│   │                           workspace/, session/ — each View keeps
+│   │                           `components/` for its parts (dialogs, panels,
+│   │                           feature utils), `index.tsx` exports only the
+│   │                           View, `*.component.test.tsx` at the View
+│   │                           root; session/ holds lock-screen, pin-dialog,
+│   │                           language-toggle behind its barrel
 │   ├── lib/
 │   │   ├── vet/              domain: store.tsx (reducer + hooks), types.ts,
 │   │   │                     sync.ts (useSyncWorker), persistence.ts (the
@@ -25,9 +28,9 @@ apps/clinic/                  Tauri 2 + React + TS desktop app
 │   │   │                     backup, format, schedule, report, worklist,
 │   │   │                     catalog, selectors, case-transfer, seed + unit
 │   │   │                     tests
+│   │   ├── platform/index.ts   isTauri() — persistence layer only
 │   │   ├── i18n.tsx          lingui wrapper
 │   │   └── theme.ts · utils.ts
-│   ├── platform/index.ts     isTauri() — persistence layer only
 │   ├── locales/              compiled lingui catalogs
 │   └── test/setup.ts
 ├── e2e/pages/                Playwright page tests
@@ -95,11 +98,12 @@ migration — new UI should use Tailwind utilities with token classes
 
 ## Target deltas (in-flight refactoring candidates)
 
-Plan of record: `docs/plans/2026-10-30-architecture-alignment.md`
-(follow-up to the executed
-`docs/plans/2026-10-29-frontend-refactor.md`, phases 0–6 all done). Each
-phase marks its delta **done** in the same PR that lands it — these docs
-never trail the code they describe.
+Plan of record: `docs/plans/2026-10-31-folder-structure-alignment.md`
+(docs-only for clinic — the mapping section below — plus the reusable
+scaffold playbook for future frontends). Predecessors, both executed:
+`2026-10-30-architecture-alignment.md` and
+`2026-10-29-frontend-refactor.md`. Each phase marks its delta **done** in
+the same PR that lands it — these docs never trail the code they describe.
 
 - Document shape: **done** — `fixtures/clinic-document.json` + conformance
   tests pin TS, Go and Rust guards; `parseClinicState` normalises legacy docs.
@@ -200,6 +204,29 @@ has no package.json, lockfile, or workspace file — Make is the only root task
 surface. Tauri's `beforeDevCommand`/`beforeBuildCommand` go through
 `make -C ../.. sidecar`, which only rebuilds when the sidecar's Go sources
 changed.
+
+## Target design ↔ clinic mapping
+
+The canonical frontend design (`app/ pages/ features/ components/ lib/` +
+TanStack Query + Zustand) is recorded in
+`docs/plans/2026-10-31-folder-structure-alignment.md`. Clinic implements
+its substance under its own names — translate, don't rename (decisions D1–D6):
+
+| Design says | Clinic is | Why different |
+|---|---|---|
+| `app/` composition only | `app/App.tsx` + `main.tsx` + `shell/` | shell owns nav + gates + view routing |
+| `pages/` thin screens | each View's `index.tsx` | Tauri single-shell, no URL space (D1) |
+| `features/<name>/` barrel | `features/vet/<view>/index.tsx` | `vet/` segment kept (D2) |
+| `components/patterns/` | `components/patterns/` | renamed from `components/vet` in R1 (2026-10-31 execution) — hooks still intentional |
+| `lib/` infrastructure | `lib/` (i18n, theme, utils) + `lib/platform/` | platform moved under lib in R1 |
+| `features/session/` chrome | `features/vet/session/` barrel | lock-screen, pin-dialog, language-toggle left feature top-level |
+| feature-internal domain | `lib/vet/` central | one fixture-pinned document, one store (ADR-0012) |
+| TanStack Query + Zustand | `store.tsx` reducer + hooks + persistence seam | offline document app, not HTTP (D5) |
+| `*.api.ts` / `*.keys.ts` / `*.store.ts` | — (no per-feature server state) | naming standard for new apps only (D6) |
+
+Boundary enforcement is the same idea, different tool: oxlint
+`no-restricted-imports` + the sibling-View tripwire instead of the design's
+ESLint regexes — both deny feature internals past the barrel.
 
 ## Known debt (checked, deliberate)
 
