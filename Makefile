@@ -20,14 +20,21 @@ SIDECAR_SRC := $(shell find $(SIDECAR)/cmd $(SIDECAR)/internal -name '*.go' 2>/d
 GOLANGCI := github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 GOVULN   := golang.org/x/vuln/cmd/govulncheck@v1.9.0
 
+# Cloudflare Pages hosting for the PoCs: pinned wrangler, one Pages project
+# per SPA (each gets its own <project>.<account>.pages.dev URL).
+WRANGLER      := wrangler@4.156.0
+PAGES_CLINIC  ?= vetcare-clinic
+PAGES_LANDING ?= vetcare-landing
+
 .DEFAULT_GOAL := help
 SHELL := bash
 .DELETE_ON_ERROR:
 
-.PHONY: help install dev dev-landing build build-landing tauri sidecar
+.PHONY: help install dev dev-landing build build-clinic build-landing tauri sidecar
 .PHONY: lint lint-ts lint-landing lint-go lint-rust
 .PHONY: fmt fmt-go fmt-rust
 .PHONY: test test-ts test-landing test-go test-rust test-pages vuln-go
+.PHONY: pages-init deploy deploy-clinic deploy-landing
 .PHONY: i18n-extract i18n-compile ci
 
 help: ## list targets and what they do
@@ -45,9 +52,10 @@ dev: ## Vite dev server (browser, localStorage adapter)
 dev-landing: ## download page dev server (port 1421)
 	pnpm -C $(LANDING) dev
 
-build: ## production web build (tsc + vite, clinic + landing)
+build: build-clinic build-landing ## production web build (tsc + vite, clinic + landing)
+
+build-clinic: ## production web build of the clinic app
 	pnpm -C $(CLINIC) build
-	pnpm -C $(LANDING) build
 
 build-landing: ## production build of the download page
 	pnpm -C $(LANDING) build
@@ -130,6 +138,32 @@ i18n-extract: ## sync lingui catalogs with source strings
 
 i18n-compile: ## compile catalogs, strict ICU validation
 	pnpm -C $(CLINIC) i18n:compile
+
+# ---------- deploy (Cloudflare Pages) ----------
+#
+# Shareable PoC URLs for both SPAs. One-time setup per machine and account:
+#   pnpm dlx wrangler login    (or export CLOUDFLARE_API_TOKEN)
+#   make pages-init
+# After that `make deploy` builds and uploads both apps; wrangler prints the
+# URLs. The clinic web build runs fully in the browser on the localStorage
+# adapter — no sidecar, no server. Deploys pin --branch=main so every upload
+# refreshes the production URL instead of spawning preview URLs.
+
+pages-init: ## one-time: create the two Cloudflare Pages projects
+	@for name in $(PAGES_CLINIC) $(PAGES_LANDING); do \
+		pnpm dlx $(WRANGLER) pages project list | grep -q "$$name" || \
+			pnpm dlx $(WRANGLER) pages project create $$name --production-branch=main; \
+	done
+
+deploy: deploy-clinic deploy-landing ## build + upload both SPAs to Cloudflare Pages
+
+deploy-clinic: build-clinic ## upload the clinic app (browser/localStorage build)
+	pnpm dlx $(WRANGLER) pages deploy $(CLINIC)/dist \
+		--project-name=$(PAGES_CLINIC) --branch=main --commit-dirty=true
+
+deploy-landing: build-landing ## upload the download page
+	pnpm dlx $(WRANGLER) pages deploy $(LANDING)/dist \
+		--project-name=$(PAGES_LANDING) --branch=main --commit-dirty=true
 
 # ---------- CI ----------
 
