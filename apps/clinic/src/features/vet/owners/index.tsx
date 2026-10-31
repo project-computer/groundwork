@@ -8,7 +8,7 @@ import { useClinic } from '@/lib/vet/store'
 import { buildCaseBundle, downloadCaseBundle, newShareToken } from '@/lib/vet/case-transfer'
 import { formatDate, sexLabel, speciesLabel } from '@/lib/vet/format'
 import { SPECIES, SEXES, type Patient } from '@/lib/vet/types'
-import { PatientClinicalDialog } from './patient-dialog'
+import { PatientClinicalDialog } from './components/patient-dialog'
 
 /**
  * Owners & patients View: search, the dual-mode registration form

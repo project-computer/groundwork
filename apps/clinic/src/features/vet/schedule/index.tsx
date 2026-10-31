@@ -22,11 +22,11 @@ import {
   type AppointmentSlot,
   type SlotDraft,
 } from '@/lib/vet/schedule'
-import { AppointmentCard } from './appointment-card'
-import { BookingDialog, type BookingDialogState, type BookingDraft } from './booking-dialog'
-import { MonthCalendar } from './month-calendar'
-import { UpcomingList } from './upcoming-list'
-import { WaitingQueue } from './waiting-queue'
+import { AppointmentCard } from './components/appointment-card'
+import { BookingDialog, type BookingDialogState, type BookingDraft } from './components/booking-dialog'
+import { MonthCalendar } from './components/month-calendar'
+import { UpcomingList } from './components/upcoming-list'
+import { WaitingQueue } from './components/waiting-queue'
 
 /**
  * Appointments & queue View — the calendar composition root (day / week /

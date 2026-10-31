@@ -8,7 +8,7 @@ import { Panel, PageHeader, Pill } from '@/components/patterns/fields'
 import { useClinic, usePermission } from '@/lib/vet/store'
 import { compareTime, formatDate, statusTone, todayKey } from '@/lib/vet/format'
 import { vaccinationOverdue } from '@/lib/vet/selectors'
-import { ImportCaseDialog } from './import-case-dialog'
+import { ImportCaseDialog } from './components/import-case-dialog'
 /**
  * Medical records View: the encounters table (the Medical Record read
  * model), case-bundle import and the vaccination history.

@@ -8,14 +8,14 @@ import { useClinic, usePermission } from '@/lib/vet/store'
 import { formatDate, permissionsFor, roleLabel, ROLES } from '@/lib/vet/format'
 import { hasPin } from '@/lib/vet/auth'
 import type { StaffUser } from '@/lib/vet/types'
-import { useMemberForm, useSwitchAccount } from './member-form'
-import { MemberActivationButton, MemberPinButton, MemberSignInButton } from './member-row-actions'
+import { useMemberForm, useSwitchAccount } from './components/member-form'
+import { MemberActivationButton, MemberPinButton, MemberSignInButton } from './components/member-row-actions'
 import { PinDialog } from '@/features/vet/session'
 
 // The workspace dialog consumes the staff feature through this public API —
 // never its folder internals (2026-10-30 plan, phase D).
-export { TeamPanel } from './team-panel'
-export { useSwitchAccount } from './member-form'
+export { TeamPanel } from './components/team-panel'
+export { useSwitchAccount } from './components/member-form'
 
 /**
  * Staff & permissions View: add members, change roles, switch accounts,

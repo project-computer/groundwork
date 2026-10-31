@@ -15,8 +15,8 @@ import { Panel, PageHeader, Pill } from '@/components/patterns/fields'
 import { useClinic } from '@/lib/vet/store'
 import { formatMoney, initials } from '@/lib/vet/format'
 import { buildReport, type ReportRange } from '@/lib/vet/report'
-import { exportReport } from './export-csv'
-import { bucketLabel, formatPeriodLabel, RANGES, STATUS_LABELS, STATUS_TONE, TREND_CAPTIONS, vetName } from './labels'
+import { exportReport } from './utils/export-csv'
+import { bucketLabel, formatPeriodLabel, RANGES, STATUS_LABELS, STATUS_TONE, TREND_CAPTIONS, vetName } from './components/labels'
 
 /* ---------- view ---------- */
 

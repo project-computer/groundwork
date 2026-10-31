@@ -3,7 +3,7 @@ import { msg } from '@lingui/core/macro'
 import { todayKey } from '@/lib/vet/format'
 import { buildReport, csvCell, csvMoney } from '@/lib/vet/report'
 import type { ClinicState } from '@/lib/vet/types'
-import { bucketLabel, formatPeriodLabel, STATUS_LABELS, vetName } from './labels'
+import { bucketLabel, formatPeriodLabel, STATUS_LABELS, vetName } from '../components/labels'
 
 /**
  * CSV export (2026-10-30 plan, phase C): builds the report spreadsheet from

@@ -7,10 +7,10 @@ import { useClinic, usePermission } from '@/lib/vet/store'
 import { billableCatalog } from '@/lib/vet/catalog'
 import { openInvoices, outstandingBalance } from '@/lib/vet/selectors'
 import { compareTime, formatMoney as formatCurrency, formatDate, formatTime, invoiceTotals, statusLabel, statusTone, todayKey } from '@/lib/vet/format'
-import { PaymentDialog } from './payment-dialog'
-import { ReceiptDialog } from './receipt-dialog'
-import { RefundDialog } from './refund-dialog'
-import { VoidInvoiceDialog } from './void-dialog'
+import { PaymentDialog } from './components/payment-dialog'
+import { ReceiptDialog } from './components/receipt-dialog'
+import { RefundDialog } from './components/refund-dialog'
+import { VoidInvoiceDialog } from './components/void-dialog'
 
 /**
  * Billing & payments View: stat cards, the invoice table and the payment,
