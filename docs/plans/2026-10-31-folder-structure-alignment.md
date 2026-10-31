@@ -80,6 +80,12 @@ element:
   deny updated to `@/lib/platform`; REFERENCE.md + SKILL.md rewritten for the
   new tree. Gates after each phase: `lint:strict` clean, 215/215 tests.
   Supersessions: D3 (components/ grouping adopted), D4 (renamed).
+- **R4 — done 2026-10-31 (owner requirement)**: all test files moved into
+  `__tests__/` (unit + component) and `__componentTests__/` (screenshot,
+  with their `__screenshots__/` baselines moved in lockstep — vitest derives
+  the baseline path from the test file's location). Watch out: imports
+  inside moved tests shift one level (`./x` → `../x`) and clinic's
+  double-quote style evades single-quote seds — audit both quote styles.
 
 ## Part B — the reusable playbook (next frontend, e.g. Markdown Note App)
 

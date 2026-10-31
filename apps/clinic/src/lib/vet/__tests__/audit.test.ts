@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { initialSession, reducer, type Store } from './store'
-import { seedState } from './seed'
+import { initialSession, reducer, type Store } from '../store'
+import { seedState } from '../seed'
 
 const adminSession = { ...initialSession, currentUserId: 'u-mai' }
 

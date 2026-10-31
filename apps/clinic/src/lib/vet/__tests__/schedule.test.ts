@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ghostSegment, minutesLabel, snapMinute, weekDays } from './schedule'
+import { ghostSegment, minutesLabel, snapMinute, weekDays } from '../schedule'
 
 describe('weekDays', () => {
   it('returns the Monday-start week containing the day', () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { initialSession, reducer, type Store } from './store'
-import { seedState } from './seed'
-import type { CaseBundle, ClinicState, Encounter } from './types'
+import { initialSession, reducer, type Store } from '../store'
+import { seedState } from '../seed'
+import type { CaseBundle, ClinicState, Encounter } from '../types'
 
 /**
  * Characterization tests for the write paths the 2026-10-29 frontend refactor

@@ -18,8 +18,10 @@ apps/clinic/                  Tauri 2 + React + TS desktop app
 │   │                           workspace/, session/ — each View keeps
 │   │                           `components/` for its parts (dialogs, panels,
 │   │                           feature utils), `index.tsx` exports only the
-│   │                           View, `*.component.test.tsx` at the View
-│   │                           root; session/ holds lock-screen, pin-dialog,
+│   │                           View, tests live in `<view>/__tests__/`
+│   │                           (component) and `<view>/__componentTests__/`
+│   │                           (screenshot + `__screenshots__/` baselines);
+│   │                           session/ holds lock-screen, pin-dialog,
 │   │                           language-toggle behind its barrel
 │   ├── lib/
 │   │   ├── vet/              domain: store.tsx (reducer + hooks), types.ts,

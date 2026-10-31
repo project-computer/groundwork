@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { backupFileName, buildBackup, isClinicBackup, parseBackup, summarizeBackup } from './backup'
-import { seedState } from './seed'
+import { backupFileName, buildBackup, isClinicBackup, parseBackup, summarizeBackup } from '../backup'
+import { seedState } from '../seed'
 
 const createdAt = '2026-10-28T14:30:05.123Z'
 

@@ -5,7 +5,7 @@ import { cleanup, render } from "vitest-browser-react"
 import { page } from "vitest/browser"
 import { initI18n, LocaleProvider } from "@/lib/i18n"
 import { todayKey } from "@/lib/vet/format"
-import { DatePicker } from "./date-picker"
+import { DatePicker } from "../date-picker"
 
 beforeAll(async () => {
   await initI18n()

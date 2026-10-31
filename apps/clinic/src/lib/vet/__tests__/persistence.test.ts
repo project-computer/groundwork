@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { loadState, saveState } from './persistence'
-import { seedState } from './seed'
+import { loadState, saveState } from '../persistence'
+import { seedState } from '../seed'
 
 afterEach(() => {
   vi.restoreAllMocks()

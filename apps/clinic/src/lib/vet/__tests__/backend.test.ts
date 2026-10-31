@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchState, pushState, runSync } from './backend'
-import { seedState } from './seed'
+import { fetchState, pushState, runSync } from '../backend'
+import { seedState } from '../seed'
 
 /**
  * Interface tests for the sidecar transport. The platform layer and the

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { webcrypto } from 'node:crypto'
-import { createPinCredential, hasPin, hashPin, isPinFormat, newPinSalt, verifyPin } from './auth'
-import type { StaffUser } from './types'
+import { createPinCredential, hasPin, hashPin, isPinFormat, newPinSalt, verifyPin } from '../auth'
+import type { StaffUser } from '../types'
 
 // jsdom does not implement WebCrypto; the app runs in a webview/browser where
 // `crypto.subtle` is always present, so borrow Node's implementation here.

@@ -9,8 +9,8 @@ import {
   statusTone,
   todayKey,
   vaccinationsDue,
-} from './format'
-import type { Invoice, InventoryLot, Payment, Vaccination } from './types'
+} from '../format'
+import type { Invoice, InventoryLot, Payment, Vaccination } from '../types'
 
 const invoice = (items: { quantity: number; unitPrice: number }[]): Invoice => ({
   id: 'inv-x',

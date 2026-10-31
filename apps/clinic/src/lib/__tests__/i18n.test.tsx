@@ -2,7 +2,7 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRoot, type Root } from "react-dom/client";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { initI18n, LocaleProvider, useLocale } from "./i18n";
+import { initI18n, LocaleProvider, useLocale } from "../i18n";
 
 const LocaleProbe = () => {
   const { locale, setLocale } = useLocale();

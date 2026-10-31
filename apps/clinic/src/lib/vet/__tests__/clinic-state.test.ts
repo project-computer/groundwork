@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { parseClinicState } from './persistence'
-import { CLINIC_STATE_COLLECTIONS } from './types'
+import { parseClinicState } from '../persistence'
+import { CLINIC_STATE_COLLECTIONS } from '../types'
 
 // fixtures/clinic-document.json is the single source of truth for the clinic
 // document shape; the Go sidecar and Rust fallback guards run against the

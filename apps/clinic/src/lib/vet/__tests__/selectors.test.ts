@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { lowStockItems, openInvoices, outstandingBalance, overdueVaccinations } from './selectors'
-import type { InventoryItem, InventoryLot, Invoice, Payment, Vaccination } from './types'
+import { lowStockItems, openInvoices, outstandingBalance, overdueVaccinations } from '../selectors'
+import type { InventoryItem, InventoryLot, Invoice, Payment, Vaccination } from '../types'
 
 const item = (id: string, reorderLevel: number): InventoryItem => ({
   id,

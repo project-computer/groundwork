@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { buildReport, csvCell, csvMoney, REPORT_RANGES, REPORT_STATUS_ORDER, reportPeriod } from './report'
-import { seedState } from './seed'
-import { shiftDays, todayKey } from './format'
-import type { ClinicState } from './types'
+import { buildReport, csvCell, csvMoney, REPORT_RANGES, REPORT_STATUS_ORDER, reportPeriod } from '../report'
+import { seedState } from '../seed'
+import { shiftDays, todayKey } from '../format'
+import type { ClinicState } from '../types'
 
 /**
  * The report model is translation-free by contract: labels leave it as

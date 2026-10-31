@@ -4,8 +4,8 @@ import { afterEach, beforeAll, expect, it, vi } from "vitest"
 import { cleanup, render } from "vitest-browser-react"
 import { page } from "vitest/browser"
 import { initI18n, LocaleProvider } from "@/lib/i18n"
-import { DataTable } from "./data-table"
-import { Modal } from "./modal"
+import { DataTable } from "../data-table"
+import { Modal } from "../modal"
 
 beforeAll(async () => {
   await initI18n()

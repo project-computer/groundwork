@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { render } from "vitest-browser-react";
-import "../../index.css";
+import "@/index.css";
 import { Button } from "@/components/ui/button";
 
 it("Button renders the default, outline, and destructive variants", async () => {

@@ -2,7 +2,7 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRoot, type Root } from "react-dom/client";
 import { todayKey } from "@/lib/vet/format";
-import { App } from "./App";
+import { App } from "../App";
 
 // Freeze the clock past the seed's latest timestamp (today 09:42+07) so
 // records created during a test always sort newest-first, and date-based

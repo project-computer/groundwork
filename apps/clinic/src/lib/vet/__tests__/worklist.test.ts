@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildWorklist } from './worklist'
-import type { ClinicState, InventoryItem, InventoryLot, Patient, Vaccination } from './types'
+import { buildWorklist } from '../worklist'
+import type { ClinicState, InventoryItem, InventoryLot, Patient, Vaccination } from '../types'
 
 /**
  * The worklist is translation-free by contract: facts carry names, dates and
