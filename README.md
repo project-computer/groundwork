@@ -1,19 +1,47 @@
-# Vet Clinic — local-first clinic management
+# Groundwork
 
-One app (`apps/clinic`): Tauri 2 + React + TypeScript + Base UI + Tailwind,
-with a bundled Go sidecar (`apps/sidecar/`) that owns SQLite and cloud sync. Works
-fully offline; sync is optional. Same codebase targets Windows desktop now,
-Android/iOS later (Tauri mobile), and web later (same UI, IndexedDB adapter).
+<p align="center">
+  <img src="docs/assets/groundwork-mark.jpeg" alt="Groundwork mark — stacked blocks on a foundation slab" width="320">
+</p>
+
+**The foundation that helps small businesses operate and grow.**
+
+Groundwork gives independent businesses the operational capabilities large
+companies have — without enterprise budgets. Free at its core, local-first by
+default, and built so the people who run a business own their software and
+their data.
+
+`groundwork` is the repository codename. The first application built on the
+foundation is **VetCare** (`apps/clinic`): local-first management software for
+veterinary clinics. New industry applications share this foundation as real
+use cases justify it — not before (see docs below).
+
+## Principles
+
+- **Free by default.** Starting a business on this software requires no
+  subscription.
+- **Own your data.** Local-first where practical; access, export, back up and
+  keep data without depending on anyone's cloud.
+- **Modular, not monolithic.** Inventory, reporting, staff management and
+  industry workflows are added as separate applications, not one generic ERP.
+- **Enterprise quality, small-business simplicity.** Reliable, secure,
+  polished — without enterprise complexity.
+- **Pay for convenience, not permission.** Managed hosting, cloud sync,
+  automated backup and premium support are paid services; data portability,
+  security updates and basic reliability never are.
+- **Built for real operators.** Designed for the receptionist, cashier and
+  owner who use the software every day.
 
 ## Layout
 
 | Path | Purpose |
 |---|---|
-| `apps/clinic` | Tauri 2 + React app (the desktop UI) |
+| `apps/clinic` | VetCare — Tauri 2 + React app (the desktop UI) |
 | `apps/landing` | Public download page for the desktop binaries (React + Vite, EN/ไทย) |
 | `apps/sidecar/` | Go sidecar `clinic-core`: local SQLite + sync engine |
 | `server/` | Go cloud API (Fiber + Postgres) — only needed for cloud sync |
 | `docs/` | Architecture, data model, ADRs, plans |
+| `docs/assets/groundwork-mark.jpeg` | Foundation mark (concept) |
 
 ## Prerequisites
 
@@ -95,3 +123,7 @@ Settings → Database. Backup/restore arrives in Phase 3.
 ## Decisions
 
 See `docs/decisions/` (ADRs), `docs/architecture.md`, `docs/data-model.md`.
+
+## License
+
+[MIT](LICENSE) — free to use, modify and build on.

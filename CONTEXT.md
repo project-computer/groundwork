@@ -1,5 +1,7 @@
 # VetCare Clinic Management System
 
+VetCare is the first application built on the Groundwork foundation — free, local-first business software (see `README.md`).
+
 A veterinary clinic management system covering patient medical records, appointments, vaccinations, and inventory. Single-clinic at launch, multi-branch ready via schema.
 
 ## Language

@@ -1,8 +1,11 @@
 name: CI
 
+# No `pull_request` trigger: this repo runs CI on a **self-hosted** runner,
+# and on a public repo a fork's PR would execute unreviewed code there.
+# Pushes and manual dispatch stay covered; re-enable pull_request only with
+# an approval gate (e.g. label-gated workflow_run) or GitHub-hosted runners.
 on:
   push:
-  pull_request:
   workflow_dispatch:
 
 concurrency:
@@ -24,6 +27,12 @@ jobs:
       - name: Lint (TS)
         run: make lint-ts lint-landing
 
+      - name: i18n catalogs
+        run: make i18n-compile
+
+      - name: Build (tsc + vite, clinic + landing)
+        run: make build
+
       - name: Tests (TS)
         run: make test-ts test-landing
 
@@ -38,3 +47,9 @@ jobs:
 
       - name: Lint (Rust)
         run: make lint-rust
+
+      - name: Tests (Rust)
+        run: make test-rust
+
+      - name: Page tests (Playwright)
+        run: make test-pages
