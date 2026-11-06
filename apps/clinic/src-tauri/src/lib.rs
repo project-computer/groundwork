@@ -38,11 +38,7 @@ impl Drop for Sidecar {
 /// The per-launch loopback secret (ADR 0020): two UUIDv4s ≈ 244 bits of OS
 /// randomness, hex-encoded. Well above the 128-bit floor.
 fn generate_secret() -> String {
-    format!(
-        "{}{}",
-        Uuid::new_v4().simple(),
-        Uuid::new_v4().simple()
-    )
+    format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple())
 }
 
 fn sidecar_binary() -> Option<PathBuf> {
@@ -90,7 +86,11 @@ fn append_shell_log(data_dir: &Path, message: &str) {
         }
     }
     let stamp = Utc::now().format("%Y-%m-%dT%H:%M:%SZ");
-    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(&path) {
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+    {
         let _ = writeln!(file, "{stamp} {message}");
     }
 }

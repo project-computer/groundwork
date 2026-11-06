@@ -33,6 +33,10 @@ import type {
 import type { ClinicBackup } from './backup'
 
 type Plan = 'local' | 'cloud'
+
+/** Inert stand-in so a document without a matching member cannot crash the
+ * shell; the reducer refuses every write for an unknown actor anyway. */
+const EMPTY_USER: StaffUser = { id: '', name: '—', role: 'reception', active: false }
 export type View =
   | 'dashboard'
   | 'schedule'
@@ -1047,6 +1051,13 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
       if (!alive) return
       if (persisted) {
         dispatch({ type: 'restore', data: persisted })
+        // A stale member reference adopts the first active admin, mirroring
+        // the restore rule — the shell needs a signed-in member to render.
+        if (!persisted.users.some((u) => u.id === initialSession.currentUserId)) {
+          const fallback =
+            persisted.users.find((u) => u.role === 'admin' && u.active) ?? persisted.users.find((u) => u.active)
+          if (fallback) dispatch({ type: 'signIn', userId: fallback.id })
+        }
         // A document whose signed-in member holds a PIN starts locked, so
         // reopening the app on a shared terminal always asks for the PIN.
         const current = persisted.users.find((u) => u.id === initialSession.currentUserId)
@@ -1118,7 +1129,13 @@ export const useClinic = () => {
   const ctx = useContext(StoreContext)
   if (!ctx) throw new Error('useClinic must be used inside ClinicProvider')
   const { store, dispatch } = ctx
-  const user = store.data.users.find((u) => u.id === store.session.currentUserId)!
+  // A stale or missing member (foreign document, emptied users collection)
+  // must not crash the shell — the inert placeholder holds no permissions on
+  // any write path because the reducer re-checks the actor on every action.
+  const user =
+    store.data.users.find((u) => u.id === store.session.currentUserId) ??
+    store.data.users.find((u) => u.active) ??
+    EMPTY_USER
   return { data: store.data, session: store.session, user, dispatch }
 }
 
