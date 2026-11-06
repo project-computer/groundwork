@@ -2,12 +2,16 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
+
+	"github.com/project-computer/groundwork/server/internal/offlineapi/auth"
 	"github.com/project-computer/groundwork/server/internal/offlineapi/db"
 )
 
@@ -378,5 +382,232 @@ func TestConsultationAndPrescription(t *testing.T) {
 	}
 	if got, _ := list.body["prescriptions"].([]any); len(got) != 1 {
 		t.Fatalf("prescriptions = %d, want 1: %s", len(got), list.raw)
+	}
+}
+
+// createService seeds one catalog entry for billing tests.
+func createService(t *testing.T, s *Server, token, name string, priceSatang int64) string {
+	t.Helper()
+	res := call(t, s, http.MethodPost, "/api/v1/services", testSecret, token, map[string]any{
+		"name": name, "unitPriceSatang": priceSatang,
+	})
+	if res.status != http.StatusCreated {
+		t.Fatalf("create service %s = %d: %s", name, res.status, res.raw)
+	}
+	id, _ := res.body["id"].(string)
+	return id
+}
+
+func TestBillingFlow(t *testing.T) {
+	s := newTestServer(t)
+	token := setupClinic(t, s)
+	ownerID, petID := createOwnerAndPet(t, s, token)
+
+	consultID := createService(t, s, token, "Consultation", 30000)
+	vaccineID := createService(t, s, token, "Vaccine", 45000)
+
+	services := call(t, s, http.MethodGet, "/api/v1/services?search=vac", testSecret, token, nil)
+	if got, _ := services.body["services"].([]any); len(got) != 1 {
+		t.Fatalf("service search = %d results, want 1: %s", len(got), services.raw)
+	}
+
+	invoice := call(t, s, http.MethodPost, "/api/v1/invoices", testSecret, token, map[string]any{
+		"ownerId": ownerID, "petId": petID, "discountSatang": 2000,
+		"items": []map[string]any{
+			{"serviceId": consultID, "description": "Consultation", "quantity": 1, "unitPriceSatang": 30000},
+			{"serviceId": vaccineID, "description": "Vaccine", "quantity": 1, "unitPriceSatang": 45000},
+		},
+	})
+	if invoice.status != http.StatusCreated {
+		t.Fatalf("create invoice = %d: %s", invoice.status, invoice.raw)
+	}
+	invoiceID, _ := invoice.body["id"].(string)
+	if number, _ := invoice.body["invoiceNumber"].(string); number == "" {
+		t.Fatalf("invoice has no number: %s", invoice.raw)
+	}
+	if invoice.body["subtotalSatang"].(float64) != 75000 ||
+		invoice.body["totalSatang"].(float64) != 73000 {
+		t.Fatalf("invoice totals wrong: %s", invoice.raw)
+	}
+	if invoice.body["status"] != "unpaid" {
+		t.Fatalf("new invoice status = %v, want unpaid: %s", invoice.body["status"], invoice.raw)
+	}
+
+	// Line discount exceeding the line total is rejected before anything is
+	// written.
+	bad := call(t, s, http.MethodPost, "/api/v1/invoices", testSecret, token, map[string]any{
+		"ownerId": ownerID,
+		"items": []map[string]any{
+			{"description": "X", "quantity": 1, "unitPriceSatang": 100, "discountSatang": 200},
+		},
+	})
+	if bad.status != http.StatusBadRequest {
+		t.Fatalf("bad line discount = %d, want 400", bad.status)
+	}
+
+	// Partial payment: status flips to partial, balance is exact.
+	partial := call(t, s, http.MethodPost, "/api/v1/payments", testSecret, token, map[string]any{
+		"invoiceId": invoiceID, "amountSatang": 23000, "method": "cash",
+	})
+	if partial.status != http.StatusCreated {
+		t.Fatalf("partial payment = %d: %s", partial.status, partial.raw)
+	}
+	got := call(t, s, http.MethodGet, "/api/v1/invoices/"+invoiceID, testSecret, token, nil)
+	if got.body["status"] != "partial" || got.body["paidSatang"].(float64) != 23000 ||
+		got.body["balanceSatang"].(float64) != 50000 {
+		t.Fatalf("after partial: %s", got.raw)
+	}
+
+	// Overpayment is refused — no silently absorbed overpays.
+	over := call(t, s, http.MethodPost, "/api/v1/payments", testSecret, token, map[string]any{
+		"invoiceId": invoiceID, "amountSatang": 60000,
+	})
+	if over.status != http.StatusConflict {
+		t.Fatalf("overpay = %d, want 409: %s", over.status, over.raw)
+	}
+
+	// Settling the rest flips the invoice to paid.
+	rest := call(t, s, http.MethodPost, "/api/v1/payments", testSecret, token, map[string]any{
+		"invoiceId": invoiceID, "amountSatang": 50000, "method": "transfer", "reference": "TB-991",
+	})
+	if rest.status != http.StatusCreated {
+		t.Fatalf("settling payment = %d: %s", rest.status, rest.raw)
+	}
+	final := call(t, s, http.MethodGet, "/api/v1/invoices/"+invoiceID, testSecret, token, nil)
+	if final.body["status"] != "paid" || final.body["balanceSatang"].(float64) != 0 {
+		t.Fatalf("after settle: %s", final.raw)
+	}
+
+	// Voiding one payment (authorized correction) recomputes to partial and
+	// leaves the audit trail intact.
+	payments, _ := final.body["payments"].([]any)
+	first, _ := payments[0].(map[string]any)
+	firstID, _ := first["id"].(string)
+	voided := call(t, s, http.MethodPost, "/api/v1/payments/"+firstID+"/void", testSecret, token, nil)
+	if voided.status != http.StatusOK || voided.body["status"] != "void" {
+		t.Fatalf("void payment = %d: %s", voided.status, voided.raw)
+	}
+	after := call(t, s, http.MethodGet, "/api/v1/invoices/"+invoiceID, testSecret, token, nil)
+	if after.body["status"] != "partial" {
+		t.Fatalf("invoice after void = %v, want partial: %s", after.body["status"], after.raw)
+	}
+
+	audit := call(t, s, http.MethodGet, "/api/v1/audit?entityType=invoice", testSecret, token, nil)
+	if audit.status != http.StatusOK {
+		t.Fatalf("audit list = %d: %s", audit.status, audit.raw)
+	}
+	events, _ := audit.body["events"].([]any)
+	actions := map[string]bool{}
+	for _, raw := range events {
+		event, _ := raw.(map[string]any)
+		action, _ := event["action"].(string)
+		actions[action] = true
+	}
+	for _, want := range []string{"invoice.issued", "payment.recorded", "payment.voided"} {
+		if !actions[want] {
+			t.Fatalf("audit missing %s, got %v: %s", want, actions, audit.raw)
+		}
+	}
+
+	// An invoice with collected money cannot be voided — correct the
+	// payments first (plan BILL-10).
+	voidInvoice := call(t, s, http.MethodPost, "/api/v1/invoices/"+invoiceID+"/void", testSecret, token, nil)
+	if voidInvoice.status != http.StatusConflict {
+		t.Fatalf("void paid invoice = %d, want 409", voidInvoice.status)
+	}
+
+	// A clean invoice voids, and a void invoice refuses new payments.
+	clean := call(t, s, http.MethodPost, "/api/v1/invoices", testSecret, token, map[string]any{
+		"ownerId": ownerID,
+		"items":   []map[string]any{{"description": "Nail trim", "quantity": 1, "unitPriceSatang": 25000}},
+	})
+	if clean.status != http.StatusCreated {
+		t.Fatalf("clean invoice = %d: %s", clean.status, clean.raw)
+	}
+	cleanID, _ := clean.body["id"].(string)
+	if v := call(t, s, http.MethodPost, "/api/v1/invoices/"+cleanID+"/void", testSecret, token, nil); v.status != http.StatusOK {
+		t.Fatalf("void clean invoice = %d: %s", v.status, v.raw)
+	}
+	if p := call(t, s, http.MethodPost, "/api/v1/payments", testSecret, token, map[string]any{
+		"invoiceId": cleanID, "amountSatang": 1000,
+	}); p.status != http.StatusConflict {
+		t.Fatalf("pay void invoice = %d, want 409", p.status)
+	}
+}
+
+func TestSettingsAccess(t *testing.T) {
+	s := newTestServer(t)
+	token := setupClinic(t, s)
+
+	got := call(t, s, http.MethodGet, "/api/v1/settings", testSecret, token, nil)
+	if got.status != http.StatusOK || got.body["clinic"] == nil {
+		t.Fatalf("get settings = %d: %s", got.status, got.raw)
+	}
+
+	updated := call(t, s, http.MethodPatch, "/api/v1/settings", testSecret, token, map[string]any{
+		"phone": "02 999 8888",
+		"settings": map[string]string{
+			"receipt.footer": "thank you",
+		},
+	})
+	if updated.status != http.StatusOK {
+		t.Fatalf("patch settings = %d: %s", updated.status, updated.raw)
+	}
+	if clinic, _ := updated.body["clinic"].(map[string]any); clinic["phone"] != "02 999 8888" {
+		t.Fatalf("profile phone not updated: %s", updated.raw)
+	}
+	if values, _ := updated.body["settings"].(map[string]any); values["receipt.footer"] != "thank you" {
+		t.Fatalf("setting not saved: %s", updated.raw)
+	}
+
+	// A receptionist is refused the admin-only patch. Seed the account
+	// directly, then log in through the public API.
+	me := call(t, s, http.MethodGet, "/api/v1/auth/me", testSecret, token, nil)
+	adminUser, _ := me.body["user"].(map[string]any)
+	clinicID, _ := adminUser["clinicId"].(string)
+
+	pinHash, err := auth.HashPIN("5678")
+	if err != nil {
+		t.Fatalf("hash pin: %v", err)
+	}
+	now := db.UtcNow()
+	q := db.New(s.sqlDB)
+	receptionist, err := q.CreateUser(context.Background(), db.CreateUserParams{
+		ID: uuid.NewString(), ClinicID: clinicID, Name: "Ploy",
+		Username: "ploy", PinHash: pinHash, Active: 1,
+		CreatedAt: now, UpdatedAt: now,
+	})
+	if err != nil {
+		t.Fatalf("seed receptionist: %v", err)
+	}
+	if err := q.AssignRole(context.Background(), db.AssignRoleParams{
+		UserID: receptionist.ID, RoleID: "role-" + auth.RoleReceptionist,
+	}); err != nil {
+		t.Fatalf("assign role: %v", err)
+	}
+	login := call(t, s, http.MethodPost, "/api/v1/auth/login", testSecret, "", map[string]any{
+		"username": "ploy", "pin": "5678",
+	})
+	if login.status != http.StatusOK {
+		t.Fatalf("receptionist login = %d: %s", login.status, login.raw)
+	}
+	receptionToken, _ := login.body["token"].(string)
+
+	if read := call(t, s, http.MethodGet, "/api/v1/settings", testSecret, receptionToken, nil); read.status != http.StatusOK {
+		t.Fatalf("receptionist read settings = %d, want 200", read.status)
+	}
+	if denied := call(t, s, http.MethodPatch, "/api/v1/settings", testSecret, receptionToken, map[string]any{
+		"phone": "02 000 0000",
+	}); denied.status != http.StatusForbidden {
+		t.Fatalf("receptionist patch settings = %d, want 403", denied.status)
+	}
+
+	// The backend enforces financial corrections too: voiding a payment is
+	// admin-only (plan BILL-10 / AUTH-06).
+	if denied := call(t, s, http.MethodPost, "/api/v1/payments/no-such/void", testSecret, receptionToken, nil); denied.status != http.StatusForbidden {
+		t.Fatalf("receptionist void payment = %d, want 403", denied.status)
+	}
+	if denied := call(t, s, http.MethodPost, "/api/v1/invoices/no-such/void", testSecret, receptionToken, nil); denied.status != http.StatusForbidden {
+		t.Fatalf("receptionist void invoice = %d, want 403", denied.status)
 	}
 }

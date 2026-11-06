@@ -79,6 +79,25 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/v1/medications", s.authed(clinicalWriters, s.handleCreateMedication))
 	mux.HandleFunc("PATCH /api/v1/medications/{id}", s.authed(clinicalWriters, s.handleUpdateMedication))
 
+	// Billing (plan BILL-01…10). Catalog edits stay with the front desk and
+	// clinical staff; financial corrections are admin-only.
+	mux.HandleFunc("GET /api/v1/services", s.authed(nil, s.handleListServices))
+	mux.HandleFunc("POST /api/v1/services", s.authed(clinicWriters, s.handleCreateService))
+	mux.HandleFunc("PATCH /api/v1/services/{id}", s.authed(clinicWriters, s.handleUpdateService))
+
+	mux.HandleFunc("GET /api/v1/invoices", s.authed(nil, s.handleListInvoices))
+	mux.HandleFunc("POST /api/v1/invoices", s.authed(clinicWriters, s.handleCreateInvoice))
+	mux.HandleFunc("GET /api/v1/invoices/{id}", s.authed(nil, s.handleGetInvoice))
+	mux.HandleFunc("POST /api/v1/invoices/{id}/void", s.authed(ownedBy(auth.RoleAdmin), s.handleVoidInvoice))
+
+	mux.HandleFunc("POST /api/v1/payments", s.authed(clinicWriters, s.handleCreatePayment))
+	mux.HandleFunc("POST /api/v1/payments/{id}/void", s.authed(ownedBy(auth.RoleAdmin), s.handleVoidPayment))
+
+	mux.HandleFunc("GET /api/v1/settings", s.authed(nil, s.handleGetSettings))
+	mux.HandleFunc("PATCH /api/v1/settings", s.authed(ownedBy(auth.RoleAdmin), s.handleUpdateSettings))
+
+	mux.HandleFunc("GET /api/v1/audit", s.authed(nil, s.handleListAuditLogs))
+
 	return cors(requireSecret(mux, s.secret, s.logger))
 }
 
