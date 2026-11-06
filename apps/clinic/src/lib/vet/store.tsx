@@ -45,7 +45,7 @@ export type View =
   | 'settings'
 
 /** Why the reducer refused an action (ADR-0015). Ephemeral UI feedback. */
-export interface Rejection {
+interface Rejection {
   /** Stable machine identifier, e.g. 'stock.shortage', 'rbac.denied'. */
   code: string
   /** Human-readable explanation a banner can show directly. */

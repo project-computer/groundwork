@@ -72,13 +72,13 @@ export const shortDayLabel = (iso: string) =>
 export const monthLabel = (iso: string) =>
   new Date(`${iso.slice(0, 7)}-01T12:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
 
-export const HOUR_START = 8
-export const HOUR_END = 18
+const HOUR_START = 8
+const HOUR_END = 18
 /** The rendered day: 08:00 through 18:00 inclusive. */
 export const HOURS: number[] = Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => HOUR_START + i)
 
 /** Drag-to-create resolution and the duration used for a plain click on an empty slot. */
-export const SLOT_SNAP_MIN = 15
+const SLOT_SNAP_MIN = 15
 export const DEFAULT_SLOT_MIN = 30
 /** Latest a slot may start inside an hour, so a single snapped step still fits. */
 export const SLOT_LATEST_START_MIN = 60 - SLOT_SNAP_MIN

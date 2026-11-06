@@ -26,7 +26,7 @@ export type BucketLabel =
   | { kind: 'weekday'; weekday: number }
   | { kind: 'day'; day: number }
 
-export interface TrendBucket {
+interface TrendBucket {
   key: string
   label: BucketLabel
   collected: number
@@ -37,7 +37,7 @@ export interface TrendBucket {
 /** Which sentence describes the trend granularity; the view translates it. */
 export type TrendCaptionKey = 'hourly' | 'monthly-year' | 'monthly-12m' | 'daily-7d' | 'daily-period'
 
-export interface ReportTrend {
+interface ReportTrend {
   buckets: TrendBucket[]
   captionKey: TrendCaptionKey
   max: number
@@ -53,25 +53,25 @@ export const REPORT_STATUS_ORDER: AppointmentStatus[] = [
   'no_show',
 ]
 
-export interface ReportStatusRow {
+interface ReportStatusRow {
   status: AppointmentStatus
   count: number
 }
 
-export interface ReportServiceRow {
+interface ReportServiceRow {
   name: string
   quantity: number
   revenue: number
 }
 
-export interface ReportVetRow {
+interface ReportVetRow {
   /** User id; the view resolves the name and supplies the unassigned fallback. */
   id: string
   visits: number
   revenue: number
 }
 
-export interface ReportMetrics {
+interface ReportMetrics {
   collected: number
   paymentCount: number
   outstanding: number
@@ -151,7 +151,7 @@ export interface ReportPeriodLabel {
   end: string
 }
 
-export const reportPeriodLabel = (period: ReportPeriod): ReportPeriodLabel => ({
+const reportPeriodLabel = (period: ReportPeriod): ReportPeriodLabel => ({
   start: period.start ? formatDate(period.start.toISOString()) : null,
   end: formatDate(period.end.toISOString()),
 })

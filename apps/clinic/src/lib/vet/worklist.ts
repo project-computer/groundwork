@@ -14,7 +14,7 @@ import type { ClinicState } from './types'
  */
 
 /** Where clicking a fact should take the user. */
-export type WorklistTarget = 'records' | 'inventory'
+type WorklistTarget = 'records' | 'inventory'
 
 interface WorklistFactBase {
   /** Stable across renders; also the React key. */
