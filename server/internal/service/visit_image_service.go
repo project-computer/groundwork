@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/vet-clinic/api/internal/models"
-	"github.com/vet-clinic/api/internal/repository"
+	"github.com/project-computer/groundwork/server/internal/models"
+	"github.com/project-computer/groundwork/server/internal/repository"
 )
 
 var ErrInvalidImage = errors.New("only image uploads (image/*) are allowed")

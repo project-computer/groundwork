@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vet-clinic/api/internal/models"
-	"github.com/vet-clinic/api/internal/repository"
+	"github.com/project-computer/groundwork/server/internal/models"
+	"github.com/project-computer/groundwork/server/internal/repository"
 )
 
 // Sentinel errors surfaced to the HTTP layer for precise status mapping.

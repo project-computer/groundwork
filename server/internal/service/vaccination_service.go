@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vet-clinic/api/internal/models"
+	"github.com/project-computer/groundwork/server/internal/models"
 )
 
 // VaccineProtocolRepo is the read-only surface for the global vaccine_protocols table.

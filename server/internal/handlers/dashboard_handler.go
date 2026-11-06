@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"github.com/vet-clinic/api/internal/middleware"
-	"github.com/vet-clinic/api/internal/service"
-	"github.com/vet-clinic/api/internal/utils"
+	"github.com/project-computer/groundwork/server/internal/middleware"
+	"github.com/project-computer/groundwork/server/internal/service"
+	"github.com/project-computer/groundwork/server/internal/utils"
 )
 
 // DashboardHandler is now a thin layer: parse, dispatch, render. The raw pgxpool that

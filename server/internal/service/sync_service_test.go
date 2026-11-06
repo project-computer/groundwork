@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vet-clinic/api/internal/models"
+	"github.com/project-computer/groundwork/server/internal/models"
 )
 
 type fakeSyncRepo struct {

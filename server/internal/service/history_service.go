@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/vet-clinic/api/internal/models"
-	"github.com/vet-clinic/api/internal/repository"
+	"github.com/project-computer/groundwork/server/internal/models"
+	"github.com/project-computer/groundwork/server/internal/repository"
 )
 
 // HistoryService assembles a patient's medical timeline (visits,

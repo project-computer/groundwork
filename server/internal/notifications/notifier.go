@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/vet-clinic/api/internal/models"
+	"github.com/project-computer/groundwork/server/internal/models"
 )
 
 // Notifier is the channel-adapter surface (slice 0010). Implementations send the

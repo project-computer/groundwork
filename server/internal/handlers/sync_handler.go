@@ -7,9 +7,9 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
-	"github.com/vet-clinic/api/internal/models"
-	"github.com/vet-clinic/api/internal/service"
-	"github.com/vet-clinic/api/internal/utils"
+	"github.com/project-computer/groundwork/server/internal/models"
+	"github.com/project-computer/groundwork/server/internal/service"
+	"github.com/project-computer/groundwork/server/internal/utils"
 )
 
 const defaultSyncClinicID = "clinic-01"

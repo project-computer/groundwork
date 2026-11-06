@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vet-clinic/api/internal/models"
+	"github.com/project-computer/groundwork/server/internal/models"
 )
 
 // SupplierRepo is the persistent surface for suppliers (slice 0007).

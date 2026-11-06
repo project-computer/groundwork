@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/vet-clinic/api/internal/models"
+	"github.com/project-computer/groundwork/server/internal/models"
 )
 
 type fakeBillRepo struct {

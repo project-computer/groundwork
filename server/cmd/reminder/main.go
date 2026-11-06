@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/vet-clinic/api/internal/config"
-	"github.com/vet-clinic/api/internal/repository"
-	"github.com/vet-clinic/api/internal/service"
+	"github.com/project-computer/groundwork/server/internal/config"
+	"github.com/project-computer/groundwork/server/internal/repository"
+	"github.com/project-computer/groundwork/server/internal/service"
 )
 
 // reminder is the standalone scheduler binary (slice 0011): it wraps

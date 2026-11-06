@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vet-clinic/api/internal/models"
-	"github.com/vet-clinic/api/internal/notifications"
+	"github.com/project-computer/groundwork/server/internal/models"
+	"github.com/project-computer/groundwork/server/internal/notifications"
 )
 
 // ContactLookup resolves an owner's notification prefs + contact fields.

@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/vet-clinic/api/internal/config"
-	"github.com/vet-clinic/api/internal/handlers"
-	"github.com/vet-clinic/api/internal/middleware"
-	"github.com/vet-clinic/api/internal/repository"
-	"github.com/vet-clinic/api/internal/service"
-	"github.com/vet-clinic/api/internal/utils"
+	"github.com/project-computer/groundwork/server/internal/config"
+	"github.com/project-computer/groundwork/server/internal/handlers"
+	"github.com/project-computer/groundwork/server/internal/middleware"
+	"github.com/project-computer/groundwork/server/internal/repository"
+	"github.com/project-computer/groundwork/server/internal/service"
+	"github.com/project-computer/groundwork/server/internal/utils"
 )
 
 func main() {

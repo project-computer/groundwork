@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/vet-clinic/api/internal/repository"
+	"github.com/project-computer/groundwork/server/internal/repository"
 )
 
 // ClinicSettingsService reads and merges the clinic configuration document

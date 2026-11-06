@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vet-clinic/sidecar/internal/db"
-	"github.com/vet-clinic/sidecar/internal/store"
+	"github.com/project-computer/groundwork/sidecar/internal/db"
+	"github.com/project-computer/groundwork/sidecar/internal/store"
 )
 
 func sampleState() map[string]any {
@@ -45,7 +45,7 @@ func sampleState() map[string]any {
 		"vaccinations": []any{
 			map[string]any{"id": "vac-1", "patientId": "patient-1", "vaccineName": "Rabies vaccine", "administeredAt": "2026-10-25T10:00:00Z", "nextDueAt": "2027-10-25", "vetId": "u-pim", "version": json.Number("1")},
 		},
-		"audit": []any{},
+		"audit":  []any{},
 		"outbox": []any{},
 	}
 }
