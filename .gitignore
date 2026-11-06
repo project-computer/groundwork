@@ -48,5 +48,8 @@ __screenshots__/**/*-failed-*.png
 # Go sidecar artifacts
 apps/sidecar/bin/
 
+# Go API artifacts
+server/bin/
+
 # Cloudflare (deploy tooling artifacts)
 .wrangler/
