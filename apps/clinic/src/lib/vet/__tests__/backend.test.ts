@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchBackupFile, fetchState, listBackupFiles, pushState, runSync, saveBackupFile } from '../backend'
+import { fetchBackupFile, fetchState, listBackupFiles, pushState, runSync } from '../backend'
 import { buildBackup } from '../backup'
 import { seedState } from '../seed'
 
@@ -70,6 +70,7 @@ describe('backup files (ADR 0021)', () => {
   // The transport caches its discovery promise per module instance; these
   // tests each need a fresh discovery, so they reset modules and import a
   // private copy of the transport.
+  // eslint-disable-next-line unicorn/consistent-function-scoping -- reads vi.resetModules from this scope
   const fresh = async () => {
     vi.resetModules()
     return import('../backend')

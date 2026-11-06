@@ -56,7 +56,9 @@ fn sidecar_binary() -> Option<PathBuf> {
     // Production: Tauri copies external binaries next to the app executable.
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
-            let candidate = dir.join("clinic-core");
+            let candidate = dir
+                .join("clinic-core")
+                .with_extension(std::env::consts::EXE_SUFFIX);
             if candidate.exists() {
                 return Some(candidate);
             }

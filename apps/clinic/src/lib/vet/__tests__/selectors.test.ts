@@ -87,6 +87,7 @@ describe('openInvoices', () => {
 })
 
 describe('latestWeightKg (ADR 0022)', () => {
+  // eslint-disable-next-line unicorn/consistent-function-scoping -- fixture builder reads nothing from this scope
   const encounter = (id: string, patientId: string, weightKg: string, openedAt: string, closedAt?: string) => ({
     id,
     patientId,
