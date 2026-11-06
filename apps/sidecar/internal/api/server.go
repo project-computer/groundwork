@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/vet-clinic/sidecar/internal/store"
-	"github.com/vet-clinic/sidecar/internal/sync"
+	"github.com/project-computer/groundwork/sidecar/internal/store"
+	"github.com/project-computer/groundwork/sidecar/internal/sync"
 )
 
 const maxBodyBytes = 64 << 20

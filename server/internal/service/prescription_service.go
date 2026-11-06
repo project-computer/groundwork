@@ -6,8 +6,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/vet-clinic/api/internal/models"
-	"github.com/vet-clinic/api/internal/repository"
+	"github.com/project-computer/groundwork/server/internal/models"
+	"github.com/project-computer/groundwork/server/internal/repository"
 )
 
 type PrescriptionService struct {

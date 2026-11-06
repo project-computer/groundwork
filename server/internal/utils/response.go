@@ -2,7 +2,7 @@ package utils
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"github.com/vet-clinic/api/internal/models"
+	"github.com/project-computer/groundwork/server/internal/models"
 )
 
 func ErrorResponse(c fiber.Ctx, status int, err string, message ...string) error {

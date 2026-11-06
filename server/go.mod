@@ -1,4 +1,4 @@
-module github.com/vet-clinic/api
+module github.com/project-computer/groundwork/server
 
 go 1.27.3
 

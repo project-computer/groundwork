@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/vet-clinic/api/internal/utils"
+	"github.com/project-computer/groundwork/server/internal/utils"
 )
 
 type AuthMiddleware struct {

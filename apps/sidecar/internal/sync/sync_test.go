@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vet-clinic/sidecar/internal/db"
-	"github.com/vet-clinic/sidecar/internal/store"
+	"github.com/project-computer/groundwork/sidecar/internal/db"
+	"github.com/project-computer/groundwork/sidecar/internal/store"
 )
 
 func sampleState() map[string]any {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/vet-clinic/api/internal/models"
+	"github.com/project-computer/groundwork/server/internal/models"
 )
 
 // DashboardRepo is the minimal surface DashboardService needs. Defining it here keeps

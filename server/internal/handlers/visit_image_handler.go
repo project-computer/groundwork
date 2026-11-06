@@ -6,9 +6,9 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/vet-clinic/api/internal/middleware"
-	"github.com/vet-clinic/api/internal/service"
-	"github.com/vet-clinic/api/internal/utils"
+	"github.com/project-computer/groundwork/server/internal/middleware"
+	"github.com/project-computer/groundwork/server/internal/service"
+	"github.com/project-computer/groundwork/server/internal/utils"
 )
 
 type VisitImageHandler struct {

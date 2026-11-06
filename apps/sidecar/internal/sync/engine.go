@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/vet-clinic/sidecar/internal/store"
+	"github.com/project-computer/groundwork/sidecar/internal/store"
 )
 
 var ErrNotConfigured = errors.New("cloud sync is not configured")

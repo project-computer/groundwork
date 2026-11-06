@@ -1,4 +1,4 @@
-module github.com/vet-clinic/sidecar
+module github.com/project-computer/groundwork/sidecar
 
 go 1.27.1
 

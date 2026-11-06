@@ -16,7 +16,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/vet-clinic/sidecar/migrations"
+	"github.com/project-computer/groundwork/sidecar/migrations"
 )
 
 type DB struct {

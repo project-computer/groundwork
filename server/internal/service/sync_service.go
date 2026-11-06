@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vet-clinic/api/internal/models"
+	"github.com/project-computer/groundwork/server/internal/models"
 )
 
 var (

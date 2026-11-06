@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/vet-clinic/sidecar/internal/db"
+	"github.com/project-computer/groundwork/sidecar/internal/db"
 )
 
 var ErrInvalidState = errors.New("invalid clinic state")

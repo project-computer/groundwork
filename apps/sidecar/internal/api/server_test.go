@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/vet-clinic/sidecar/internal/db"
-	"github.com/vet-clinic/sidecar/internal/store"
-	"github.com/vet-clinic/sidecar/internal/sync"
+	"github.com/project-computer/groundwork/sidecar/internal/db"
+	"github.com/project-computer/groundwork/sidecar/internal/store"
+	"github.com/project-computer/groundwork/sidecar/internal/sync"
 )
 
 func newTestServer(t *testing.T) *httptest.Server {

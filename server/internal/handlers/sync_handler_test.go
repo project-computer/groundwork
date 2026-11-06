@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/vet-clinic/api/internal/models"
+	"github.com/project-computer/groundwork/server/internal/models"
 )
 
 type fakeSyncService struct {
