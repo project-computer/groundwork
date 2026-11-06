@@ -201,7 +201,7 @@ The root `Makefile` is the entrypoint for anything that crosses language
 boundaries (`make lint`, `make test`, `make sidecar`, `make test-pages`,
 `make ci`). Each JS app owns its tooling entirely (`apps/clinic` and
 `apps/landing` each have a package.json, pnpm-lock.yaml, and node_modules);
-knip is a clinic devDependency and only audits `apps/clinic`. The repo root
+knip is a clinic devDependency, only audits `apps/clinic`, and gates as **error** via `make lint-ts` — unused exports/files/deps fail the build, don't accumulate. The repo root
 has no package.json, lockfile, or workspace file — Make is the only root task
 surface. Tauri's `beforeDevCommand`/`beforeBuildCommand` go through
 `make -C ../.. sidecar`, which only rebuilds when the sidecar's Go sources
@@ -235,6 +235,5 @@ ESLint regexes — both deny feature internals past the barrel.
 - oxlint warnings (~30: array sort mutation, function scoping, hook deps,
   render purity) are advisory; `pnpm -C apps/clinic lint:strict` blocks on
   them. Burn them down file-by-file; don't let new ones land.
-- knip warns on unused exports — fix when touching the file.
 - Migration 0005 skips version 4 on the Rust side (sidecar-only 0004);
   intentional, don't "fix" the gap.
