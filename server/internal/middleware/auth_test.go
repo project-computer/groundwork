@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/stretchr/testify/assert"
 	"github.com/project-computer/groundwork/server/internal/utils"
+	"github.com/stretchr/testify/assert"
 )
 
 // GetClinicID is the single resolver through which every tenant-scoped query flows.

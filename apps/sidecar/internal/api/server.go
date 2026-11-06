@@ -146,9 +146,9 @@ func (s *Server) handleSyncStatus(w http.ResponseWriter, r *http.Request) {
 		cursorValue, _ = strconv.ParseInt(cursor, 10, 64)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"configured":  s.engine.Configured(),
-		"cursor":      cursorValue,
-		"hasCursor":   ok,
+		"configured": s.engine.Configured(),
+		"cursor":     cursorValue,
+		"hasCursor":  ok,
 	})
 }
 
