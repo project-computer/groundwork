@@ -24,7 +24,7 @@ export const RELEASE_VERSION = '0.1.0'
  * requirements live in the view (download-card.tsx) — this manifest stays
  * translation-free.
  */
-export const RELEASES_BASE_URL = 'https://github.com/vetcare/vetcare/releases/download'
+export const RELEASES_BASE_URL = 'https://github.com/project-computer/groundwork/releases/download'
 
 export const PLATFORMS: readonly PlatformDownloads[] = [
   {
