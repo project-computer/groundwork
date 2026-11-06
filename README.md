@@ -5,6 +5,10 @@ with a bundled Go sidecar (`apps/sidecar/`) that owns SQLite and cloud sync. Wor
 fully offline; sync is optional. Same codebase targets Windows desktop now,
 Android/iOS later (Tauri mobile), and web later (same UI, IndexedDB adapter).
 
+Agents (and humans) working in this repo: read [`AGENT.md`](AGENT.md) first —
+it sets the code, structure, and workflow standard and links the canonical
+sources (`CONTEXT.md`, `.agents/skills/`, `docs/decisions/`).
+
 ## Layout
 
 | Path | Purpose |
@@ -12,7 +16,7 @@ Android/iOS later (Tauri mobile), and web later (same UI, IndexedDB adapter).
 | `apps/clinic` | Tauri 2 + React app (the desktop UI) |
 | `apps/landing` | Public download page for the desktop binaries (React + Vite, EN/ไทย) |
 | `apps/sidecar/` | Go sidecar `clinic-core`: local SQLite + sync engine |
-| `server/` | Go cloud API (Fiber + Postgres) — only needed for cloud sync |
+| `server/` | Go API module: cloud API (Fiber + Postgres) for optional sync, plus the offline-MVP REST backend `server/cmd/vetcare` (`server/internal/offlineapi/` — normalized SQLite + sqlc, not yet wired into the shell) |
 | `docs/` | Architecture, data model, ADRs, plans |
 
 ## Prerequisites
@@ -38,6 +42,7 @@ make tauri         # desktop shell (builds the sidecar first, then SQLite)
 make build         # web build (clinic + landing)
 
 make sidecar    # build + stage the Go sidecar binary (incremental)
+make api        # build the offline REST backend (server/cmd/vetcare)
 
 make lint       # every linter (TS + Go + Rust)
 make lint-ts    # oxlint + knip (unused files, deps, exports)

@@ -11,7 +11,7 @@ code.
 |---|---|
 | `architecture.md` | System architecture: app/sidecar/server split, persistence, sync |
 | `data-model.md` | Clinic document shape, entities, migration history |
-| `decisions/` | ADRs 0001–0019, the single decision series (append-only) |
+| `decisions/` | ADRs 0001–0023, the single decision series (append-only) |
 
 ## Historical records (do not update to match later code)
 
@@ -20,7 +20,7 @@ code.
 | `PLAN.md` | Original execution plan for the platform build |
 | `plans/` | Point-in-time feature plans, kept as a historical record |
 | `agents/` | Scaffolding playbook (00–09) from the original repo build |
-| `issues/` | Issue breakdown 0000–0012 from the original build |
+| `issues/` | Issue series: 0000–0012 from the original build (historical); 0013+ from the 2026-11-06 offline-MVP plan reconciliation (active backlog) |
 
 ## ADR numbering note
 
