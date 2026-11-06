@@ -880,6 +880,31 @@
   background: var(--teal-soft);
   color: var(--teal);
 }
+.auto-backup-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.auto-backup-toggle input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--teal);
+}
+.backup-history {
+  padding: 12px 0 0;
+  border-top: 1px solid var(--row-border);
+}
+.backup-history > strong {
+  display: block;
+  font-size: 12px;
+  padding-bottom: 8px;
+}
+.backup-history .status-line button {
+  margin-left: auto;
+}
 .empty-state {
   color: var(--ink-muted);
   font-size: 12px;

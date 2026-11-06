@@ -1,5 +1,5 @@
-import { invoiceTotals, itemOnHand, todayKey } from './format'
-import type { InventoryItem, InventoryLot, Invoice, Payment, Vaccination } from './types'
+import { compareTime, invoiceTotals, itemOnHand, todayKey } from './format'
+import type { Encounter, InventoryItem, InventoryLot, Invoice, Payment, Vaccination } from './types'
 
 /**
  * Read-model selectors (2026-10-29 refactor, phase 3). Pure state → derived
@@ -46,6 +46,29 @@ export const vaccinationOverdue = (nextDueAt: string | undefined, today = todayK
 /** Vaccinations whose next-due date has passed. */
 export const overdueVaccinations = (vaccinations: Vaccination[], today = todayKey()): Vaccination[] =>
   vaccinations.filter((v) => vaccinationOverdue(v.nextDueAt, today))
+
+export interface WeightObservation {
+  valueKg: string
+  recordedAt: string
+}
+
+/**
+ * Latest recorded vital weight for a patient (ADR 0022): the clinical weight
+ * record is the Visit's vitals entry — the patient-level `weightKg` field is
+ * only the owner-reported baseline. Ordered by encounter time (close time
+ * when closed, otherwise open). Null before the first recorded weight.
+ */
+export const latestWeightKg = (patientId: string, encounters: Encounter[]): WeightObservation | null => {
+  let latest: WeightObservation | null = null
+  for (const encounter of encounters) {
+    if (encounter.patientId !== patientId || !encounter.vitals.weightKg) continue
+    const recordedAt = encounter.closedAt ?? encounter.openedAt
+    if (!latest || compareTime(recordedAt, latest.recordedAt) > 0) {
+      latest = { valueKg: encounter.vitals.weightKg, recordedAt }
+    }
+  }
+  return latest
+}
 
 /** Latest next-due date per patient — a patient is overdue when their most
  * recent schedule is in the past. Drives the reminder worklist. */

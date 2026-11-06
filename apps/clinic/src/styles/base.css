@@ -45,6 +45,44 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* Vettera palette — registered as first-class tokens so markup can use
+     `text-ink` / `bg-teal-soft` / `border-line` instead of `bg-[var(--teal)]`.
+     Raw values stay in :root/.dark below (light/dark flip lives there). */
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-line: var(--line);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-canvas: var(--canvas);
+  --color-teal: var(--teal);
+  --color-teal-dark: var(--teal-dark);
+  --color-teal-soft: var(--teal-soft);
+  --color-teal-wash: var(--teal-wash);
+  --color-teal-wash-border: var(--teal-wash-border);
+  --color-teal-line: var(--teal-line);
+  --color-navy: var(--navy);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --color-blue: var(--blue);
+  --color-blue-soft: var(--blue-soft);
+  --color-chip-bg: var(--chip-bg);
+  --color-avatar-bg: var(--avatar-bg);
+  --color-nav-fg: var(--nav-fg);
+  --color-nav-active-bg: var(--nav-active-bg);
+  --color-nav-badge-bg: var(--nav-badge-bg);
+  --color-topbar-bg: var(--topbar-bg);
+  --color-pulse: var(--pulse);
+  --color-pulse-ring: var(--pulse-ring);
+  --color-row-border: var(--row-border);
+  --color-thead-bg: var(--thead-bg);
+  --color-table-fg: var(--table-fg);
+  --color-tile-bg: var(--tile-bg);
+  --color-backdrop: var(--backdrop);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --shadow-panel: var(--shadow);
+  --shadow-sidebar: var(--sidebar-shadow);
 }
 
 :root {

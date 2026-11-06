@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useS
 import { i18n } from '@lingui/core'
 import { msg } from '@lingui/core/macro'
 import { loadPlanPref, loadState, parseClinicState, savePlanPref, saveState } from './persistence'
+import { runAutoBackup } from './backup'
 import { useSyncWorker } from './sync'
 import { can, formatMoney, formatMrn, invoiceTotals, roleLabel } from './format'
 import { seedState } from './seed'
@@ -1084,6 +1085,18 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     dataRef.current = store.data
   }, [store.data])
+
+  // Daily automatic backup (ADR 0021): once per launch, on the hydrated
+  // document. In a browser this is a no-op (no sidecar to hold the file).
+  const autoBackupDone = useRef(false)
+  useEffect(() => {
+    if (!hydrated || autoBackupDone.current) return
+    autoBackupDone.current = true
+    void runAutoBackup(dataRef.current, dispatch)
+    // Runs exactly once per launch on the loaded document; later commits are
+    // deliberately out of scope.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated])
 
   // Sync orchestration lives behind the lib/vet/sync seam (phase 5): debounced
   // push, periodic pull, connectivity resets and the in-flight mutation lock.

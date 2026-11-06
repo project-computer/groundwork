@@ -28,7 +28,7 @@ it("edits patient identity and owner contact details from the profile dialog", a
 
   await patientName.fill("Tiger II")
   await page.getByLabelText("Phone").fill("089 000 1111")
-  await page.getByLabelText("Weight (kg)").fill("33.1")
+  await page.getByLabelText("Baseline weight (kg)").fill("33.1")
   await page.getByRole("button", { name: "Save Profile" }).click()
 
   // The list reflects the renamed patient and the owner is untouched.
@@ -39,7 +39,21 @@ it("edits patient identity and owner contact details from the profile dialog", a
   await rowButton("Tiger II", "View")
   await expect.element(page.getByLabelText("Patient name")).toHaveValue("Tiger II")
   await expect.element(page.getByLabelText("Phone")).toHaveValue("089 000 1111")
-  await expect.element(page.getByLabelText("Weight (kg)")).toHaveValue("33.1")
+  await expect.element(page.getByLabelText("Baseline weight (kg)")).toHaveValue("33.1")
+})
+
+it("shows the last recorded vital weight as the clinical weight (ADR 0022)", async () => {
+  await page.viewport(1280, 900)
+  seed(seedState)
+  await renderApp()
+  await page.getByRole("button", { name: "Owners & Patients" }).click()
+
+  // Tiger has a seeded visit with vitals — the clinical weight comes from it.
+  await rowButton("Tiger", "View")
+  await expect.element(page.getByText(/Last recorded 32\.4 kg/)).toBeVisible()
+
+  // The timeline row carries the same vitals weight.
+  await expect.element(page.getByText(/weight 32\.4 kg/)).toBeVisible()
 })
 
 it("blocks saving when the patient name is blank", async () => {

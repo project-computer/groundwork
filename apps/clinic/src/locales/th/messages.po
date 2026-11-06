@@ -11,6 +11,11 @@ msgstr ""
 msgid " · {0}% completion rate"
 msgstr " · อัตราการสำเร็จ {0}%"
 
+#. placeholder {0}: snapshot.file
+#: src/features/vet/settings/index.tsx
+msgid " A safety copy was saved as {0}."
+msgstr " บันทึกสำเนาความปลอดภัยเป็น {0} แล้ว"
+
 #: src/features/vet/inventory/index.tsx
 msgid "— none —"
 msgstr "— ไม่มี —"
@@ -19,11 +24,11 @@ msgstr "— ไม่มี —"
 msgid "— select item —"
 msgstr "— เลือกรายการ —"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "— select medication —"
 msgstr "— เลือกยา —"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "…or paste bundle JSON"
 msgstr "…หรือวาง JSON ของเคส"
 
@@ -84,7 +89,7 @@ msgid "{0, plural, one {# no-show} other {# no-shows}}"
 msgstr "{0, plural, other {# ไม่มาตามนัด}}"
 
 #. placeholder {0}: entry.encounter.notes.length
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "{0, plural, one {# note} other {# notes}}"
 msgstr "{0, plural, other {# บันทึก}}"
 
@@ -127,7 +132,7 @@ msgstr "{0, plural, other {# รายการที่ต้องสั่ง
 
 #. placeholder {0}: dayLabel(iso)
 #. placeholder {1}: list.length
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "{0} — {1, plural, one {# appointment} other {# appointments}}"
 msgstr "{0} — {1, plural, other {# นัดหมาย}}"
 
@@ -182,7 +187,7 @@ msgid "{0} {unit} · expires {1}"
 msgstr "{0} {unit} · หมดอายุ {1}"
 
 #. placeholder {0}: monthLabel(dayIso)
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "{0} calendar"
 msgstr "ปฏิทิน{0}"
 
@@ -202,7 +207,7 @@ msgid "{0} invoices"
 msgstr "ใบแจ้งหนี้ {0} ใบ"
 
 #. placeholder {0}: patient.name
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "{0} is allergic to “{allergyHit}” — check this prescription before dispensing."
 msgstr "{0} แพ้ “{allergyHit}” — โปรดตรวจสอบใบสั่งยานี้ก่อนจ่ายยา"
 
@@ -211,8 +216,8 @@ msgstr "{0} แพ้ “{allergyHit}” — โปรดตรวจสอบ�
 msgid "{0} items"
 msgstr "รายการ {0} ชิ้น"
 
-#. placeholder {0}: dialogConflict.durationMin
-#: src/features/vet/schedule/index.tsx
+#. placeholder {0}: conflict.durationMin
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "{0} min"
 msgstr "{0} นาที"
 
@@ -237,10 +242,10 @@ msgstr "ผู้ป่วย {0} ตัว"
 msgid "{0} payments"
 msgstr "รายการชำระเงิน {0} รายการ"
 
-#. placeholder {0}: formatCurrency(refundPayment.amount)
-#. placeholder {1}: formatDate(refundPayment.receivedAt)
+#. placeholder {0}: formatCurrency(payment.amount)
+#. placeholder {1}: formatDate(payment.receivedAt)
 #. placeholder {2}: formatCurrency(refundable)
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "{0} recorded on {1} · up to {2} refundable"
 msgstr "บันทึก {0} เมื่อ {1} · คืนเงินได้สูงสุด {2}"
 
@@ -261,12 +266,12 @@ msgid "{0}/{1} completed ·"
 msgstr "สำเร็จ {0}/{1} ·"
 
 #. placeholder {0}: a.durationMin
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
 msgid "{0}min"
 msgstr "{0} นาที"
 
-#. placeholder {0}: formatTime(dialogConflict.startsAt)
-#: src/features/vet/schedule/index.tsx
+#. placeholder {0}: formatTime(conflict.startsAt)
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "{conflictVetName} is already booked at {0}"
 msgstr "{conflictVetName} มีนัดอยู่แล้วที่ {0}"
 
@@ -275,7 +280,7 @@ msgstr "{conflictVetName} มีนัดอยู่แล้วที่ {0}"
 msgid "{itemName} — lot {0}"
 msgstr "{itemName} — ล็อต {0}"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "{m, plural, one {# minute} other {# minutes}}"
 msgstr "{m, plural, other {# นาที}}"
 
@@ -295,12 +300,12 @@ msgid "{patientName} — {0}"
 msgstr "{patientName} — {0}"
 
 #. placeholder {0}: selectedRx.unit
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "{selectedStock} {0} available in stock."
 msgstr "มี {selectedStock} {0} ในสต๊อก"
 
 #. placeholder {0}: c.unit
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "{stock} {0} in stock"
 msgstr "มี {stock} {0} ในสต๊อก"
 
@@ -316,22 +321,26 @@ msgstr "1 รายการ"
 msgid "1 patient"
 msgstr "ผู้ป่วย 1 ราย"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "30 days"
 msgstr "30 วัน"
 
-#: src/features/vet/consultations/index.tsx
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "7 days"
 msgstr "7 วัน"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "A PIN is set for this account."
 msgstr "บัญชีนี้ตั้ง PIN ไว้แล้ว"
 
 #: src/features/vet/settings/index.tsx
 msgid "A restorable copy of this installation — patients, visits, billing and settings."
 msgstr "สำเนาสำหรับกู้คืนของระบบนี้ — ผู้ป่วย การรักษา การเงิน และการตั้งค่า"
+
+#: src/features/vet/settings/index.tsx
+msgid "A safety copy of the current data will be saved on this computer first. Restoring never discards it without a trace."
+msgstr "สำเนาความปลอดภัยของข้อมูลปัจจุบันจะถูกบันทึกไว้ในเครื่องนี้ก่อน การกู้คืนจะไม่ละทิ้งข้อมูลเดิมโดยไม่มีร่องรอย"
 
 #: src/features/vet/dashboard/index.tsx
 msgid "A traceable history of clinic changes"
@@ -350,7 +359,7 @@ msgstr "ใช้งาน"
 msgid "Active lots expiring within 30 days"
 msgstr "ล็อตที่กำลังใช้งานซึ่งหมดอายุใน 30 วัน"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/walk-in-form.tsx
 msgid "Add"
 msgstr "เพิ่ม"
 
@@ -367,16 +376,16 @@ msgstr "เพิ่มรายการสต๊อก"
 msgid "Add item"
 msgstr "เพิ่มรายการ"
 
+#: src/features/vet/staff/components/team-panel.tsx
 #: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
 msgid "Add member"
 msgstr "เพิ่มสมาชิก"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Add note"
 msgstr "เพิ่มบันทึก"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Add prescription"
 msgstr "เพิ่มใบสั่งยา"
 
@@ -392,12 +401,12 @@ msgstr "เพิ่มผู้ขาย"
 msgid "Add to invoice"
 msgstr "เพิ่มในใบแจ้งหนี้"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/waiting-queue.tsx
 msgid "Add walk-in"
 msgstr "เพิ่มผู้ป่วย walk-in"
 
-#: src/features/vet/owners/patient-dialog.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Address"
 msgstr "ที่อยู่"
 
@@ -410,7 +419,7 @@ msgid "All"
 msgstr "ทั้งหมด"
 
 #. placeholder {0}: label.end
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "All activity through {0}"
 msgstr "กิจกรรมทั้งหมดจนถึง {0}"
 
@@ -434,15 +443,15 @@ msgstr "สต๊อกทุกรายการอยู่เหนือร
 msgid "All patients"
 msgstr "ผู้ป่วยทั้งหมด"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "All time"
 msgstr "ตลอดกาล"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Allergies (comma-separated)"
 msgstr "การแพ้ (คั่นด้วยเครื่องหมายจุลภาค)"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Allergy warning"
 msgstr "คำเตือนการแพ้"
 
@@ -451,31 +460,32 @@ msgstr "คำเตือนการแพ้"
 msgid "Allergy: {a}"
 msgstr "การแพ้: {a}"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/roles-panel.tsx
 msgid "Allowed"
 msgstr "อนุญาต"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Amend"
 msgstr "แก้ไข"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Amended note"
 msgstr "บันทึกที่แก้ไข"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Amendment"
 msgstr "การแก้ไข"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Amount"
 msgstr "จำนวนเงิน"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Amount (THB)"
 msgstr "จำนวนเงิน (บาท)"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Another patient"
 msgstr "ผู้ป่วยรายอื่น"
 
@@ -483,11 +493,11 @@ msgstr "ผู้ป่วยรายอื่น"
 msgid "Appointment completion"
 msgstr "นัดหมายที่สำเร็จ"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Appointment completion (%)"
 msgstr "นัดหมายที่สำเร็จ (%)"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Appointment date"
 msgstr "วันที่นัดหมาย"
 
@@ -508,7 +518,7 @@ msgstr "นัดหมาย & คิว"
 msgid "Appointments across the clinic week — click or drag empty space to book"
 msgstr "นัดหมายตลอดสัปดาห์ของคลินิก — คลิกหรือลากบริเวณว่างเพื่อจองนัด"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Appointments are saved to the local clinic database."
 msgstr "นัดหมายจะถูกบันทึกลงฐานข้อมูลของคลินิกในเครื่อง"
 
@@ -517,15 +527,15 @@ msgstr "นัดหมายจะถูกบันทึกลงฐานข
 msgid "Appointments at {0}"
 msgstr "นัดหมายที่ {0}"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Appointments by status"
 msgstr "นัดหมายแยกตามสถานะ"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Appointments per day — select a day to open it"
 msgstr "นัดหมายรายวัน — เลือกวันเพื่อเปิดดู"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Apr"
 msgstr "เม.ย."
 
@@ -534,11 +544,11 @@ msgstr "เม.ย."
 msgid "archived"
 msgstr "จัดเก็บแล้ว"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Archived"
 msgstr "เก็บถาวร"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 msgid "Archived visit"
 msgstr "การรักษาที่เก็บถาวร"
 
@@ -546,15 +556,16 @@ msgstr "การรักษาที่เก็บถาวร"
 msgid "Audit trail"
 msgstr "ร่องรอยการตรวจสอบ"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Aug"
 msgstr "ส.ค."
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Authentication"
 msgstr "การยืนยันตัวตน"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Authored notes are preserved as a revision history"
 msgstr "บันทึกที่เขียนไว้จะถูกเก็บเป็นประวัติการแก้ไข"
 
@@ -563,6 +574,7 @@ msgid "Available on Cloud plan"
 msgstr "ใช้ได้เมื่ออยู่ในแพ็กเกจ Cloud"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Average per visit"
 msgstr "เฉลี่ยต่อการรักษา"
 
@@ -570,24 +582,33 @@ msgstr "เฉลี่ยต่อการรักษา"
 msgid "Backup downloaded. Keep it somewhere outside this computer."
 msgstr "ดาวน์โหลดไฟล์สำรองแล้ว กรุณาเก็บไว้นอกเครื่องนี้ด้วย"
 
+#: src/features/vet/settings/index.tsx
+msgid "Backups on this computer"
+msgstr "ไฟล์สำรองในเครื่องนี้"
+
 #: src/features/vet/billing/index.tsx
 msgid "Balance"
 msgstr "ยอดค้างชำระ"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Balance due"
 msgstr "ยอดที่ต้องชำระ"
 
-#. placeholder {0}: formatCurrency(paymentBalance)
-#: src/features/vet/billing/index.tsx
+#. placeholder {0}: formatCurrency(balance)
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Balance due {0} · partial payments are supported"
 msgstr "ค้างชำระ {0} · รองรับการชำระบางส่วน"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Bank transfer"
 msgstr "โอนเงินผ่านธนาคาร"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
+msgid "Baseline weight (kg)"
+msgstr "น้ำหนักฐานเริ่มต้น (กก.)"
+
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Billed"
 msgstr "ออกบิลแล้ว"
 
@@ -612,19 +633,20 @@ msgstr "การเงิน & การชำระเงิน"
 msgid "Bird"
 msgstr "นก"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Book anyway — double-book this veterinarian"
 msgstr "จอด้วยดีกว่า — จองซ้อนให้สัตวแพทย์ท่านนี้"
 
+#: src/features/vet/schedule/components/booking-dialog.tsx
 #: src/features/vet/schedule/index.tsx
 msgid "Book appointment"
 msgstr "จองนัดหมาย"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/follow-up-panel.tsx
 msgid "Book follow-up"
 msgstr "นัดติดตามอาการ"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/follow-up-panel.tsx
 msgid "Book the next visit before closing"
 msgstr "นัดครั้งถัดไปก่อนปิดการรักษา"
 
@@ -636,7 +658,7 @@ msgstr "จองนัด เช็คอิน และดูแลงาน�
 msgid "booked"
 msgstr "นัดไว้"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Booked"
 msgstr "นัดไว้"
 
@@ -644,16 +666,16 @@ msgstr "นัดไว้"
 msgid "Boosters due or overdue within 30 days"
 msgstr "เข็มกระตุ้นที่ครบกำหนดหรือเลยกำหนดใน 30 วัน"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "Breed"
 msgstr "สายพันธุ์"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Bucket"
 msgstr "ช่วงเวลา"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "Bundle file (.json)"
 msgstr "ไฟล์เคส (.json)"
 
@@ -665,16 +687,18 @@ msgstr "เรียงตามปริมาณยาที่จ่ายใ
 msgid "Calendar mode"
 msgstr "โหมดปฏิทิน"
 
-#: src/features/vet/billing/index.tsx
-#: src/features/vet/consultations/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
-#: src/features/vet/pin-dialog.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/billing/components/payment-dialog.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 #: src/features/vet/settings/index.tsx
 msgid "Cancel"
 msgstr "ยกเลิก"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/walk-in-form.tsx
 msgid "Cancel walk-in"
 msgstr "ยกเลิก walk-in"
 
@@ -682,15 +706,15 @@ msgstr "ยกเลิก walk-in"
 msgid "cancelled"
 msgstr "ยกเลิก"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Cancelled"
 msgstr "ยกเลิก"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Card"
 msgstr "บัตร"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Cash"
 msgstr "เงินสด"
 
@@ -702,22 +726,19 @@ msgstr "แมว"
 msgid "Category"
 msgstr "หมวดหมู่"
 
-#: src/features/vet/pin-dialog.tsx
-#: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Change PIN"
 msgstr "เปลี่ยน PIN"
 
 #. placeholder {0}: member.name
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "Change PIN — {0}"
 msgstr "เปลี่ยน PIN — {0}"
 
 #. placeholder {0}: member.name
-#. placeholder {0}: user.name
-#: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
 msgid "Change PIN for {0}"
 msgstr "เปลี่ยน PIN ของ {0}"
 
@@ -727,15 +748,15 @@ msgstr "เปลี่ยน PIN ของ {0}"
 msgid "Change theme (current: {0}, switches to {1})"
 msgstr "เปลี่ยนธีม (ปัจจุบัน: {0}, สลับเป็น {1})"
 
-#: src/features/vet/save-error-banner.tsx
+#: src/components/patterns/save-error-banner.tsx
 msgid "Changes are not being saved to this computer"
 msgstr "การเปลี่ยนแปลงยังไม่ถูกบันทึกลงเครื่องนี้"
 
-#: src/features/vet/save-error-banner.tsx
+#: src/components/patterns/save-error-banner.tsx
 msgid "check free disk space or the clinic server before continuing."
 msgstr "ตรวจสอบพื้นที่ว่างในดิสก์หรือเซิร์ฟเวอร์คลินิกก่อนดำเนินการต่อ"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
 msgid "Check in"
 msgstr "เช็คอิน"
 
@@ -743,15 +764,15 @@ msgstr "เช็คอิน"
 msgid "checked in"
 msgstr "เช็คอินแล้ว"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Checked in"
 msgstr "เช็คอินแล้ว"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/waiting-queue.tsx
 msgid "Checked-in patients waiting for the vet"
 msgstr "ผู้ป่วยที่เช็คอินแล้วกำลังรอสัตวแพทย์"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "Checking…"
 msgstr "กำลังตรวจสอบ…"
 
@@ -759,11 +780,11 @@ msgstr "กำลังตรวจสอบ…"
 msgid "Choose a backup file"
 msgstr "เลือกไฟล์สำรองข้อมูล"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 msgid "Choose a booked appointment from the calendar to begin, or open a past visit below."
 msgstr "เลือกนัดหมายที่จองไว้จากปฏิทินเพื่อเริ่มต้น หรือเปิดการรักษาที่ผ่านมาด้านล่าง"
 
-#: src/components/vet/date-picker.tsx
+#: src/components/patterns/date-picker.tsx
 msgid "Choose a date"
 msgstr "เลือกวันที่"
 
@@ -771,7 +792,7 @@ msgstr "เลือกวันที่"
 msgid "Choose backup…"
 msgstr "เลือกไฟล์สำรอง…"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 #: src/features/vet/settings/index.tsx
 #: src/features/vet/workspace/index.tsx
 msgid "Clinic"
@@ -812,11 +833,11 @@ msgstr "ข้อมูลคลินิก"
 msgid "Clinic identity, data portability and plan."
 msgstr "ข้อมูลคลินิก การพกพาข้อมูล และแพ็กเกจ"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "Clinic locked"
 msgstr "คลินิกถูกล็อก"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Clinic name"
 msgstr "ชื่อคลินิก"
 
@@ -828,7 +849,7 @@ msgstr "เชื่อมต่อเซิร์ฟเวอร์คลิน
 msgid "Clinic workspace"
 msgstr "พื้นที่ทำงานคลินิก"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Clinical"
 msgstr "งานคลินิก"
 
@@ -836,12 +857,13 @@ msgstr "งานคลินิก"
 msgid "Clinical care — records visits, diagnoses and prescriptions."
 msgstr "งานรักษา — บันทึกการรักษา การวินิจฉัย และใบสั่งยา"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Clinical notes"
 msgstr "บันทึกทางคลินิก"
 
 #. placeholder {0}: patient.name
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Clinical profile for {0}"
 msgstr "ข้อมูลทางคลินิกของ {0}"
 
@@ -856,7 +878,7 @@ msgstr "เวชระเบียนของ {0} · {1} · {2}{apptSuffix}"
 msgid "Clinical records"
 msgstr "เวชระเบียน"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Close"
 msgstr "ปิด"
 
@@ -864,11 +886,11 @@ msgstr "ปิด"
 msgid "Close clinic and account management"
 msgstr "ปิดหน้าจัดการคลินิกและบัญชี"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Close consultation"
 msgstr "ปิดการรักษา"
 
-#: src/components/vet/modal.tsx
+#: src/components/patterns/modal.tsx
 msgid "Close dialog"
 msgstr "ปิดหน้าต่าง"
 
@@ -896,7 +918,7 @@ msgstr "ปิดแล้ว"
 
 #. placeholder {0}: encounter.closedAt ? formatDate(encounter.closedAt) : ''
 #. placeholder {0}: formatDate(open.closedAt)
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/records/index.tsx
 msgid "Closed {0}"
 msgstr "ปิดเมื่อ {0}"
@@ -910,6 +932,7 @@ msgid "Cloud synchronization"
 msgstr "การซิงค์ผ่านคลาวด์"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Collected"
 msgstr "รับชำระแล้ว"
 
@@ -926,7 +949,7 @@ msgstr "รับชำระวันนี้"
 msgid "completed"
 msgstr "สำเร็จ"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Completed"
 msgstr "สำเร็จ"
 
@@ -939,7 +962,7 @@ msgstr "ยืนยัน"
 msgid "Confirm diagnosis {0}"
 msgstr "ยืนยันการวินิจฉัย {0}"
 
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "Confirm PIN"
 msgstr "ยืนยัน PIN"
 
@@ -959,26 +982,27 @@ msgstr "เชื่อมต่อแล้ว"
 msgid "Connection"
 msgstr "การเชื่อมต่อ"
 
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 #: src/features/vet/consultations/index.tsx
 #: src/features/vet/shell/index.tsx
 msgid "Consultation"
 msgstr "การตรวจรักษา"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Consultation closed"
 msgstr "ปิดการรักษาแล้ว"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 #: src/features/vet/records/index.tsx
 msgid "Consultation in progress"
 msgstr "กำลังตรวจรักษา"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 #: src/features/vet/records/index.tsx
 msgid "Continue"
 msgstr "ดำเนินการต่อ"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "Continue without PIN"
 msgstr "เข้าใช้งานโดยไม่ใช้ PIN"
 
@@ -986,7 +1010,7 @@ msgstr "เข้าใช้งานโดยไม่ใช้ PIN"
 msgid "Cost/unit (THB)"
 msgstr "ต้นทุน/หน่วย (บาท)"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Count"
 msgstr "จำนวน"
 
@@ -1009,7 +1033,7 @@ msgstr "สร้างเมื่อ {0}"
 msgid "Created a clinic backup — {0, plural, one {# patient} other {# patients}}, {1, plural, one {# encounter} other {# encounters}}"
 msgstr "สร้างไฟล์สำรองคลินิกแล้ว — {0, plural, other {# ผู้ป่วย}}, {1, plural, other {# การรักษา}}"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Currency"
 msgstr "สกุลเงิน"
 
@@ -1022,17 +1046,25 @@ msgstr "สกุลเงิน {0}"
 msgid "Current clinic team"
 msgstr "ทีมงานคลินิกปัจจุบัน"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/patient-snapshot.tsx
 msgid "Current patient details"
 msgstr "ข้อมูลผู้ป่วยปัจจุบัน"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/settings/index.tsx
+msgid "daily"
+msgstr "รายวัน"
+
+#: src/features/vet/reports/components/labels.ts
 msgid "Daily · last 7 days"
 msgstr "รายวัน · 7 วันที่ผ่านมา"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Daily · selected period"
 msgstr "รายวัน · ตามช่วงที่เลือก"
+
+#: src/features/vet/settings/index.tsx
+msgid "Daily automatic backup"
+msgstr "สำรองข้อมูลอัตโนมัติรายวัน"
 
 #: src/features/vet/shell/theme-toggle.tsx
 msgid "dark"
@@ -1050,7 +1082,7 @@ msgstr "ส่งออกข้อมูล"
 msgid "Data status"
 msgstr "สถานะข้อมูล"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Date"
 msgstr "วันที่"
 
@@ -1058,8 +1090,8 @@ msgstr "วันที่"
 msgid "Date administered"
 msgstr "วันที่ให้วัคซีน"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "Date of birth"
 msgstr "วันเกิด"
 
@@ -1067,12 +1099,11 @@ msgstr "วันเกิด"
 msgid "Day"
 msgstr "วัน"
 
-#: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
 msgid "Deactivate"
 msgstr "ปิดการใช้งาน"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "deactivated"
 msgstr "ปิดใช้งาน"
 
@@ -1080,7 +1111,7 @@ msgstr "ปิดใช้งาน"
 msgid "Deactivated"
 msgstr "ปิดใช้งาน"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Dec"
 msgstr "ธ.ค."
 
@@ -1088,6 +1119,7 @@ msgstr "ธ.ค."
 msgid "Define the stock-keeping unit; lots are received against it."
 msgstr "กำหนดรายการสต๊อกหลัก โดยรับของเข้าเป็นล็อตย่อย"
 
+#: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/consultations/index.tsx
 #: src/features/vet/records/index.tsx
 msgid "Diagnoses"
@@ -1097,7 +1129,7 @@ msgstr "การวินิจฉัย"
 msgid "Diagnosis"
 msgstr "การวินิจฉัย"
 
-#: src/features/vet/save-error-banner.tsx
+#: src/components/patterns/save-error-banner.tsx
 msgid "Dismiss saving warning"
 msgstr "ปิดคำเตือนการบันทึก"
 
@@ -1105,7 +1137,8 @@ msgstr "ปิดคำเตือนการบันทึก"
 msgid "Dispense 1"
 msgstr "จ่าย 1 หน่วย"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Dispensed from pharmacy stock when the visit closes"
 msgstr "จ่ายจากสต๊อกยาเมื่อปิดการรักษา"
 
@@ -1117,20 +1150,24 @@ msgstr "งานจ่ายยา — ดูแลสต๊อก ล็อต
 msgid "Dog"
 msgstr "หมา"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "Done"
 msgstr "เสร็จสิ้น"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Dose"
 msgstr "ขนาดยา"
+
+#: src/features/vet/settings/index.tsx
+msgid "Download safety copy"
+msgstr "ดาวน์โหลดสำเนาความปลอดภัย"
 
 #: src/lib/vet/format.ts
 msgid "draft"
 msgstr "ฉบับร่าง"
 
 #. placeholder {0}: invoice.number
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Draft invoice {0} was created and is ready to post in Billing."
 msgstr "สร้างใบแจ้งหนี้ฉบับร่าง {0} แล้ว พร้อมอนุมัติในหน้าการเงิน"
 
@@ -1142,7 +1179,7 @@ msgstr "ใบแจ้งหนี้ฉบับร่าง"
 msgid "Draft invoices can be edited and posted when settled at the desk."
 msgstr "ใบแจ้งหนี้ฉบับร่างแก้ไขและอนุมัติได้เมื่อชำระที่เคาน์เตอร์"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Draft is saved locally"
 msgstr "ฉบับร่างบันทึกไว้ในเครื่องแล้ว"
 
@@ -1150,7 +1187,7 @@ msgstr "ฉบับร่างบันทึกไว้ในเครื่
 msgid "Drafts can be reviewed before posting; posted invoices are immutable."
 msgstr "ตรวจทานฉบับร่างได้ก่อนอนุมัติ เมื่ออนุมัติแล้วใบแจ้งหนี้จะแก้ไขไม่ได้"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
 msgid "Drag to another hour to reschedule"
 msgstr "ลากไปชั่วโมงอื่นเพื่อเลื่อนนัด"
 
@@ -1163,54 +1200,54 @@ msgstr "ครบกำหนด {0}"
 msgid "due soon"
 msgstr "ใกล้ครบกำหนด"
 
-#: src/features/vet/consultations/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Duration"
 msgstr "ระยะเวลา"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "e.g. 0.1 mg/kg"
 msgstr "เช่น 0.1 mg/kg"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "e.g. 02 234 5678…"
 msgstr "เช่น 02 234 5678…"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "e.g. 081 234 5678…"
 msgstr "เช่น 081 234 5678…"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "e.g. 22"
 msgstr "เช่น 22"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "e.g. 28.6"
 msgstr "เช่น 28.6"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "e.g. 38.6"
 msgstr "เช่น 38.6"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "e.g. 4.2…"
 msgstr "เช่น 4.2…"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "e.g. 7 days"
 msgstr "เช่น 7 วัน"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "e.g. 96"
 msgstr "เช่น 96"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "e.g. 985141002341238…"
 msgstr "เช่น 985141002341238…"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "e.g. Aggressive during handling — muzzle first…"
 msgstr "เช่น ดุระหว่างจับต้อง — สวมปลอกปากก่อน…"
 
@@ -1222,64 +1259,64 @@ msgstr "เช่น อะโมกซีซิลลิน 250 มก.…"
 msgid "e.g. AMX-2611C…"
 msgstr "เช่น AMX-2611C…"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "e.g. Annual vaccination…"
 msgstr "เช่น ฉีดวัคซีนประจำปี…"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 #: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
 msgid "e.g. Anong Srisuk…"
 msgstr "เช่น อนงค์ ศรีสุข…"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "e.g. anong@clinic.vet…"
 msgstr "เช่น anong@clinic.vet…"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "e.g. anong@example.com…"
 msgstr "เช่น anong@example.com…"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "e.g. Baan Sathorn Animal Clinic…"
 msgstr "เช่น คลินิกสัตว์บ้านสาทร…"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "e.g. Corrected the recorded dose…"
 msgstr "เช่น แก้ไขขนาดยาที่บันทึกไว้…"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "e.g. Dispensed the wrong strength…"
 msgstr "เช่น จ่ายยาความแรงผิด…"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "e.g. Golden Retriever…"
 msgstr "เช่น โกลเด้นริทรีฟเวอร์…"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "e.g. hello@clinic.vet…"
 msgstr "เช่น hello@clinic.vet…"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "e.g. Milo…"
 msgstr "เช่น ไมโล…"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/walk-in-form.tsx
 msgid "e.g. Nail trim…"
 msgstr "เช่น ตัดเล็บ…"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "e.g. Penicillin, Flea topical (pyrethrin)…"
 msgstr "เช่น เพนิซิลลิน ยาหยอดเห็บ (ไพรเทริน)…"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 msgid "e.g. RAB-2610B…"
 msgstr "เช่น RAB-2610B…"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 msgid "e.g. Rabies vaccine…"
 msgstr "เช่น วัคซีนพิษสุนัขบ้า…"
 
@@ -1291,16 +1328,17 @@ msgstr "เช่น กล้ามเนื้อและเอ็นฉี�
 msgid "e.g. Thai Vet Pharma Co.…"
 msgstr "เช่น ไทยเวทเฟาร์มา จำกัด…"
 
-#: src/features/vet/owners/patient-dialog.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Email"
 msgstr "อีเมล"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "Email (optional)"
 msgstr "อีเมล (ไม่บังคับ)"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "Enter your 4–8 digit PIN"
 msgstr "กรอก PIN 4–8 หลักของคุณ"
 
@@ -1320,17 +1358,13 @@ msgstr "ทุกรายการอยู่เหนือระดับส
 msgid "Every payment is appended to an immutable ledger."
 msgstr "ทุกการชำระเงินถูกบันทึกในบัญชีที่แก้ไขไม่ได้"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/roles-panel.tsx
 msgid "Every role is a fixed set of permissions. Assign a member's role from the Team tab; their access updates immediately."
 msgstr "แต่ละบทบาทมีชุดสิทธิ์คงที่ กำหนดบทบาทของสมาชิกได้ที่แท็บทีมงาน สิทธิ์จะอัปเดตทันที"
 
 #: src/features/vet/staff/index.tsx
 msgid "Every write lands here with actor and timestamp"
 msgstr "ทุกการแก้ไขจะแสดงที่นี่พร้อมผู้ทำรายการและเวลา"
-
-#: src/features/vet/settings/index.tsx
-msgid "Everything currently on this computer will be replaced. Export a fresh archive first if you are unsure."
-msgstr "ข้อมูลทั้งหมดในเครื่องนี้จะถูกแทนที่ หากไม่มั่นใจ กรุณาส่งออกไฟล์จัดเก็บล่าสุดก่อน"
 
 #: src/features/vet/owners/index.tsx
 msgid "Existing owner"
@@ -1381,7 +1415,7 @@ msgstr "ส่งออกชุดข้อมูลเคสของผู้
 msgid "Exported the clinic archive — {0, plural, one {# patient} other {# patients}}, {1, plural, one {# invoice} other {# invoices}}"
 msgstr "ส่งออกไฟล์จัดเก็บของคลินิกแล้ว — {0, plural, other {# ผู้ป่วย}}, {1, plural, other {# ใบแจ้งหนี้}}"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Feb"
 msgstr "ก.พ."
 
@@ -1401,26 +1435,26 @@ msgstr "ตัวเลขคำนวณจากข้อมูลในเค
 msgid "Find a record quickly or register a new patient."
 msgstr "ค้นหาเวชระเบียนอย่างรวดเร็ว หรือลงทะเบียนผู้ป่วยใหม่"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/follow-up-panel.tsx
 msgid "Follow-up"
 msgstr "นัดติดตามอาการ"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/follow-up-panel.tsx
 msgid "Follow-up date"
 msgstr "วันนัดติดตามอาการ"
 
 #. placeholder {0}: appt.reason
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/follow-up-panel.tsx
 msgid "Follow-up: {0}"
 msgstr "นัดติดตามอาการ: {0}"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Frequency"
 msgstr "ความถี่"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Fri"
 msgstr "ศ."
 
@@ -1429,7 +1463,7 @@ msgid "Front desk — registers patients, books appointments and takes payments.
 msgstr "หน้าเคาน์เตอร์ — ลงทะเบียนผู้ป่วย จองนัดหมาย และรับชำระเงิน"
 
 #: src/features/vet/staff/index.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Full name"
 msgstr "ชื่อ-นามสกุล"
 
@@ -1437,7 +1471,7 @@ msgstr "ชื่อ-นามสกุล"
 msgid "Full workspace control, including staff and clinic identity."
 msgstr "ควบคุมพื้นที่ทำงานได้ทั้งหมด รวมถึงพนักงานและข้อมูลคลินิก"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Generated"
 msgstr "สร้างอัตโนมัติ"
 
@@ -1445,7 +1479,7 @@ msgstr "สร้างอัตโนมัติ"
 msgid "Given"
 msgstr "ให้ไปแล้ว"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Go to billing"
 msgstr "ไปที่การเงิน"
 
@@ -1461,7 +1495,8 @@ msgstr "สวัสดีตอนเย็น"
 msgid "Good morning"
 msgstr "สวัสดีตอนเช้า"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Heart rate (bpm)"
 msgstr "ชีพจร (ครั้ง/นาที)"
 
@@ -1469,11 +1504,11 @@ msgstr "ชีพจร (ครั้ง/นาที)"
 msgid "Hide lots"
 msgstr "ซ่อนล็อต"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Hourly · 08:00–19:00"
 msgstr "รายชั่วโมง · 08:00–19:00"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "Import a case bundle"
 msgstr "นำเข้าชุดข้อมูลเคส"
 
@@ -1481,15 +1516,15 @@ msgstr "นำเข้าชุดข้อมูลเคส"
 msgid "Import case"
 msgstr "นำเข้าเคส"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "Import case bundle"
 msgstr "นำเข้าชุดข้อมูลเคส"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "Import pasted bundle"
 msgstr "นำเข้าจากข้อมูลที่วาง"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "In consult"
 msgstr "กำลังตรวจ"
 
@@ -1509,7 +1544,7 @@ msgstr "ปิดใช้งาน"
 msgid "Includes roles and PIN credentials as they were when the backup was taken."
 msgstr "รวมบทบาทและข้อมูล PIN ตามที่เป็นอยู่ตอนสร้างไฟล์สำรอง"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "Incorrect PIN — try again"
 msgstr "PIN ไม่ถูกต้อง — ลองอีกครั้ง"
 
@@ -1518,6 +1553,7 @@ msgid "Internet unavailable"
 msgstr "อินเทอร์เน็ตใช้งานไม่ได้"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Inventory attention"
 msgstr "สต๊อกที่ต้องดูแล"
 
@@ -1529,11 +1565,11 @@ msgstr "ตัวกรองหมวดหมู่สต๊อก"
 msgid "Inventory changes require admin or pharmacist access."
 msgstr "การแก้ไขสต๊อกต้องใช้สิทธิ์ผู้ดูแลหรือเภสัชกร"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Inventory value at cost"
 msgstr "มูลค่าสต๊อกตามราคาทุน"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "invoice"
 msgstr "ใบแจ้งหนี้"
 
@@ -1541,7 +1577,7 @@ msgstr "ใบแจ้งหนี้"
 msgid "Invoice"
 msgstr "ใบแจ้งหนี้"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Invoice / Receipt"
 msgstr "ใบแจ้งหนี้ / ใบเสร็จ"
 
@@ -1553,11 +1589,11 @@ msgstr "ใบแจ้งหนี้"
 msgid "Invoices, payments and adjustments stay traceable."
 msgstr "ใบแจ้งหนี้ การชำระเงิน และการปรับยอด ตรวจสอบย้อนหลังได้"
 
+#: src/features/vet/billing/components/receipt-dialog.tsx
 #: src/features/vet/billing/index.tsx
-#: src/features/vet/billing/receipt-dialog.tsx
 #: src/features/vet/dashboard/index.tsx
 #: src/features/vet/inventory/index.tsx
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 #: src/features/vet/shell/notification-center.tsx
 msgid "Item"
 msgstr "รายการ"
@@ -1578,11 +1614,11 @@ msgstr "รายการที่ต่ำกว่าหรือเท่า
 msgid "Items, batch lots and an append-only stock ledger with clear reorder signals."
 msgstr "รายการสินค้า ล็อตยา และบัญชีสต๊อกแบบเพิ่มเท่านั้น พร้อมสัญญาณเตือนจุดสั่งซื้อที่ชัดเจน"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Jan"
 msgstr "ม.ค."
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Jul"
 msgstr "ก.ค."
 
@@ -1590,17 +1626,21 @@ msgstr "ก.ค."
 msgid "Jump to date"
 msgstr "ไปที่วันที่"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Jun"
 msgstr "มิ.ย."
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/void-dialog.tsx
 msgid "Keep invoice"
 msgstr "คงใบแจ้งหนี้"
 
+#: src/features/vet/settings/index.tsx
+msgid "Keeps the last 14 daily copies on this computer, next to the clinic database."
+msgstr "เก็บสำเนารายวันล่าสุด 14 ไฟล์ในเครื่องนี้ ข้างฐานข้อมูลคลินิก"
+
 #. placeholder {0}: localeLabel[locale]
 #. placeholder {1}: localeLabel[next]
-#: src/features/vet/language-toggle.tsx
+#: src/features/vet/session/components/language-toggle.tsx
 msgid "Language: {0} — switch to {1}"
 msgstr "ภาษา: {0} — สลับเป็น {1}"
 
@@ -1608,6 +1648,12 @@ msgstr "ภาษา: {0} — สลับเป็น {1}"
 #: src/features/vet/dashboard/index.tsx
 msgid "Last given {0}"
 msgstr "ให้ล่าสุด {0}"
+
+#. placeholder {0}: recordedWeight.valueKg
+#. placeholder {1}: formatDate(recordedWeight.recordedAt)
+#: src/features/vet/owners/components/patient-dialog.tsx
+msgid "Last recorded {0} kg on {1} — from the visit's vitals."
+msgstr "บันทึกล่าสุด {0} กก. เมื่อ {1} — จากสัญญาณชีพของการรักษา"
 
 #: src/features/vet/settings/index.tsx
 msgid "Last sync attempt failed"
@@ -1647,18 +1693,18 @@ msgid "Local server"
 msgstr "เซิร์ฟเวอร์ในคลินิก"
 
 #: src/features/vet/shell/index.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Lock screen"
 msgstr "ล็อกหน้าจอ"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Locked"
 msgstr "ล็อกอยู่"
 
 #. placeholder {0}: entry.vaccination.lotNumber
 #. placeholder {0}: v.lotNumber
-#: src/features/vet/consultations/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "lot {0}"
 msgstr "ล็อต {0}"
 
@@ -1667,7 +1713,7 @@ msgstr "ล็อต {0}"
 msgid "Lot {0}"
 msgstr "ล็อต {0}"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 #: src/features/vet/inventory/index.tsx
 #: src/features/vet/records/index.tsx
 msgid "Lot number"
@@ -1686,7 +1732,7 @@ msgstr "ล็อตสามารถระบุผู้ขายที่ซ
 msgid "Lots expiring ≤ 30 days"
 msgstr "ล็อตที่หมดอายุ ≤ 30 วัน"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Lots expiring within 30 days"
 msgstr "ล็อตที่หมดอายุใน 30 วัน"
 
@@ -1733,19 +1779,23 @@ msgstr "จัดการคลินิก & บัญชี"
 msgid "Management sections"
 msgstr "ส่วนจัดการ"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/settings/index.tsx
+msgid "manual"
+msgstr "ด้วยตนเอง"
+
+#: src/features/vet/reports/components/labels.ts
 msgid "Mar"
 msgstr "มี.ค."
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
 msgid "Mark no-show"
 msgstr "ทำเครื่องหมายไม่มาตามนัด"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "May"
 msgstr "พ.ค."
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Medical alerts (comma-separated)"
 msgstr "การแจ้งเตือนทางการแพทย์ (คั่นด้วยเครื่องหมายจุลภาค)"
 
@@ -1757,11 +1807,11 @@ msgstr "เวชระเบียน"
 msgid "Medical Records"
 msgstr "เวชระเบียน"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Medical timeline"
 msgstr "ไทม์ไลน์การรักษา"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Medication"
 msgstr "ยา"
 
@@ -1773,15 +1823,15 @@ msgstr "ยา"
 msgid "Member"
 msgstr "สมาชิก"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Method"
 msgstr "วิธีชำระ"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Metric"
 msgstr "ตัวชี้วัด"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Microchip"
 msgstr "ไมโครชิป"
 
@@ -1793,9 +1843,9 @@ msgstr "ไมโครชิป (ไม่บังคับ)"
 msgid "Mixed breed"
 msgstr "พันธุ์ผสม"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Mon"
 msgstr "จ."
 
@@ -1803,11 +1853,11 @@ msgstr "จ."
 msgid "Month"
 msgstr "เดือน"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Monthly · last 12 months"
 msgstr "รายเดือน · 12 เดือนที่ผ่านมา"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Monthly · this year"
 msgstr "รายเดือน · ปีนี้"
 
@@ -1824,7 +1874,7 @@ msgstr "ชื่อ"
 msgid "New invoice"
 msgstr "ใบแจ้งหนี้ใหม่"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "New member"
 msgstr "สมาชิกใหม่"
 
@@ -1832,7 +1882,7 @@ msgstr "สมาชิกใหม่"
 msgid "New members start active with the permissions of their role"
 msgstr "สมาชิกใหม่เริ่มต้นเป็นสถานะใช้งาน พร้อมสิทธิ์ตามบทบาท"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "New members start active with the permissions of their role."
 msgstr "สมาชิกใหม่เริ่มต้นเป็นสถานะใช้งาน พร้อมสิทธิ์ตามบทบาท"
 
@@ -1844,7 +1894,7 @@ msgstr "เจ้าของใหม่"
 msgid "New patient"
 msgstr "ผู้ป่วยใหม่"
 
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "New PIN (4–8 digits)"
 msgstr "PIN ใหม่ (4–8 หลัก)"
 
@@ -1852,7 +1902,7 @@ msgstr "PIN ใหม่ (4–8 หลัก)"
 msgid "Newest first"
 msgstr "ใหม่ก่อน"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/upcoming-list.tsx
 msgid "Next booked appointments after this day"
 msgstr "นัดหมายถัดไปหลังวันนี้"
 
@@ -1860,15 +1910,15 @@ msgstr "นัดหมายถัดไปหลังวันนี้"
 msgid "Next day"
 msgstr "วันถัดไป"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 #: src/features/vet/records/index.tsx
 msgid "Next due"
 msgstr "ครบกำหนดถัดไป"
 
 #. placeholder {0}: entry.vaccination.nextDueAt
 #. placeholder {0}: v.nextDueAt
-#: src/features/vet/consultations/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "next due {0}"
 msgstr "ครบกำหนดถัดไป {0}"
 
@@ -1876,7 +1926,7 @@ msgstr "ครบกำหนดถัดไป {0}"
 msgid "Next due date"
 msgstr "วันครบกำหนดถัดไป"
 
-#: src/components/vet/date-picker.tsx
+#: src/components/patterns/date-picker.tsx
 msgid "Next month"
 msgstr "เดือนถัดไป"
 
@@ -1885,11 +1935,11 @@ msgstr "เดือนถัดไป"
 msgid "Next: {0}"
 msgstr "ถัดไป: {0}"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 msgid "No active consultation"
 msgstr "ไม่มีการตรวจรักษาที่เปิดอยู่"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "No active staff members are on file for this clinic."
 msgstr "ไม่มีพนักงานที่ใช้งานอยู่ในระบบของคลินิกนี้"
 
@@ -1921,6 +1971,7 @@ msgstr "ไม่มีกิจกรรมทางคลินิกในช
 msgid "No contact details"
 msgstr "ไม่มีช่องทางติดต่อ"
 
+#: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/consultations/index.tsx
 msgid "No diagnoses recorded yet."
 msgstr "ยังไม่มีบันทึกการวินิจฉัย"
@@ -1933,7 +1984,7 @@ msgstr "ไม่มีรายการจ่ายยาใน 30 วัน�
 msgid "No encounters match your search."
 msgstr "ไม่พบการรักษาที่ตรงกับคำค้น"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "No invoice was created for this visit."
 msgstr "ไม่มีการสร้างใบแจ้งหนี้สำหรับการรักษานี้"
 
@@ -1949,15 +2000,15 @@ msgstr "ยังไม่มีรายการในหมวดหมู่
 msgid "No lots received yet."
 msgstr "ยังไม่มีการรับล็อตเข้า"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "No notes were recorded for this visit."
 msgstr "ไม่มีการบันทึกบันทึกสำหรับการรักษานี้"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/waiting-queue.tsx
 msgid "No one waiting right now."
 msgstr "ตอนนี้ไม่มีผู้ป่วยรอคิว"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "No owner"
 msgstr "ไม่ระบุเจ้าของ"
 
@@ -1965,7 +2016,7 @@ msgstr "ไม่ระบุเจ้าของ"
 msgid "No patients match your search."
 msgstr "ไม่พบผู้ป่วยที่ตรงกับคำค้น"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/void-dialog.tsx
 msgid "No payments are held against this invoice. Voiding cannot be undone."
 msgstr "ใบแจ้งหนี้นี้ยังไม่มีการรับชำระ การยกเลิกไม่สามารถเรียกคืนได้"
 
@@ -1977,13 +2028,13 @@ msgstr "ไม่มีรายการชำระเงินหรือใ
 msgid "No payments recorded yet."
 msgstr "ยังไม่มีรายการชำระเงิน"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 #: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
 msgid "no PIN"
 msgstr "ยังไม่มี PIN"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "No PIN set"
 msgstr "ยังไม่ได้ตั้ง PIN"
 
@@ -1991,7 +2042,8 @@ msgstr "ยังไม่ได้ตั้ง PIN"
 msgid "No posted invoices in this period."
 msgstr "ไม่มีใบแจ้งหนี้ที่อนุมัติแล้วในช่วงนี้"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "No prescriptions on this visit."
 msgstr "ไม่มีใบสั่งยาในการรักษานี้"
 
@@ -2003,11 +2055,11 @@ msgstr "ไม่ระบุเหตุผล"
 msgid "no show"
 msgstr "ไม่มาตามนัด"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "No staff on file"
 msgstr "ไม่มีข้อมูลพนักงาน"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "No staff PINs are set up yet. An admin can add them under Staff & Permissions."
 msgstr "ยังไม่มีการตั้ง PIN ของพนักงาน ผู้ดูแลสามารถเพิ่มได้ในหมวดพนักงาน & สิทธิ์"
 
@@ -2015,7 +2067,7 @@ msgstr "ยังไม่มีการตั้ง PIN ของพนัก�
 msgid "No suppliers recorded yet."
 msgstr "ยังไม่มีข้อมูลผู้ขาย"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 msgid "No vaccinations recorded for this patient."
 msgstr "ยังไม่มีประวัติการฉีดวัคซีนของผู้ป่วยนี้"
 
@@ -2023,12 +2075,12 @@ msgstr "ยังไม่มีประวัติการฉีดวัค
 msgid "No vaccinations recorded yet."
 msgstr "ยังไม่มีประวัติการฉีดวัคซีน"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "No visits or vaccinations recorded yet."
 msgstr "ยังไม่มีประวัติการรักษาหรือการฉีดวัคซีน"
 
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/appointment-card.tsx
 msgid "No-show"
 msgstr "ไม่มาตามนัด"
 
@@ -2036,11 +2088,12 @@ msgstr "ไม่มาตามนัด"
 msgid "None upcoming"
 msgstr "ไม่มีในช่วงนี้"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/roles-panel.tsx
 msgid "Not allowed"
 msgstr "ไม่อนุญาต"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "not recorded"
 msgstr "ไม่มีบันทึก"
 
@@ -2048,7 +2101,7 @@ msgstr "ไม่มีบันทึก"
 msgid "Notes"
 msgstr "บันทึก"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/upcoming-list.tsx
 msgid "Nothing booked ahead."
 msgstr "ยังไม่มีนัดหมายล่วงหน้า"
 
@@ -2069,13 +2122,17 @@ msgstr "การแจ้งเตือน"
 msgid "Notifications ({0} pending)"
 msgstr "การแจ้งเตือน ({0} รายการค้าง)"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Nov"
 msgstr "พ.ย."
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Oct"
 msgstr "ต.ค."
+
+#: src/features/vet/settings/index.tsx
+msgid "Off"
+msgstr "ปิด"
 
 #: src/features/vet/settings/index.tsx
 msgid "Offline"
@@ -2085,7 +2142,7 @@ msgstr "ออฟไลน์"
 msgid "Offline · read-only mode"
 msgstr "ออฟไลน์ · โหมดอ่านอย่างเดียว"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Offline from clinic server — account changes are read-only"
 msgstr "ออฟไลน์จากเซิร์ฟเวอร์คลินิก — แก้ไขบัญชีไม่ได้ในขณะนี้"
 
@@ -2093,18 +2150,22 @@ msgstr "ออฟไลน์จากเซิร์ฟเวอร์คลิ
 msgid "Offline from clinic server — read-only"
 msgstr "ออฟไลน์จากเซิร์ฟเวอร์คลินิก — อ่านได้อย่างเดียว"
 
+#: src/features/vet/settings/index.tsx
+msgid "On"
+msgstr "เปิด"
+
 #: src/features/vet/inventory/index.tsx
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "On hand"
 msgstr "คงเหลือ"
 
 #. placeholder {0}: Math.max(0, selectedStock)
 #. placeholder {1}: selectedRx.unit
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Only {0} {1} left in stock — reduce the quantity or receive a delivery first."
 msgstr "สต๊อกเหลือเพียง {0} {1} — ลดจำนวนหรือรับของเข้าก่อน"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Only a clinic admin can change clinic identity."
 msgstr "เฉพาะผู้ดูแลคลินิกเท่านั้นที่แก้ไขข้อมูลคลินิกได้"
 
@@ -2112,7 +2173,7 @@ msgstr "เฉพาะผู้ดูแลคลินิกเท่านั
 msgid "open"
 msgstr "เปิด"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 msgid "Open an appointment to start a consultation."
 msgstr "เปิดนัดหมายเพื่อเริ่มการตรวจรักษา"
 
@@ -2141,11 +2202,11 @@ msgstr "เปิดเมนู"
 msgid "Open my account ({0})"
 msgstr "เปิดบัญชีของฉัน ({0})"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "Open Staff & Permissions"
 msgstr "เปิดหน้าพนักงาน & สิทธิ์"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Open visit"
 msgstr "เปิดการรักษา"
 
@@ -2153,7 +2214,7 @@ msgstr "เปิดการรักษา"
 msgid "Opened"
 msgstr "เปิดเมื่อ"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "original note no longer on file"
 msgstr "บันทึกเดิมไม่อยู่ในระบบแล้ว"
 
@@ -2167,6 +2228,7 @@ msgstr "ค้างชำระ"
 
 #: src/features/vet/billing/index.tsx
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Outstanding balance"
 msgstr "ยอดค้างชำระ"
 
@@ -2184,8 +2246,8 @@ msgid "Overdue {0}"
 msgstr "เลยกำหนด {0}"
 
 #: src/features/vet/billing/index.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "Owner"
 msgstr "เจ้าของ"
 
@@ -2193,8 +2255,8 @@ msgstr "เจ้าของ"
 msgid "Owner and patient records are saved in one local transaction."
 msgstr "บันทึกเจ้าของและผู้ป่วยถูกบันทึกพร้อมกันในหนึ่งรายการ"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "Owner name"
 msgstr "ชื่อเจ้าของ"
 
@@ -2202,9 +2264,12 @@ msgstr "ชื่อเจ้าของ"
 msgid "Owner phone"
 msgstr "โทรศัพท์เจ้าของ"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
+msgid "Owner-reported starting weight; the clinical weight comes from each visit's vitals."
+msgstr "น้ำหนักเริ่มต้นที่เจ้าของแจ้งมา น้ำหนักทางคลินิกมาจากสัญญาณชีพในแต่ละครั้งของการรักษา"
+
 #. placeholder {0}: data.owners.find((o) => o.id === patient.ownerId)?.name
-#. placeholder {0}: owner?.name
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/patient-snapshot.tsx
 msgid "Owner: {0}"
 msgstr "เจ้าของ: {0}"
 
@@ -2220,15 +2285,15 @@ msgstr "เจ้าของ & สัตว์ป่วย"
 msgid "paid"
 msgstr "ชำระแล้ว"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Paid"
 msgstr "ชำระแล้ว"
 
 #: src/features/vet/dashboard/index.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 #: src/features/vet/records/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Patient"
 msgstr "ผู้ป่วย"
 
@@ -2236,12 +2301,12 @@ msgstr "ผู้ป่วย"
 msgid "Patient identity and owner contact details"
 msgstr "ข้อมูลตัวตนผู้ป่วยและช่องทางติดต่อเจ้าของ"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "Patient name"
 msgstr "ชื่อผู้ป่วย"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/patient-snapshot.tsx
 msgid "Patient snapshot"
 msgstr "ข้อมูลสรุปผู้ป่วย"
 
@@ -2250,14 +2315,15 @@ msgid "Patients & records"
 msgstr "ผู้ป่วย & เวชระเบียน"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Payments collected"
 msgstr "เงินที่รับชำระ"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Period"
 msgstr "ช่วงเวลา"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/roles-panel.tsx
 msgid "Permission"
 msgstr "สิทธิ์"
 
@@ -2265,7 +2331,7 @@ msgstr "สิทธิ์"
 msgid "Permissions"
 msgstr "สิทธิ์"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Permissions from your role"
 msgstr "สิทธิ์ตามบทบาทของคุณ"
 
@@ -2283,38 +2349,39 @@ msgid "Pharmacy & Inventory"
 msgstr "ร้านยา & สต๊อกสินค้า"
 
 #: src/features/vet/inventory/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Phone"
 msgstr "โทรศัพท์"
 
 #. placeholder {0}: selected.name
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "PIN for {0}"
 msgstr "PIN ของ {0}"
 
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "PIN must be 4–8 digits"
 msgstr "PIN ต้องเป็นตัวเลข 4–8 หลัก"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "PIN protected"
 msgstr "ป้องกันด้วย PIN"
 
+#: src/features/vet/staff/components/team-panel.tsx
 #: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
 msgid "PIN set"
 msgstr "ตั้ง PIN แล้ว"
 
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "PINs are hashed on this device and never synced in plain text."
 msgstr "PIN จะถูกแฮชในเครื่องนี้และไม่มีวันส่งข้อมูลดิบออกไป"
 
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "PINs do not match"
 msgstr "PIN ทั้งสองช่องไม่ตรงกัน"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "PO / SC / IM"
 msgstr "PO / SC / IM"
 
@@ -2330,9 +2397,14 @@ msgstr "อนุมัติใบแจ้งหนี้"
 msgid "posted"
 msgstr "อนุมัติแล้ว"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Prescriptions"
 msgstr "ใบสั่งยา"
+
+#: src/features/vet/settings/index.tsx
+msgid "Preview"
+msgstr "ดูตัวอย่าง"
 
 #: src/features/vet/settings/index.tsx
 msgid "Preview Cloud plan"
@@ -2342,23 +2414,23 @@ msgstr "ทดลองแพ็กเกจ Cloud"
 msgid "Previous day"
 msgstr "วันก่อนหน้า"
 
-#: src/components/vet/date-picker.tsx
+#: src/components/patterns/date-picker.tsx
 msgid "Previous month"
 msgstr "เดือนก่อนหน้า"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Price"
 msgstr "ราคา"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Print receipt"
 msgstr "พิมพ์ใบเสร็จ"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Profile saved"
 msgstr "บันทึกข้อมูลแล้ว"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "PromptPay"
 msgstr "พร้อมเพย์"
 
@@ -2370,23 +2442,25 @@ msgstr "ขั้นต้น"
 msgid "Provisional"
 msgstr "ขั้นต้น"
 
+#: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/consultations/index.tsx
 msgid "Provisional working diagnoses and confirmed findings"
 msgstr "การวินิจฉัยขั้นต้นและผลตรวจที่ยืนยันแล้ว"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Qty"
 msgstr "จำนวน"
 
 #. placeholder {0}: rx.quantity
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "qty {0}"
 msgstr "จำนวน {0}"
 
 #: src/features/vet/billing/index.tsx
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 #: src/features/vet/inventory/index.tsx
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Quantity"
 msgstr "จำนวน"
 
@@ -2398,8 +2472,7 @@ msgstr "ยอดคงเหลือคำนวณจากปริมาณ
 msgid "Rabbit"
 msgstr "กระต่าย"
 
-#: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
 msgid "Reactivate"
 msgstr "เปิดใช้งานอีกครั้ง"
 
@@ -2411,19 +2484,20 @@ msgstr "พร้อมบันทึก"
 msgid "Ready to post"
 msgstr "พร้อมอนุมัติ"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Reason"
 msgstr "เหตุผล"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "Reason (recorded on the receipt)"
 msgstr "เหตุผล (แสดงบนใบเสร็จ)"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Reason for amendment"
 msgstr "เหตุผลการแก้ไข"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Reason: {amendmentReason}"
 msgstr "เหตุผล: {amendmentReason}"
 
@@ -2432,7 +2506,7 @@ msgid "Receipt"
 msgstr "ใบเสร็จ"
 
 #. placeholder {0}: invoice.number
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Receipt for {0}"
 msgstr "ใบเสร็จสำหรับ {0}"
 
@@ -2444,7 +2518,7 @@ msgstr "รับของเข้าสต๊อก"
 #. placeholder {1}: bundle.fromClinic.name
 #. placeholder {2}: bundle.encounters.length
 #. placeholder {3}: bundle.vaccinations.length
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "Received {0} from {1}: {2, plural, one {# visit} other {# visits}} and {3, plural, one {# vaccination} other {# vaccinations}} copied into this clinic with a new MRN."
 msgstr "รับ {0} จาก {1} แล้ว: คัดลอก {2, plural, other {# การรักษา}} และ {3, plural, other {# การฉีดวัคซีน}} เข้าคลินิกนี้พร้อม MRN ใหม่"
 
@@ -2453,7 +2527,7 @@ msgstr "รับ {0} จาก {1} แล้ว: คัดลอก {2, plural,
 msgid "Received from {0}"
 msgstr "รับจาก {0}"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "Receives a shared case from another clinic. Copies are stamped with the source clinic — nothing is shared in place."
 msgstr "ใช้รับเคสที่แชร์จากคลินิกอื่น ข้อมูลจะถูกคัดลอกและระบุคลินิกต้นทาง — ไม่มีการใช้ข้อมูลร่วมกันโดยตรง"
 
@@ -2477,17 +2551,18 @@ msgstr "เชื่อมต่อเซิร์ฟเวอร์อีกค
 msgid "Record"
 msgstr "บันทึก"
 
+#: src/features/vet/billing/components/payment-dialog.tsx
 #: src/features/vet/billing/index.tsx
 msgid "Record payment"
 msgstr "บันทึกการชำระเงิน"
 
-#. placeholder {0}: paymentInvoice.number
-#: src/features/vet/billing/index.tsx
+#. placeholder {0}: invoice.number
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Record payment — {0}"
 msgstr "บันทึกการชำระเงิน — {0}"
 
-#. placeholder {0}: paymentInvoice.number
-#: src/features/vet/billing/index.tsx
+#. placeholder {0}: invoice.number
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Record payment for {0}"
 msgstr "บันทึกการชำระเงินของ {0}"
 
@@ -2495,23 +2570,23 @@ msgstr "บันทึกการชำระเงินของ {0}"
 msgid "Record receipt"
 msgstr "บันทึกรายรับ"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "Record refund"
 msgstr "บันทึกการคืนเงิน"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Record the consultation findings, assessment and plan…"
 msgstr "บันทึกผลตรวจ การประเมิน และแผนการรักษา…"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 msgid "Record vaccination"
 msgstr "บันทึกการฉีดวัคซีน"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Record vitals"
 msgstr "บันทึกสัญญาณชีพ"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 msgid "Recorded during this visit and prior history"
 msgstr "บันทึกจากการรักษาครั้งนี้และประวัติก่อนหน้า"
 
@@ -2519,8 +2594,8 @@ msgstr "บันทึกจากการรักษาครั้งนี
 msgid "refund"
 msgstr "คืนเงิน"
 
+#: src/features/vet/billing/components/receipt-dialog.tsx
 #: src/features/vet/billing/index.tsx
-#: src/features/vet/billing/receipt-dialog.tsx
 msgid "Refund"
 msgstr "คืนเงิน"
 
@@ -2529,16 +2604,16 @@ msgstr "คืนเงิน"
 msgid "Refund — {0}"
 msgstr "คืนเงิน — {0}"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "Refund amount (THB)"
 msgstr "จำนวนเงินคืน (บาท)"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "Refund payment"
 msgstr "คืนเงินรายการชำระ"
 
-#. placeholder {0}: data.invoices.find((i) => i.id === refundPayment.invoiceId)?.number ?? t`invoice`
-#: src/features/vet/billing/index.tsx
+#. placeholder {0}: data.invoices.find((i) => i.id === payment.invoiceId)?.number ?? t`invoice`
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "Refund payment on {0}"
 msgstr "คืนเงินรายการชำระของ {0}"
 
@@ -2546,7 +2621,7 @@ msgstr "คืนเงินรายการชำระของ {0}"
 msgid "refunded"
 msgstr "คืนเงินแล้ว"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "Refunds are appended to the payment ledger; the original payment and the receipt stay unchanged."
 msgstr "การคืนเงินจะถูกเพิ่มในบัญชีการชำระเงิน โดยรายการเดิมและใบเสร็จคงสภาพเดิม"
 
@@ -2563,15 +2638,15 @@ msgstr "ลงทะเบียนผู้ป่วย"
 msgid "Registration mode"
 msgstr "โหมดลงทะเบียน"
 
-#: src/features/vet/error-boundary.tsx
+#: src/app/error-boundary.tsx
 msgid "Reload the app"
 msgstr "โหลดแอปใหม่"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Remove"
 msgstr "เอาออก"
 
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "Remove PIN"
 msgstr "ลบ PIN"
 
@@ -2582,7 +2657,7 @@ msgid "reorder at {0} {1}"
 msgstr "จุดสั่งเพิ่ม {0} {1}"
 
 #: src/features/vet/inventory/index.tsx
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Reorder level"
 msgstr "ระดับสั่งซื้อขั้นต่ำ"
 
@@ -2599,15 +2674,17 @@ msgstr "ช่วงเวลารายงาน"
 msgid "Reports"
 msgstr "รายงาน"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
+#: src/features/vet/schedule/components/upcoming-list.tsx
 msgid "Reschedule"
 msgstr "เลื่อนนัด"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Reschedule appointment"
 msgstr "เลื่อนนัดหมาย"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Respiratory rate"
 msgstr "อัตราการหายใจ"
 
@@ -2626,14 +2703,16 @@ msgstr "กู้คืนจากไฟล์สำรอง"
 #. placeholder {0}: summary.patients
 #. placeholder {1}: summary.encounters
 #: src/features/vet/settings/index.tsx
-msgid "Restored {0, plural, one {# patient} other {# patients}} and {1, plural, one {# encounter} other {# encounters}} from the backup."
-msgstr "กู้คืนจากไฟล์สำรองแล้ว {0, plural, other {# ผู้ป่วย}} และ {1, plural, other {# การรักษา}}"
+msgid "Restored {0, plural, one {# patient} other {# patients}} and {1, plural, one {# encounter} other {# encounters}} from the backup.{snapshotNote}"
+msgstr "กู้คืนจากไฟล์สำรองแล้ว {0, plural, one {# ผู้ป่วย} other {# ผู้ป่วย}} และ {1, plural, one {# การรักษา} other {# การรักษา}}{snapshotNote}"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Revenue"
 msgstr "รายได้"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Revenue trend"
 msgstr "แนวโน้มรายได้"
 
@@ -2641,15 +2720,15 @@ msgstr "แนวโน้มรายได้"
 msgid "Revenue, appointments and clinical activity from your local data."
 msgstr "รายได้ นัดหมาย และกิจกรรมทางคลินิก จากข้อมูลในเครื่องของคุณ"
 
+#: src/features/vet/staff/components/team-panel.tsx
 #: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
 msgid "Role"
 msgstr "บทบาท"
 
 #. placeholder {0}: member.name
 #. placeholder {0}: user.name
+#: src/features/vet/staff/components/team-panel.tsx
 #: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
 msgid "Role for {0}"
 msgstr "บทบาทของ {0}"
 
@@ -2661,26 +2740,34 @@ msgstr "บทบาท & สิทธิ์"
 msgid "Roles decide who can write records, bill, adjust stock and export."
 msgstr "บทบาทกำหนดว่าใครบันทึกเวชระเบียน ออกบิล ปรับสต๊อก และส่งออกข้อมูลได้"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Route"
 msgstr "วิธีให้ยา"
 
 #. placeholder {0}: entry.encounter.prescriptions.map((rx) => `${rx.medication} (${rx.dose} ${rx.frequency})`).join(', ')
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Rx: {0}"
 msgstr "Rx: {0}"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/settings/index.tsx
+msgid "safety copy"
+msgstr "สำเนาความปลอดภัย"
+
+#: src/features/vet/settings/index.tsx
+msgid "Safety copy downloaded. Restoring will replace everything currently on this device."
+msgstr "ดาวน์โหลดสำเนาความปลอดภัยแล้ว การกู้คืนจะแทนที่ข้อมูลทั้งหมดในเครื่องนี้"
+
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Sat"
 msgstr "ส."
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Save amendment"
 msgstr "บันทึกการแก้ไข"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Save clinic"
 msgstr "บันทึกข้อมูลคลินิก"
 
@@ -2688,15 +2775,15 @@ msgstr "บันทึกข้อมูลคลินิก"
 msgid "Save item"
 msgstr "บันทึกรายการ"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Save new time"
 msgstr "บันทึกเวลาใหม่"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Save profile"
 msgstr "บันทึกข้อมูล"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Save Profile"
 msgstr "บันทึกข้อมูล"
 
@@ -2709,11 +2796,11 @@ msgid "Save supplier"
 msgstr "บันทึกผู้ขาย"
 
 #: src/features/vet/consultations/index.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Saved locally"
 msgstr "บันทึกในเครื่องแล้ว"
 
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "Saving…"
 msgstr "กำลังบันทึก…"
 
@@ -2746,7 +2833,7 @@ msgstr "เลือกผู้ป่วย…"
 msgid "Selling price (THB)"
 msgstr "ราคาขาย (บาท)"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Sep"
 msgstr "ก.ย."
 
@@ -2754,35 +2841,32 @@ msgstr "ก.ย."
 msgid "Server offline"
 msgstr "เซิร์ฟเวอร์ออฟไลน์"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Service"
 msgstr "บริการ"
 
 #. placeholder {0}: member.name
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "Set a PIN for {0}"
 msgstr "ตั้ง PIN สำหรับ {0}"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Set a PIN so this account is protected on shared terminals."
 msgstr "ตั้ง PIN เพื่อปกป้องบัญชีนี้เมื่อใช้งานบนเครื่องร่วมกัน"
 
-#: src/features/vet/pin-dialog.tsx
-#: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Set PIN"
 msgstr "ตั้ง PIN"
 
 #. placeholder {0}: member.name
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "Set PIN — {0}"
 msgstr "ตั้ง PIN — {0}"
 
 #. placeholder {0}: member.name
-#. placeholder {0}: user.name
-#: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
 msgid "Set PIN for {0}"
 msgstr "ตั้ง PIN สำหรับ {0}"
 
@@ -2791,8 +2875,8 @@ msgstr "ตั้ง PIN สำหรับ {0}"
 msgid "Settings"
 msgstr "การตั้งค่า"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "Sex"
 msgstr "เพศ"
 
@@ -2810,24 +2894,23 @@ msgid "Show recent"
 msgstr "แสดงล่าสุด"
 
 #: src/features/vet/settings/index.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Shown across the workspace and on printed documents."
 msgstr "แสดงทั่วทั้งพื้นที่ทำงานและบนเอกสารที่พิมพ์"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "SID / BID / TID"
 msgstr "SID / BID / TID"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
 msgid "Sign in (PIN)"
 msgstr "ลงชื่อเข้าใช้ (PIN)"
 
-#: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
 msgid "Sign in as"
 msgstr "ลงชื่อเข้าใช้เป็น"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Signed in"
 msgstr "ลงชื่อเข้าใช้อยู่"
 
@@ -2840,16 +2923,16 @@ msgid "Simulate server offline"
 msgstr "จำลองเซิร์ฟเวอร์ออฟไลน์"
 
 #. placeholder {0}: formatTime(a.startsAt)
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/waiting-queue.tsx
 msgid "Since {0}"
 msgstr "ตั้งแต่ {0}"
 
-#: src/features/vet/error-boundary.tsx
+#: src/app/error-boundary.tsx
 msgid "Something went wrong while drawing the workspace"
 msgstr "เกิดข้อผิดพลาดขณะแสดงผลพื้นที่ทำงาน"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "Species"
 msgstr "ชนิดสัตว์"
 
@@ -2865,11 +2948,12 @@ msgstr "พนักงาน & สิทธิ์"
 msgid "Staff management"
 msgstr "จัดการพนักงาน"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "Staff members"
 msgstr "พนักงาน"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
+#: src/features/vet/schedule/components/waiting-queue.tsx
 msgid "Start"
 msgstr "เริ่ม"
 
@@ -2879,7 +2963,7 @@ msgstr "เริ่มตรวจ"
 
 #: src/features/vet/billing/index.tsx
 #: src/features/vet/consultations/index.tsx
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Status"
 msgstr "สถานะ"
 
@@ -2903,7 +2987,7 @@ msgstr "ยอดสต๊อกคำนวณจากบัญชีเคล
 msgid "stock out"
 msgstr "เบิกออก"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Stock valuation"
 msgstr "มูลค่าสต๊อก"
 
@@ -2911,29 +2995,29 @@ msgstr "มูลค่าสต๊อก"
 msgid "Stock value at cost"
 msgstr "มูลค่าสต๊อกตามราคาทุน"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Street, city, postcode…"
 msgstr "ถนน เขต/อำเภอ รหัสไปรษณีย์…"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Street, district, city, postal code…"
 msgstr "ถนน แขวง/ตำบล เขต/อำเภอ รหัสไปรษณีย์…"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Subtotal"
 msgstr "ยอดรวมย่อย"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Summary"
 msgstr "สรุป"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Sun"
 msgstr "อาทิตย์"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "supersedes an earlier note"
 msgstr "แทนที่บันทึกก่อนหน้า"
 
@@ -2958,7 +3042,7 @@ msgstr "ผู้ขาย ({0})"
 msgid "Supply"
 msgstr "วัสดุ"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "Switch accounts here or open the full staff view for the audit trail."
 msgstr "สลับบัญชีที่นี่ หรือเปิดหน้าพนักงานแบบเต็มเพื่อดูร่องรอยการตรวจสอบ"
 
@@ -2986,24 +3070,34 @@ msgstr "ทีมงาน"
 msgid "Team member"
 msgstr "สมาชิกทีม"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Temperature (°C)"
 msgstr "อุณหภูมิ (°C)"
 
 #. placeholder {0}: data.clinic.name
 #. placeholder {1}: data.clinic.timezone
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Thank you — {0} · {1}"
 msgstr "ขอบคุณ — {0} · {1}"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/settings/index.tsx
+msgid "That backup file could not be read from disk."
+msgstr "อ่านไฟล์สำรองจากดิสก์ไม่สำเร็จ"
+
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "That is not valid JSON — paste the case bundle file contents or choose a .json file."
 msgstr "ข้อความนี้ไม่ใช่ JSON ที่ถูกต้อง — กรุณาวางเนื้อหาไฟล์เคส หรือเลือกไฟล์ .json"
 
 #. placeholder {0}: patient.name
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "The clinical record for {0} is archived — notes, diagnoses and prescriptions are preserved."
 msgstr "เวชระเบียนของ {0} ถูกจัดเก็บแล้ว — บันทึก การวินิจฉัย และใบสั่งยายังคงอยู่ครบถ้วน"
+
+#. placeholder {0}: snapshot.reason
+#: src/features/vet/settings/index.tsx
+msgid "The safety copy of the current data could not be saved ({0}). Restore cancelled — nothing was changed."
+msgstr "บันทึกสำเนาความปลอดภัยของข้อมูลปัจจุบันไม่สำเร็จ ({0}) ยกเลิกการกู้คืน — ไม่มีข้อมูลใดถูกเปลี่ยนแปลง"
 
 #. placeholder {0}: i18n._(themeName[choice])
 #. placeholder {1}: i18n._(themeName[next])
@@ -3011,7 +3105,7 @@ msgstr "เวชระเบียนของ {0} ถูกจัดเก็�
 msgid "Theme: {0} — switch to {1}"
 msgstr "ธีม: {0} — สลับเป็น {1}"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "This appointment starts in the past. Saving is allowed for record-keeping."
 msgstr "นัดหมายนี้เวลาเริ่มอยู่ในอดีต บันทึกได้เพื่อเก็บไว้เป็นหลักฐาน"
 
@@ -3020,47 +3114,51 @@ msgstr "นัดหมายนี้เวลาเริ่มอยู่ใ
 msgid "This backup belongs to a different clinic ({0}). Restoring it will replace this clinic's records."
 msgstr "ไฟล์สำรองนี้เป็นของคลินิกอื่น ({0}) การกู้คืนจะแทนที่ข้อมูลของคลินิกนี้"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/settings/index.tsx
+msgid "This device cannot hold a safety copy automatically — download one first; restoring is disabled until you do."
+msgstr "อุปกรณ์นี้ไม่สามารถเก็บสำเนาความปลอดภัยอัตโนมัติได้ — โปรดดาวน์โหลดก่อน มิฉะนั้นจะไม่สามารถกู้คืนได้"
+
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "This device unlocks with your staff PIN."
 msgstr "เครื่องนี้ปลดล็อกด้วย PIN ของพนักงาน"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "This file is not a VetCare case bundle."
 msgstr "ไฟล์นี้ไม่ใช่ชุดข้อมูลเคสของ VetCare"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "This member has no PIN configured yet."
 msgstr "สมาชิกท่านนี้ยังไม่ได้ตั้ง PIN"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "This month"
 msgstr "เดือนนี้"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "This vet"
 msgstr "สัตวแพทย์ท่านนี้"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "This year"
 msgstr "ปีนี้"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Thu"
 msgstr "พฤ."
 
-#: src/features/vet/consultations/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/consultations/components/follow-up-panel.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Time"
 msgstr "เวลา"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Timezone"
 msgstr "เขตเวลา"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
 #: src/features/vet/schedule/index.tsx
 msgid "Today"
 msgstr "วันนี้"
@@ -3074,6 +3172,7 @@ msgid "Today’s schedule"
 msgstr "ตารางนัดวันนี้"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Top services"
 msgstr "บริการยอดนิยม"
 
@@ -3081,30 +3180,30 @@ msgstr "บริการยอดนิยม"
 msgid "Top used medicines"
 msgstr "ยาที่ใช้มากที่สุด"
 
+#: src/features/vet/billing/components/receipt-dialog.tsx
 #: src/features/vet/billing/index.tsx
-#: src/features/vet/billing/receipt-dialog.tsx
 msgid "Total"
 msgstr "รวมทั้งสิ้น"
 
-#: src/features/vet/error-boundary.tsx
+#: src/app/error-boundary.tsx
 msgid "Try again"
 msgstr "ลองอีกครั้ง"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Tue"
 msgstr "อ."
 
 #: src/features/vet/billing/index.tsx
 #: src/features/vet/dashboard/index.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/appointment-card.tsx
 msgid "Unassigned"
 msgstr "ยังไม่ได้มอบหมาย"
 
 #: src/features/vet/inventory/index.tsx
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Unit"
 msgstr "หน่วย"
 
@@ -3114,22 +3213,22 @@ msgid "units"
 msgstr "หน่วย"
 
 #: src/features/vet/records/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
 #: src/features/vet/shell/notification-center.tsx
 #: src/lib/vet/format.ts
 msgid "Unknown"
 msgstr "ไม่ระบุ"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 #: src/features/vet/shell/notification-center.tsx
 msgid "Unknown patient"
 msgstr "ผู้ป่วยไม่ระบุชื่อ"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "Unlock"
 msgstr "ปลดล็อก"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/upcoming-list.tsx
 msgid "Upcoming"
 msgstr "กำลังจะถึง"
 
@@ -3143,7 +3242,7 @@ msgstr "ถึงกำหนดฉีดวัคซีน — {0}"
 msgid "Vaccination overdue — {0}"
 msgstr "เลยกำหนดฉีดวัคซีน — {0}"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 #: src/features/vet/records/index.tsx
 msgid "Vaccinations"
 msgstr "การฉีดวัคซีน"
@@ -3156,9 +3255,9 @@ msgstr "ถึงกำหนดฉีดวัคซีน"
 msgid "Vaccinations due (30d)"
 msgstr "ถึงกำหนดฉีดวัคซีน (30 วัน)"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 #: src/features/vet/inventory/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/records/index.tsx
 msgid "Vaccine"
 msgstr "วัคซีน"
@@ -3171,16 +3270,17 @@ msgstr "ประวัติวัคซีนและวันครบกำ
 msgid "Vaccine name"
 msgstr "ชื่อวัคซีน"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Value"
 msgstr "มูลค่า"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "VAT"
 msgstr "ภาษีมูลค่าเพิ่ม"
 
 #. placeholder {0}: Math.round(data.clinic.vatRate * 100)
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "VAT ({0}%)"
 msgstr "ภาษีมูลค่าเพิ่ม ({0}%)"
 
@@ -3189,7 +3289,7 @@ msgstr "ภาษีมูลค่าเพิ่ม ({0}%)"
 msgid "VAT {0}%"
 msgstr "ภาษีมูลค่าเพิ่ม {0}%"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "VAT rate (%)"
 msgstr "อัตราภาษีมูลค่าเพิ่ม (%)"
 
@@ -3206,34 +3306,37 @@ msgid "Vet"
 msgstr "สัตวแพทย์"
 
 #: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
+#: src/features/vet/schedule/components/booking-dialog.tsx
 #: src/lib/vet/format.ts
 msgid "Veterinarian"
 msgstr "สัตวแพทย์"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Veterinarian activity"
 msgstr "กิจกรรมของสัตวแพทย์"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Vettera clinic report"
 msgstr "รายงานคลินิก Vettera"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 #: src/features/vet/owners/index.tsx
 #: src/features/vet/records/index.tsx
 msgid "View"
 msgstr "ดู"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Visit"
 msgstr "การรักษา"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Visit complete"
 msgstr "การรักษาเสร็จสมบูรณ์"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Visits"
 msgstr "การรักษา"
 
@@ -3241,7 +3344,8 @@ msgstr "การรักษา"
 msgid "Visits attended and revenue billed in this period."
 msgstr "การรักษาที่ให้บริการและรายได้ที่ออกบิลในช่วงนี้"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Vitals"
 msgstr "สัญญาณชีพ"
 
@@ -3253,29 +3357,29 @@ msgstr "เป็นโมฆะ"
 msgid "Void"
 msgstr "เป็นโมฆะ"
 
-#. placeholder {0}: voidInvoice.number
-#: src/features/vet/billing/index.tsx
+#. placeholder {0}: invoice.number
+#: src/features/vet/billing/components/void-dialog.tsx
 msgid "Void {0}"
 msgstr "ยกเลิก {0}"
 
-#. placeholder {0}: voidInvoice.number
-#: src/features/vet/billing/index.tsx
+#. placeholder {0}: invoice.number
+#: src/features/vet/billing/components/void-dialog.tsx
 msgid "Void {0}?"
 msgstr "ยกเลิก {0}?"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/void-dialog.tsx
 msgid "Void invoice"
 msgstr "ยกเลิกใบแจ้งหนี้"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/waiting-queue.tsx
 msgid "Waiting queue"
 msgstr "คิวรอ"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/walk-in-form.tsx
 msgid "Walk-in patient"
 msgstr "ผู้ป่วย walk-in"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/walk-in-form.tsx
 msgid "Walk-in reason"
 msgstr "เหตุผลที่มารักษา"
 
@@ -3292,9 +3396,9 @@ msgstr "ของเสีย"
 msgid "Waste 1"
 msgstr "ตัดของเสีย 1 หน่วย"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Wed"
 msgstr "พ."
 
@@ -3311,32 +3415,33 @@ msgstr "สัปดาห์ของวันที่ {0}"
 msgid "Week overview"
 msgstr "ภาพรวมรายสัปดาห์"
 
-#: src/features/vet/consultations/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Weight (kg)"
 msgstr "น้ำหนัก (กก.)"
 
 #. placeholder {0}: entry.encounter.vitals.weightKg
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "weight {0} kg"
 msgstr "น้ำหนัก {0} กก."
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Weight, temperature, pulse and respiration"
 msgstr "น้ำหนัก อุณหภูมิ ชีพจร และการหายใจ"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "You"
 msgstr "คุณ"
 
 #. placeholder {0}: roleLabel[user.role]
 #. placeholder {1}: permissionsFor(user.role).length
 #. placeholder {2}: PERMISSIONS.length
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/roles-panel.tsx
 msgid "You are signed in as {0}. {1} of {2} permissions."
 msgstr "คุณลงชื่อเข้าใช้เป็น {0} ได้สิทธิ์ {1} จาก {2} รายการ"
 
-#: src/features/vet/error-boundary.tsx
+#: src/app/error-boundary.tsx
 msgid "Your records are saved on this computer — nothing was lost."
 msgstr "ข้อมูลของคุณถูกบันทึกไว้ในเครื่องนี้ — ไม่มีข้อมูลสูญหาย"
 
@@ -3344,6 +3449,6 @@ msgstr "ข้อมูลของคุณถูกบันทึกไว้
 msgid "Your role does not permit this action"
 msgstr "บทบาทของคุณไม่อนุญาตให้ทำรายการนี้"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Your teammates see this name on notes and the audit trail."
 msgstr "เพื่อนร่วมทีมจะเห็นชื่อนี้ในบันทึกและร่องรอยการตรวจสอบ"

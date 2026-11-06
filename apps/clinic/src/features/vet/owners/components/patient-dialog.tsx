@@ -5,6 +5,7 @@ import { Field, NativeSelect, Pill } from '@/components/patterns/fields'
 import { Modal } from '@/components/patterns/modal'
 import { useClinic } from '@/lib/vet/store'
 import { compareTime, formatDate, sexLabel, speciesLabel } from '@/lib/vet/format'
+import { latestWeightKg } from '@/lib/vet/selectors'
 import { SPECIES, SEXES, type Patient } from '@/lib/vet/types'
 
 const splitList = (value: string) =>
@@ -43,6 +44,9 @@ export const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patien
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onClose])
   if (!patient) return null
+  // ADR 0022: the clinical weight is the latest recorded Visit vital; the
+  // editable field below is only the owner-reported baseline.
+  const recordedWeight = latestWeightKg(patient.id, data.encounters)
   const timeline = [
     ...data.encounters
       .filter((e) => e.patientId === patient.id)
@@ -152,7 +156,7 @@ export const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patien
           <Field label={t`Date of birth`} htmlFor="pt-birth">
             <DatePicker id="pt-birth" label={t`Date of birth`} value={birthDate} onChange={setBirthDate} />
           </Field>
-          <Field label={t`Weight (kg)`} htmlFor="pt-weight">
+          <Field label={t`Baseline weight (kg)`} htmlFor="pt-weight">
             <input
               id="pt-weight"
               inputMode="decimal"
@@ -161,6 +165,15 @@ export const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patien
               onChange={(e) => setWeightKg(e.target.value)}
               placeholder={t`e.g. 4.2…`}
             />
+            <p className="form-hint">
+              {recordedWeight ? (
+                <Trans>
+                  Last recorded {recordedWeight.valueKg} kg on {formatDate(recordedWeight.recordedAt)} — from the visit's vitals.
+                </Trans>
+              ) : (
+                <Trans>Owner-reported starting weight; the clinical weight comes from each visit's vitals.</Trans>
+              )}
+            </p>
           </Field>
         </div>
       </fieldset>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { backupFileName, buildBackup, isClinicBackup, parseBackup, summarizeBackup } from '../backup'
+import { backupFileName, buildBackup, isClinicBackup, lastAutoBackupDay, parseBackup, shouldAutoBackup, summarizeBackup } from '../backup'
 import { seedState } from '../seed'
 
 const createdAt = '2026-10-28T14:30:05.123Z'
@@ -79,5 +79,83 @@ describe('clinic backup files', () => {
 
   it('names files so they sort chronologically', () => {
     expect(backupFileName(createdAt)).toBe('vetcare-backup-2026-10-28-14-30.json')
+  })
+
+  it('carries the trigger and tolerates pre-trigger (ADR 0014) files', () => {
+    const auto = buildBackup(seedState, createdAt, 'auto')
+    expect(auto.trigger).toBe('auto')
+    const parsed = parseBackup(JSON.stringify(auto))
+    expect(parsed.ok).toBe(true)
+    if (!parsed.ok) return
+    expect(parsed.backup.trigger).toBe('auto')
+
+    // An ADR-0014 envelope has no trigger field and must keep parsing.
+    const legacy = JSON.parse(JSON.stringify(buildBackup(seedState, createdAt)))
+    delete legacy.trigger
+    const legacyParsed = parseBackup(JSON.stringify(legacy))
+    expect(legacyParsed.ok).toBe(true)
+    if (!legacyParsed.ok) return
+    expect(legacyParsed.backup.trigger).toBeUndefined()
+  })
+
+  it('defaults an unknown trigger to absent rather than passing it through', () => {
+    const weird = { ...buildBackup(seedState, createdAt), trigger: 'hacker' }
+    const parsed = parseBackup(JSON.stringify(weird))
+    expect(parsed.ok).toBe(true)
+    if (!parsed.ok) return
+    expect(parsed.backup.trigger).toBeUndefined()
+  })
+})
+
+describe('daily automatic backup gate (ADR 0021)', () => {
+  const today = '2026-11-06'
+
+  it('is due when the toggle is on and no auto backup was recorded today', () => {
+    expect(shouldAutoBackup(seedState, today)).toBe(true)
+  })
+
+  it('is not due when an auto backup audit event exists for today', () => {
+    const backedUp = {
+      ...seedState,
+      audit: [
+        {
+          id: 'a-1',
+          actorId: 'u-mai',
+          action: 'backup.auto',
+          entityType: 'clinic',
+          entityId: seedState.clinic.id,
+          summary: 'Automatic daily backup saved as x.json',
+          occurredAt: `${today}T09:12:00.000Z`,
+        },
+      ],
+    }
+    expect(shouldAutoBackup(backedUp, today)).toBe(false)
+  })
+
+  it('is due again the next day', () => {
+    const backedUp = {
+      ...seedState,
+      audit: [
+        {
+          id: 'a-1',
+          actorId: 'u-mai',
+          action: 'backup.auto',
+          entityType: 'clinic',
+          entityId: seedState.clinic.id,
+          summary: '',
+          occurredAt: '2026-11-05T09:12:00.000Z',
+        },
+      ],
+    }
+    expect(shouldAutoBackup(backedUp, today)).toBe(true)
+  })
+
+  it('is never due when the clinic turned the toggle off', () => {
+    const off = { ...seedState, clinic: { ...seedState.clinic, autoBackup: false } }
+    expect(shouldAutoBackup(off, today)).toBe(false)
+  })
+
+  it('reads the last auto-backup day from the audit trail', () => {
+    expect(lastAutoBackupDay(seedState)).toBeNull()
   })
 })

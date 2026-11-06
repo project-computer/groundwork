@@ -91,7 +91,25 @@ it("previews a backup before replacing the clinic", async () => {
   const before = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}")
   expect(before.clinic.name).toBe(seedState.clinic.name)
 
-  await page.getByRole("button", { name: "Restore backup" }).click()
+  // Web flow (ADR 0021): no sidecar can hold a safety snapshot, so restore
+  // stays disabled until the user downloads a safety copy explicitly.
+  const restoreButton = page.getByRole("button", { name: "Restore backup" })
+  await expect.element(restoreButton).toBeDisabled()
+  await expect.poll(() => document.body.innerText).toContain("cannot hold a safety copy")
+
+  HTMLAnchorElement.prototype.click = function () {
+    downloads.push(this)
+  }
+  URL.createObjectURL = (blob: Blob) => {
+    blobs.push(blob)
+    return "blob:safety-copy"
+  }
+  URL.revokeObjectURL = () => {}
+  await page.getByRole("button", { name: "Download safety copy" }).click()
+  await expect.poll(() => downloads.length).toBe(1)
+  await expect.element(restoreButton).toBeEnabled()
+
+  await restoreButton.click()
 
   await expect.poll(() => document.querySelector(".modal")).toBeNull()
   await expect.poll(() => document.body.innerText).toMatch(/Restored 1 patients?/)
@@ -100,6 +118,25 @@ it("previews a backup before replacing the clinic", async () => {
   expect(saved.clinic.name).toBe("Riverside Recovery")
   expect(saved.patients).toHaveLength(1)
   expect(saved.audit[0]).toMatchObject({ action: "backup.restore", actorId: "u-mai" })
+})
+
+it("shows the daily automatic backup toggle and persists it on the clinic", async () => {
+  await openSettings()
+  await expect.poll(() => document.body.innerText).toContain("Daily automatic backup")
+
+  // Seed clinic starts with the toggle on (undefined counts as on).
+  const toggle = page.getByRole("checkbox")
+  await expect.element(toggle).toBeChecked()
+
+  // A non-admin member cannot flip the clinic toggle.
+  await page.getByRole("button", { name: "Staff & Permissions" }).click()
+  const row = [...document.querySelectorAll(".staff-table .table-row")].find((r) => (r.textContent ?? "").includes("Dr. Pim Chaiyasit"))
+  const button = row ? [...row.querySelectorAll("button")].find((b) => (b.textContent ?? "").includes("Sign in as")) : undefined
+  if (!button) throw new Error("sign-in button not found")
+  await button.click()
+  await page.getByRole("button", { name: /Settings/ }).click()
+  await expect.poll(() => document.body.innerText).toContain("Portability & recovery")
+  await expect.element(page.getByRole("checkbox")).toBeDisabled()
 })
 
 it("rejects a file that is not a clinic backup", async () => {
