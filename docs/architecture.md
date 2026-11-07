@@ -29,6 +29,9 @@ Store API (src/lib/vet/store.tsx — same API on every platform)
    +---> Tauri fallback (sidecar missing): invoke() -> Rust commands
    |         (apps/clinic/src-tauri/src/clinic.rs) -> same SQLite file
    |
+   +---> Tauri mobile (Android/iOS): invoke() -> Rust commands
+   |         (no sidecar ships in an app bundle; discovery is skipped)
+   |
    +---> Web fallback: localStorage (dev/browser only, NOT durable)
 ```
 
@@ -54,6 +57,9 @@ Store API (src/lib/vet/store.tsx — same API on every platform)
   (ADR 0020): the shell generates it, passes it through the environment and
   answers the webview via the `backend_secret` command; `/healthz` stays open.
   A URL without a secret is treated as sidecar-unavailable (adapter order).
+- On Tauri mobile there is no sidecar to discover: `isMobilePlatform()`
+  short-circuits discovery and the Rust SQLite document is read directly, so a
+  cold start never waits on a loopback probe that cannot answer.
 - Restorable backups are the ADR-0014 envelope written by the sidecar to
   `<data dir>/backups` (ADR 0021): one automatic backup on the first launch
   of each day (gated on the `backup.auto` audit event + clinic toggle), a
