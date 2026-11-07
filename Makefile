@@ -35,7 +35,7 @@ SHELL := bash
 .PHONY: help install dev dev-landing build build-clinic build-landing tauri sidecar api
 .PHONY: lint lint-ts lint-landing lint-go lint-rust
 .PHONY: fmt fmt-go fmt-rust
-.PHONY: test test-ts test-landing test-go test-rust test-pages vuln-go
+.PHONY: test test-ts test-landing test-go test-rust test-pages test-screenshots vuln-go
 .PHONY: pages-init deploy deploy-clinic deploy-landing
 .PHONY: i18n-extract i18n-compile ci
 
@@ -121,8 +121,13 @@ vuln-go: ## govulncheck — reachable known CVEs in the server
 
 test: test-ts test-landing test-go test-rust ## every test suite (builds the sidecar first)
 
-test-ts: ## vitest in apps/clinic (unit + component + screenshot)
-	pnpm -C $(CLINIC) test
+# Screenshot baselines are pixel-exact against the dev machine's fonts, so
+# they only pass where they were generated — keep them out of CI (issue 0018).
+test-ts: ## vitest in apps/clinic (unit + component; screenshots are local-only)
+	pnpm -C $(CLINIC) test:ci
+
+test-screenshots: ## visual baselines — dev machine only (pnpm test:screenshot:update to re-pin)
+	pnpm -C $(CLINIC) test:screenshot
 
 test-landing: ## vitest in apps/landing (unit)
 	pnpm -C $(LANDING) test

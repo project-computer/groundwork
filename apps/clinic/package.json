@@ -20,7 +20,8 @@
     "test:pages": "playwright test",
     "test:rust": "make -C ../.. sidecar && cargo test --manifest-path src-tauri/Cargo.toml",
     "test:component": "vitest run --project browser component",
-    "test:browser": "vitest run --project browser"
+    "test:browser": "vitest run --project browser",
+    "test:ci": "pnpm run test:unit && pnpm run test:component"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
