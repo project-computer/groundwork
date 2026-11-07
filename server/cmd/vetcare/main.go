@@ -56,7 +56,7 @@ func main() {
 	}
 
 	server := &http.Server{
-		Handler:           api.New(conn, secret, logger).Handler(),
+		Handler:           api.New(conn, api.Options{Secret: secret, BackupsDir: backupDir(dataDir), Logger: logger}).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
@@ -86,4 +86,13 @@ func newLogger(dataDir string) *log.Logger {
 		out = io.MultiWriter(os.Stderr, writer)
 	}
 	return log.New(out, "vetcare-api: ", log.LstdFlags)
+}
+
+// backupDir resolves where restorable backups are written (ADR 0021), next
+// to the database file unless overridden.
+func backupDir(dataDir string) string {
+	if dir := os.Getenv("VET_BACKUP_DIR"); dir != "" {
+		return dir
+	}
+	return filepath.Join(dataDir, "backups")
 }

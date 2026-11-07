@@ -19,22 +19,35 @@ const LoopbackSecretHeader = "X-VetCare-Loopback-Secret"
 
 const maxBodyBytes = 2 << 20
 
+// Options carries the process-wide settings: the per-launch loopback secret
+// (ADR 0020), where restorable backups are written (ADR 0021) and where
+// request-level failures are logged. An empty Secret fails closed — every
+// business request is rejected. An empty BackupsDir disables the backup
+// routes with 503 rather than writing to an unknown location.
+type Options struct {
+	Secret     string
+	BackupsDir string
+	Logger     *log.Logger
+}
+
 // Server owns the HTTP handlers and the shared query set.
 type Server struct {
-	sqlDB  *sql.DB
-	q      *db.Queries
-	secret string
-	logger *log.Logger
+	sqlDB      *sql.DB
+	q          *db.Queries
+	secret     string
+	backupsDir string
+	logger     *log.Logger
 }
 
 // New builds a Server. An empty secret fails closed: every business request
 // is rejected.
-func New(sqlDB *sql.DB, secret string, logger *log.Logger) *Server {
+func New(sqlDB *sql.DB, opts Options) *Server {
 	return &Server{
-		sqlDB:  sqlDB,
-		q:      db.New(sqlDB),
-		secret: secret,
-		logger: logger,
+		sqlDB:      sqlDB,
+		q:          db.New(sqlDB),
+		secret:     opts.Secret,
+		backupsDir: opts.BackupsDir,
+		logger:     opts.Logger,
 	}
 }
 
@@ -95,6 +108,12 @@ func (s *Server) Handler() http.Handler {
 
 	mux.HandleFunc("GET /api/v1/settings", s.authed(nil, s.handleGetSettings))
 	mux.HandleFunc("PATCH /api/v1/settings", s.authed(ownedBy(auth.RoleAdmin), s.handleUpdateSettings))
+
+	// Backups (ADR 0021): any signed-in member may save or list; the storage
+	// discipline matches the document-model sidecar.
+	mux.HandleFunc("POST /api/v1/backups", s.authed(nil, s.handleBackupSave))
+	mux.HandleFunc("GET /api/v1/backups", s.authed(nil, s.handleBackupList))
+	mux.HandleFunc("GET /api/v1/backups/{file}", s.authed(nil, s.handleBackupGet))
 
 	mux.HandleFunc("GET /api/v1/audit", s.authed(nil, s.handleListAuditLogs))
 

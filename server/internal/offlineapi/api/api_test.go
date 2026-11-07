@@ -7,6 +7,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -24,7 +27,7 @@ func newTestServer(t *testing.T) *Server {
 		t.Fatalf("open db: %v", err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
-	return New(conn, testSecret, nil)
+	return New(conn, Options{Secret: testSecret, BackupsDir: t.TempDir()})
 }
 
 type response struct {
@@ -610,4 +613,172 @@ func TestSettingsAccess(t *testing.T) {
 	if denied := call(t, s, http.MethodPost, "/api/v1/invoices/no-such/void", testSecret, receptionToken, nil); denied.status != http.StatusForbidden {
 		t.Fatalf("receptionist void invoice = %d, want 403", denied.status)
 	}
+}
+
+const backupEnvelopeJSON = `{"format":"vetcare-clinic-backup","version":1,"createdAt":"2026-11-06T10:00:00Z","trigger":"auto","state":{"clinic":{"id":"clinic-01"}}}`
+
+// newTestServerWithBackups exposes the backup directory for on-disk asserts.
+func newTestServerWithBackups(t *testing.T) (*Server, string) {
+	t.Helper()
+	conn, err := db.Open(":memory:")
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	dir := t.TempDir()
+	return New(conn, Options{Secret: testSecret, BackupsDir: dir}), dir
+}
+
+func TestBackupRoutesRequireAuth(t *testing.T) {
+	s := newTestServer(t)
+	if res := call(t, s, http.MethodGet, "/api/v1/backups", testSecret, "", nil); res.status != http.StatusUnauthorized {
+		t.Fatalf("unauthenticated list = %d, want 401", res.status)
+	}
+	if res := call(t, s, http.MethodPost, "/api/v1/backups", testSecret, "", nil); res.status != http.StatusUnauthorized {
+		t.Fatalf("unauthenticated save = %d, want 401", res.status)
+	}
+}
+
+func TestBackupRoundTrip(t *testing.T) {
+	s, dir := newTestServerWithBackups(t)
+	token := setupClinic(t, s)
+
+	saved := call(t, s, http.MethodPost, "/api/v1/backups", testSecret, token, nil)
+	if saved.status != http.StatusBadRequest {
+		t.Fatalf("empty body = %d, want 400", saved.status)
+	}
+
+	envelope := callRaw(t, s, http.MethodPost, "/api/v1/backups", token, backupEnvelopeJSON)
+	if envelope.status != http.StatusOK {
+		t.Fatalf("save = %d: %s", envelope.status, envelope.raw)
+	}
+	file, _ := envelope.body["file"].(string)
+	if !strings.HasSuffix(file, "-auto.json") {
+		t.Fatalf("server-derived name must carry the trigger, got %q", file)
+	}
+
+	// The file exists on disk with the exact posted bytes.
+	onDisk, err := os.ReadFile(filepath.Join(dir, file))
+	if err != nil {
+		t.Fatalf("backup not written to the configured dir: %v", err)
+	}
+	if string(onDisk) != backupEnvelopeJSON {
+		t.Fatal("backup bytes were altered by save")
+	}
+
+	list := call(t, s, http.MethodGet, "/api/v1/backups", testSecret, token, nil)
+	if list.status != http.StatusOK {
+		t.Fatalf("list = %d: %s", list.status, list.raw)
+	}
+	entries, _ := list.body["backups"].([]any)
+	if len(entries) != 1 {
+		t.Fatalf("backups = %d, want 1: %s", len(entries), list.raw)
+	}
+	entry, _ := entries[0].(map[string]any)
+	if entry["trigger"] != "auto" || entry["createdAt"] == "" || entry["sizeBytes"].(float64) == 0 {
+		t.Fatalf("unexpected list entry: %s", list.raw)
+	}
+
+	got := callRaw(t, s, http.MethodGet, "/api/v1/backups/"+file, token, "")
+	if got.status != http.StatusOK || string(got.raw) != backupEnvelopeJSON {
+		t.Fatalf("get = %d: %s", got.status, got.raw)
+	}
+}
+
+func TestBackupSaveDefaultsUnknownTrigger(t *testing.T) {
+	s := newTestServer(t)
+	token := setupClinic(t, s)
+	body := strings.Replace(backupEnvelopeJSON, `"trigger":"auto"`, `"trigger":"hacker"`, 1)
+	saved := callRaw(t, s, http.MethodPost, "/api/v1/backups", token, body)
+	if saved.status != http.StatusOK {
+		t.Fatalf("save = %d: %s", saved.status, saved.raw)
+	}
+	if file, _ := saved.body["file"].(string); !strings.HasSuffix(file, "-manual.json") {
+		t.Fatalf("unknown trigger must default to manual, got %q", file)
+	}
+}
+
+func TestBackupSaveRejectsForeignBodies(t *testing.T) {
+	s := newTestServer(t)
+	token := setupClinic(t, s)
+	cases := []string{
+		`{"format": "something-else", "state": {"clinic": {"id": "x"}}}`,
+		`{"format": "vetcare-clinic-backup", "state": {"clinic": {"id": "x"}}}`, // no createdAt
+		`{"format": "vetcare-clinic-backup", "createdAt": "x", "state": {}}`,    // no clinic id
+		`not json`,
+	}
+	for _, body := range cases {
+		if res := callRaw(t, s, http.MethodPost, "/api/v1/backups", token, body); res.status != http.StatusBadRequest {
+			t.Fatalf("body %q: expected 400, got %d", body, res.status)
+		}
+	}
+}
+
+func TestBackupRotationKeepsNewest14(t *testing.T) {
+	s := newTestServer(t)
+	token := setupClinic(t, s)
+	for i := 0; i < 16; i++ {
+		if res := callRaw(t, s, http.MethodPost, "/api/v1/backups", token, backupEnvelopeJSON); res.status != http.StatusOK {
+			t.Fatalf("save %d failed: %d", i, res.status)
+		}
+	}
+	list := call(t, s, http.MethodGet, "/api/v1/backups", testSecret, token, nil)
+	entries, _ := list.body["backups"].([]any)
+	if len(entries) != 14 {
+		t.Fatalf("rotation must keep 14 files, got %d", len(entries))
+	}
+	// Filenames share a same-second timestamp, so also assert the list is
+	// newest-first by name.
+	prev := ""
+	for _, raw := range entries {
+		entry, _ := raw.(map[string]any)
+		name, _ := entry["file"].(string)
+		if prev != "" && prev < name {
+			t.Fatalf("list must be newest first: %q before %q", prev, name)
+		}
+		prev = name
+	}
+}
+
+func TestBackupGetRejectsPathTraversal(t *testing.T) {
+	s := newTestServer(t)
+	token := setupClinic(t, s)
+	for _, name := range []string{"..%2F..%2Fvetcare.db", "sub%2Fdir.json", "20261106-090000-auto.txt"} {
+		if res := callRaw(t, s, http.MethodGet, "/api/v1/backups/"+name, token, ""); res.status != http.StatusBadRequest {
+			t.Fatalf("name %q: expected 400, got %d", name, res.status)
+		}
+	}
+}
+
+func TestBackupGetMissingIsNotFound(t *testing.T) {
+	s := newTestServer(t)
+	token := setupClinic(t, s)
+	if res := callRaw(t, s, http.MethodGet, "/api/v1/backups/20261106-090000-auto.json", token, ""); res.status != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", res.status)
+	}
+}
+
+// callRaw posts/gets a raw string body (backup envelopes must survive
+// byte-for-byte) and returns the raw response text.
+func callRaw(t *testing.T, s *Server, method, path, token, body string) response {
+	t.Helper()
+	var reader io.Reader
+	if body != "" {
+		reader = strings.NewReader(body)
+	}
+	req := httptest.NewRequest(method, path, reader)
+	if body != "" {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	req.Header.Set(LoopbackSecretHeader, testSecret)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+	out := response{status: rec.Code, raw: rec.Body.Bytes()}
+	if len(out.raw) > 0 && rec.Header().Get("Content-Type") == "application/json" {
+		_ = json.Unmarshal(out.raw, &out.body)
+	}
+	return out
 }
