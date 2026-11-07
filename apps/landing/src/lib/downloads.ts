@@ -31,24 +31,24 @@ export const PLATFORMS: readonly PlatformDownloads[] = [
     id: 'windows',
     name: 'Windows',
     files: [
-      { id: 'installer', name: 'Vet Clinic_0.1.0_x64-setup.exe' },
-      { id: 'msi', name: 'Vet Clinic_0.1.0_x64_en-US.msi' },
+      { id: 'installer', name: 'Vet.Clinic_0.1.0_x64-setup.exe' },
+      { id: 'msi', name: 'Vet.Clinic_0.1.0_x64_en-US.msi' },
     ],
   },
   {
     id: 'macos',
     name: 'macOS',
     files: [
-      { id: 'apple-silicon', name: 'Vet Clinic_0.1.0_aarch64.dmg' },
-      { id: 'intel', name: 'Vet Clinic_0.1.0_x64.dmg' },
+      { id: 'apple-silicon', name: 'Vet.Clinic_0.1.0_aarch64.dmg' },
+      { id: 'intel', name: 'Vet.Clinic_0.1.0_x64.dmg' },
     ],
   },
   {
     id: 'linux',
     name: 'Linux',
     files: [
-      { id: 'appimage', name: 'Vet Clinic_0.1.0_amd64.AppImage' },
-      { id: 'deb', name: 'Vet Clinic_0.1.0_amd64.deb' },
+      { id: 'appimage', name: 'Vet.Clinic_0.1.0_amd64.AppImage' },
+      { id: 'deb', name: 'Vet.Clinic_0.1.0_amd64.deb' },
     ],
   },
 ]
