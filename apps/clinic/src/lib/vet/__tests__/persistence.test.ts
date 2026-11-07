@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+
+// The mobile path reads the bundled SQLite document through this command.
+vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 import { loadState, saveState } from '../persistence'
 import { seedState } from '../seed'
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   window.localStorage.clear()
 })
 
@@ -60,5 +64,23 @@ describe('loadState (web adapter)', () => {
     const loaded = await loadState()
     expect(loaded?.vaccinations).toEqual([])
     expect(loaded?.outbox).toEqual([])
+  })
+})
+
+describe('loadState (Tauri mobile)', () => {
+  it('skips the sidecar probe and reads the bundled Rust document', async () => {
+    const platform = await import('@/lib/platform')
+    vi.spyOn(platform, 'isTauri').mockReturnValue(true)
+    vi.spyOn(platform, 'isMobilePlatform').mockReturnValue(true)
+    const core = await import('@tauri-apps/api/core')
+    const invoke = vi.mocked(core.invoke).mockResolvedValue(seedState)
+    const fetchSpy = vi.fn()
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const loaded = await loadState()
+
+    expect(loaded?.clinic.id).toBe(seedState.clinic.id)
+    expect(invoke).toHaveBeenCalledWith('state_load_command')
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 })

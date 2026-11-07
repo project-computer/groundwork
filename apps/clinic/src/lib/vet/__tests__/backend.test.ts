@@ -9,7 +9,7 @@ import { seedState } from '../seed'
  * error mapping (503 = not configured) and the browser null path.
  */
 
-vi.mock('@/lib/platform', () => ({ isTauri: () => false }))
+vi.mock('@/lib/platform', () => ({ isTauri: () => false, isMobilePlatform: () => false }))
 vi.mock('@tauri-apps/api/core', () => ({ invoke: async () => null }))
 
 afterEach(() => {

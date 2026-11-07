@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import { isTauri } from '@/lib/platform'
+import { isMobilePlatform, isTauri } from '@/lib/platform'
 import { fetchState, pushState } from './backend'
 import { formatMrn } from './format'
 import { CLINIC_STATE_COLLECTIONS, type ClinicState, type Patient } from './types'
@@ -64,14 +64,17 @@ export const parseClinicState = (raw: unknown): ClinicState | null => {
 }
 
 /** Load order per ADR 0012: sidecar first, Rust fallback second; the web
- * target has localStorage only. Returns null when nothing usable is stored. */
+ * target has localStorage only. The mobile shell skips the sidecar probe —
+ * there is no sidecar in an APK and polling it delays hydration by seconds. */
 export const loadState = async (): Promise<ClinicState | null> => {
   if (isTauri()) {
-    try {
-      const fromSidecar = parseClinicState(await fetchState())
-      if (fromSidecar) return fromSidecar
-    } catch (error) {
-      console.error('failed to load clinic state from sidecar', error)
+    if (!isMobilePlatform()) {
+      try {
+        const fromSidecar = parseClinicState(await fetchState())
+        if (fromSidecar) return fromSidecar
+      } catch (error) {
+        console.error('failed to load clinic state from sidecar', error)
+      }
     }
     try {
       return parseClinicState(await invoke<unknown>('state_load_command'))
