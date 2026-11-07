@@ -135,6 +135,19 @@ func (s *Server) handleCreateConsultation(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusInternalServerError, "internal", msg)
 		return
 	}
+	// ADR 0022: a recorded weight is a measurement in the patient's history,
+	// not just a column on the encounter. Same transaction, so the vitals
+	// snapshot and the history row commit together.
+	if weight.Valid {
+		if _, err := qtx.CreatePetWeight(r.Context(), db.CreatePetWeightParams{
+			ID: uuid.NewString(), ClinicID: p.ClinicID, PetID: req.PetID,
+			WeightGrams: weight.Int64, MeasuredAt: now,
+			RecordedBy: vet, CreatedAt: now,
+		}); err != nil {
+			writeError(w, http.StatusInternalServerError, "internal", "could not record weight history")
+			return
+		}
+	}
 	if err := tx.Commit(); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal", "could not commit consultation")
 		return
@@ -276,6 +289,19 @@ func (s *Server) handleUpdateConsultation(w http.ResponseWriter, r *http.Request
 		}
 		if msg := insertEntries(r.Context(), qtx, p.ClinicID, current.ID, nil, *req.Treatments); msg != "" {
 			writeError(w, http.StatusInternalServerError, "internal", msg)
+			return
+		}
+	}
+	// ADR 0022: an updated weight is a new measurement, appended to the
+	// patient's history when it changed (same transaction as the update).
+	if weight.Valid && (!current.WeightGrams.Valid || current.WeightGrams.Int64 != weight.Int64) {
+		measuredAt := db.UtcNow()
+		if _, err := qtx.CreatePetWeight(r.Context(), db.CreatePetWeightParams{
+			ID: uuid.NewString(), ClinicID: p.ClinicID, PetID: current.PetID,
+			WeightGrams: weight.Int64, MeasuredAt: measuredAt,
+			RecordedBy: sql.NullString{String: p.UserID, Valid: true}, CreatedAt: measuredAt,
+		}); err != nil {
+			writeError(w, http.StatusInternalServerError, "internal", "could not record weight history")
 			return
 		}
 	}
