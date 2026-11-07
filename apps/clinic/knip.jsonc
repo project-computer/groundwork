@@ -23,5 +23,8 @@
   "vitest": false,
   "playwright": false,
   "ignoreDependencies": ["@lingui/native-tools", "@vitest/browser"],
-  "ignoreBinaries": ["make"]
+  "ignoreBinaries": ["make"],
+  "ignore": [
+    "src/lib/vet/rest.ts"
+  ]
 }
