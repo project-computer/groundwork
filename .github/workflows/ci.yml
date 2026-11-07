@@ -42,6 +42,10 @@ jobs:
           pnpm -C apps/clinic install --frozen-lockfile
           pnpm -C apps/landing install --frozen-lockfile
 
+      # Browser-mode vitest (component + screenshot) drives real Chromium.
+      - name: Install Playwright Chromium
+        run: pnpm -C apps/clinic exec playwright install --with-deps chromium
+
       - name: Lint (TS)
         run: make lint-ts lint-landing
 
