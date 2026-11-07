@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import { isTauri } from '@/lib/platform'
+import { isMobilePlatform, isTauri } from '@/lib/platform'
 import type { ClinicBackup } from './backup'
 import type { ClinicState } from './types'
 
@@ -41,7 +41,9 @@ const discover = async (): Promise<BackendConnection | null> => {
 }
 
 const connection = (): Promise<BackendConnection | null> => {
-  if (!isTauri()) return Promise.resolve(null)
+  // The mobile shell bundles no Go sidecar; polling would always time out and
+  // delay hydration, so resolve "unavailable" immediately.
+  if (!isTauri() || isMobilePlatform()) return Promise.resolve(null)
   if (!resolved) resolved = discover()
   return resolved
 }

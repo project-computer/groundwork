@@ -2214,6 +2214,10 @@ msgstr "Open visit"
 msgid "Opened"
 msgstr "Opened"
 
+#: src/features/vet/shell/boot-screen.tsx
+msgid "Opening clinic…"
+msgstr "Opening clinic…"
+
 #: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "original note no longer on file"
 msgstr "original note no longer on file"

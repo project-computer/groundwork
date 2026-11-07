@@ -2214,6 +2214,10 @@ msgstr "เปิดการรักษา"
 msgid "Opened"
 msgstr "เปิดเมื่อ"
 
+#: src/features/vet/shell/boot-screen.tsx
+msgid "Opening clinic…"
+msgstr "กำลังเปิดคลินิก…"
+
 #: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "original note no longer on file"
 msgstr "บันทึกเดิมไม่อยู่ในระบบแล้ว"

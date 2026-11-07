@@ -261,6 +261,7 @@ fn vetcare_secret(vetcare: tauri::State<Vetcare>) -> Option<String> {
     vetcare.0.secret.clone()
 }
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {

@@ -1028,7 +1028,7 @@ export const initialSession: Session = {
   view: 'dashboard',
 }
 
-const StoreContext = createContext<{ store: Store; dispatch: (a: Action) => void } | null>(null)
+const StoreContext = createContext<{ store: Store; dispatch: (a: Action) => void; hydrated: boolean } | null>(null)
 
 export const ClinicProvider = ({ children }: { children: ReactNode }) => {
   const [hydrated, setHydrated] = useState(false)
@@ -1121,14 +1121,14 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
     dispatch,
   })
 
-  const value = useMemo(() => ({ store, dispatch: guardedDispatch }), [store, guardedDispatch])
+  const value = useMemo(() => ({ store, dispatch: guardedDispatch, hydrated }), [store, guardedDispatch, hydrated])
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }
 
 export const useClinic = () => {
   const ctx = useContext(StoreContext)
   if (!ctx) throw new Error('useClinic must be used inside ClinicProvider')
-  const { store, dispatch } = ctx
+  const { store, dispatch, hydrated } = ctx
   // A stale or missing member (foreign document, emptied users collection)
   // must not crash the shell — the inert placeholder holds no permissions on
   // any write path because the reducer re-checks the actor on every action.
@@ -1136,7 +1136,7 @@ export const useClinic = () => {
     store.data.users.find((u) => u.id === store.session.currentUserId) ??
     store.data.users.find((u) => u.active) ??
     EMPTY_USER
-  return { data: store.data, session: store.session, user, dispatch }
+  return { data: store.data, session: store.session, user, dispatch, hydrated }
 }
 
 export const usePermission = (permission: Permission) => {
