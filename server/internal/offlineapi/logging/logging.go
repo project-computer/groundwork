@@ -50,7 +50,7 @@ func (w *RotatingWriter) Write(p []byte) (int, error) {
 		w.rotateLocked()
 	}
 	// Best-effort: a failed write is dropped; stderr keeps flowing.
-	w.file.Write(p)
+_, _ = w.file.Write(p)
 	return len(p), nil
 }
 

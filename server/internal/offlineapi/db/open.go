@@ -72,12 +72,12 @@ func migrate(conn *sql.DB) error {
 	for rows.Next() {
 		var version int64
 		if err := rows.Scan(&version); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return err
 		}
 		applied[version] = true
 	}
-	rows.Close()
+	_ = rows.Close()
 	if err := rows.Err(); err != nil {
 		return err
 	}
@@ -95,14 +95,14 @@ func migrate(conn *sql.DB) error {
 			return err
 		}
 		if _, err := tx.Exec(m.sql); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return fmt.Errorf("migration %s failed: %w", m.name, err)
 		}
 		if _, err := tx.Exec(
 			"INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)",
 			m.version, UtcNow(),
 		); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return err
 		}
 		if err := tx.Commit(); err != nil {
@@ -129,21 +129,21 @@ func Open(path string) (*sql.DB, error) {
 	}
 	conn.SetMaxOpenConns(1)
 	if _, err := conn.Exec("PRAGMA foreign_keys = ON"); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, err
 	}
 	if _, err := conn.Exec("PRAGMA busy_timeout = 5000"); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, err
 	}
 	if path != ":memory:" {
 		if _, err := conn.Exec("PRAGMA journal_mode = WAL"); err != nil {
-			conn.Close()
+			_ = conn.Close()
 			return nil, err
 		}
 	}
 	if err := migrate(conn); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, err
 	}
 	return conn, nil
