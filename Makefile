@@ -117,7 +117,7 @@ lint-go: ## Go: vet + golangci-lint + gofmt check (server module)
 		echo 'Go files need gofmt:'; echo "$$unformatted"; exit 1; \
 	fi
 
-lint-rust: ## Tauri shell: cargo fmt --check + clippy -D warnings
+lint-rust: sidecar vetcare ## Tauri shell: cargo fmt --check + clippy -D warnings (stages externalBin resources first)
 	cargo fmt --check --manifest-path $(TAURI)/Cargo.toml
 	cargo clippy --manifest-path $(TAURI)/Cargo.toml --all-targets -- -D warnings
 
