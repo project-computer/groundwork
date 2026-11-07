@@ -13,8 +13,8 @@ func TestWriterCreatesFileAndAppends(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-_, _ = w.Write([]byte("line one\n"))
-_, _ = w.Write([]byte("line two\n"))
+	_, _ = w.Write([]byte("line one\n"))
+	_, _ = w.Write([]byte("line two\n"))
 	if err := w.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestWriterRotatesOnOverflow(t *testing.T) {
 	defer w.Close()
 
 	for i := 0; i < 10; i++ {
-_, _ = w.Write([]byte("0123456789abcdef0123456789abcdef\n")) // 33 bytes > cap
+		_, _ = w.Write([]byte("0123456789abcdef0123456789abcdef\n")) // 33 bytes > cap
 	}
 
 	// Generations exist: active + shifted copies, bounded by keep.

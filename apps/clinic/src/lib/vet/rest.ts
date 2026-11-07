@@ -143,13 +143,19 @@ const request = async <T>(method: string, path: string, payload?: unknown): Prom
   if (!config && !(await discoverRest())) {
     throw new RestError(0, 'not_configured', 'REST backend is not configured')
   }
+  // Re-read after discovery: the shell's `vetcare_url`/`vetcare_secret` pair
+  // lands in `config` inside discoverRest, which the compiler cannot see.
+  const active = config
+  if (!active) {
+    throw new RestError(0, 'not_configured', 'REST backend is not configured')
+  }
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'X-VetCare-Loopback-Secret': config.secret,
+    'X-VetCare-Loopback-Secret': active.secret,
   }
   const token = readSession()
   if (token) headers.Authorization = `Bearer ${token}`
-  const response = await fetch(`${config.baseUrl}${path}`, {
+  const response = await fetch(`${active.baseUrl}${path}`, {
     method,
     headers,
     body: payload === undefined ? undefined : JSON.stringify(payload),
@@ -177,7 +183,8 @@ const request = async <T>(method: string, path: string, payload?: unknown): Prom
 
 const httpNoContent = 204
 
-const withQuery = (path: string, query: Record<string, string | undefined>): string => {
+const withQuery = (path: string, query?: Record<string, string | undefined>): string => {
+  if (!query) return path
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(query)) {
     if (value !== undefined && value !== '') params.set(key, value)
@@ -312,6 +319,8 @@ export interface RestAppointment {
   durationMinutes: number
   reason: string
   status: 'scheduled' | 'arrived' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
+  cancellationReason?: string
+  notes: string
   checkedInAt?: string
   startedAt?: string
   completedAt?: string

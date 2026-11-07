@@ -106,6 +106,9 @@ lint-ts: ## oxlint in apps/clinic + knip (unused files/exports)
 lint-landing: ## oxlint in apps/landing
 	pnpm -C $(LANDING) lint:strict
 
+typecheck: ## TypeScript typecheck of the clinic app (tsc --noEmit)
+	pnpm -C $(CLINIC) typecheck
+
 lint-go: ## Go: vet + golangci-lint + gofmt check (server module)
 	cd $(SERVER) && go vet ./...
 	cd $(SERVER) && go run $(GOLANGCI) run ./...
@@ -191,4 +194,4 @@ deploy-landing: build-landing ## upload the download page
 
 # ---------- CI ----------
 
-ci: lint-ts lint-landing test-ts test-landing lint-go vuln-go test-go lint-rust ## exactly what the CI workflow runs
+ci: lint-ts lint-landing typecheck test-ts test-landing lint-go vuln-go test-go lint-rust ## exactly what the CI workflow runs

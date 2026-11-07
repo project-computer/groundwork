@@ -12,6 +12,8 @@ import {
   listOwners,
   listPets,
   listWeights,
+  listAppointments,
+  listInvoices,
   login,
   logout,
   me,
@@ -87,6 +89,18 @@ describe('configuration', () => {
       'X-VetCare-Loopback-Secret': 'launch-secret',
       'Content-Type': 'application/json',
     })
+  })
+})
+
+describe('list filters', () => {
+  it('omits the query string when no filters are given', async () => {
+    await listAppointments()
+    expect(lastCall().url).toBe('http://127.0.0.1:51731/api/v1/appointments')
+  })
+
+  it('serializes only the provided filters', async () => {
+    await listInvoices({ status: 'paid', from: undefined, to: '' })
+    expect(lastCall().url).toBe('http://127.0.0.1:51731/api/v1/invoices?status=paid')
   })
 })
 

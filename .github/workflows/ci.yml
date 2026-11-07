@@ -49,6 +49,11 @@ jobs:
       - name: Lint (TS)
         run: make lint-ts lint-landing
 
+      # `make lint-ts` is oxlint + knip only; keep the production build's
+      # typecheck in CI so unused-module regressions cannot ship.
+      - name: Typecheck (TS)
+        run: make typecheck
+
       - name: Tests (TS)
         run: make test-ts test-landing
 
