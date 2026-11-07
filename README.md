@@ -100,3 +100,5 @@ Settings → Database. Backup/restore arrives in Phase 3.
 ## Decisions
 
 See `docs/decisions/` (ADRs), `docs/architecture.md`, `docs/data-model.md`.
+The prioritized path to a pilot release is tracked in
+[`docs/RELEASE-READINESS.md`](docs/RELEASE-READINESS.md).
