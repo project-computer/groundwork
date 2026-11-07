@@ -38,7 +38,7 @@ The offline binary writes its own `vetcare.db` (distinct from the legacy
 | --- | --- | --- | --- |
 | 1 | scaffold, migrations 001–010, sqlc, health + setup/login/logout + RBAC, owners, pets, weights | `go test ./...` green; `curl` exercises setup → login → create owner → create pet | **done 2026-11-06** |
 | 2 | Appointments, consultations, prescriptions, medication catalog | APT-01…09, MED-01…11, RX-01…06 covered by handlers/tests | **done 2026-11-06** |
-| 3 | Services/invoices/payments, settings, audit, backups | BILL-01…10, SET-01…04, AUD-01…03, BKP-01…04 | **billing + settings + audit done 2026-11-06** (`commit 6d5fc53`); REST backup endpoints still open |
+| 3 | Services/invoices/payments, settings, audit, backups | BILL-01…10, SET-01…04, AUD-01…03, BKP-01…04 | **done 2026-11-07** — billing/settings/audit (`6d5fc53`) + backup endpoints (`1582e65`) |
 | 4 | Frontend REST client + `clinic_state` importer; replace document store per feature | Full visit E2E against the REST backend; restart persistence | open |
 | 5 | Delete document store, sync engine, legacy sidecar paths, update repo-structure docs | No references to `clinic_state` / `outbox` in runtime code | open |
 
