@@ -10,16 +10,21 @@
  * cleared when a call comes back 401 (expired or revoked server-side).
  */
 
+import { invoke } from '@tauri-apps/api/core'
+import { isTauri } from '@/lib/platform'
+
 export interface RestConfig {
   baseUrl: string
   secret: string
 }
 
 let config: RestConfig | null = null
+/** Memoized shell discovery: one `vetcare_url`/`vetcare_secret` pair per
+ * launch, resolved on the first REST call. */
+let discovered: Promise<boolean> | null = null
 
 /** Wires the backend location and the per-launch secret. The desktop shell
- * calls this once its vetcare sidecar has announced itself; tests call it
- * with a stub. */
+ * normally answers discovery (see below); tests call this with a stub. */
 export const configureRest = (next: RestConfig): void => {
   config = { baseUrl: next.baseUrl.replace(/\/$/, ''), secret: next.secret }
 }
@@ -28,6 +33,7 @@ export const configureRest = (next: RestConfig): void => {
  * with it. */
 export const resetRest = (): void => {
   config = null
+  discovered = null
   try {
     window.sessionStorage.removeItem(SESSION_KEY)
   } catch {
@@ -36,6 +42,34 @@ export const resetRest = (): void => {
 }
 
 export const restConfigured = (): boolean => config !== null
+
+/**
+ * The shell hands the webview the vetcare URL and the per-launch secret the
+ * same way it does for clinic-core (backend.ts). Resolves false in a browser
+ * (no shell) or when the vetcare binary was not bundled — the app then stays
+ * on the document path. Memoized: one discovery per launch.
+ */
+const discoverRest = async (): Promise<boolean> => {
+  if (!isTauri()) return false
+  if (!discovered) {
+    discovered = (async () => {
+      try {
+        const [url, secret] = (await Promise.all([
+          invoke<string | null>('vetcare_url'),
+          invoke<string | null>('vetcare_secret'),
+        ])) as [string | null, string | null]
+        if (url && secret) {
+          configureRest({ baseUrl: url, secret })
+          return true
+        }
+        return false
+      } catch {
+        return false
+      }
+    })()
+  }
+  return discovered
+}
 
 const SESSION_KEY = 'vetcare:rest-session'
 
@@ -106,7 +140,9 @@ const clearSession = (): void => {
 export const sessionToken = (): string | null => readSession()
 
 const request = async <T>(method: string, path: string, payload?: unknown): Promise<T> => {
-  if (!config) throw new RestError(0, 'not_configured', 'REST backend is not configured')
+  if (!config && !(await discoverRest())) {
+    throw new RestError(0, 'not_configured', 'REST backend is not configured')
+  }
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-VetCare-Loopback-Secret': config.secret,

@@ -32,7 +32,7 @@ PAGES_LANDING ?= vetcare-landing
 SHELL := bash
 .DELETE_ON_ERROR:
 
-.PHONY: help install dev dev-landing build build-clinic build-landing tauri sidecar api
+.PHONY: help install dev dev-landing build build-clinic build-landing tauri sidecar api vetcare
 .PHONY: lint lint-ts lint-landing lint-go lint-rust
 .PHONY: fmt fmt-go fmt-rust
 .PHONY: test test-ts test-landing test-go test-rust test-pages test-screenshots vuln-go
@@ -82,6 +82,18 @@ $(SIDECAR_BIN): $(SIDECAR_SRC) $(SIDECAR)/go.mod | $(TAURI)/binaries
 
 api: ## build the normalized REST backend (server/cmd/vetcare)
 	cd $(SERVER) && go build -trimpath -o bin/vetcare ./cmd/vetcare
+
+## The staged vetcare binary Tauri bundles; rebuilt only when its Go sources
+## change (sidecar discipline: same staging, same announcement contract).
+VETCARE_BIN := $(TAURI)/binaries/vetcare-$(TRIPLE)$(EXE_EXT)
+SERVER_SRC := $(shell find $(SERVER)/cmd $(SERVER)/internal -name '*.go' 2>/dev/null)
+
+vetcare: $(VETCARE_BIN)
+
+$(VETCARE_BIN): $(SERVER_SRC) $(SERVER)/go.mod | $(TAURI)/binaries
+	@test -n '$(TRIPLE)' || { echo 'rustc not found — cannot determine the target triple to stage vetcare'; exit 1; }
+	cd $(SERVER) && go build -trimpath -o bin/vetcare ./cmd/vetcare
+	cp $(SERVER)/bin/vetcare $(VETCARE_BIN)
 
 # ---------- linting & formatting ----------
 

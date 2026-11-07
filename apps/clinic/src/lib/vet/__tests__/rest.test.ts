@@ -29,6 +29,9 @@ import { seedState } from '../seed'
  * is stubbed — the server contract itself is pinned by the Go suite.
  */
 
+vi.mock('@/lib/platform', () => ({ isTauri: () => false }))
+vi.mock('@tauri-apps/api/core', () => ({ invoke: async () => null }))
+
 const SESSION_KEY = 'vetcare:rest-session'
 
 const jsonResponse = (status: number, body: unknown) =>
@@ -84,6 +87,53 @@ describe('configuration', () => {
       'X-VetCare-Loopback-Secret': 'launch-secret',
       'Content-Type': 'application/json',
     })
+  })
+})
+
+describe('shell discovery', () => {
+  it('configures itself from vetcare_url/vetcare_secret on first use', async () => {
+    resetRest()
+    const platform = await import('@/lib/platform')
+    const core = await import('@tauri-apps/api/core')
+    vi.spyOn(platform, 'isTauri').mockReturnValue(true)
+    const invokeSpy = vi
+      .spyOn(core, 'invoke')
+      .mockImplementation(async (cmd: string) =>
+        cmd === 'vetcare_url' ? 'http://127.0.0.1:51799/' : 'vetcare-launch-secret',
+      )
+    try {
+      // The shell reports a trailing slash; the client trims it.
+      await expect(listOwners()).resolves.toEqual({ ok: true })
+      expect(lastCall().url).toBe('http://127.0.0.1:51799/api/v1/owners')
+      expect(lastCall().init.headers).toMatchObject({ 'X-VetCare-Loopback-Secret': 'vetcare-launch-secret' })
+      // Memoized: a second call must not re-invoke the shell.
+      const invocations = invokeSpy.mock.calls.length
+      await listPets()
+      expect(invokeSpy.mock.calls.length).toBe(invocations)
+    } finally {
+      invokeSpy.mockRestore()
+    }
+  })
+
+  it('stays unconfigured in a browser', async () => {
+    resetRest()
+    const platform = await import('@/lib/platform')
+    vi.spyOn(platform, 'isTauri').mockReturnValue(false)
+    await expect(listOwners()).rejects.toMatchObject({ code: 'not_configured' })
+  })
+
+  it('stays unconfigured when the vetcare binary was not bundled', async () => {
+    resetRest()
+    const platform = await import('@/lib/platform')
+    const core = await import('@tauri-apps/api/core')
+    vi.spyOn(platform, 'isTauri').mockReturnValue(true)
+    const invokeSpy = vi.spyOn(core, 'invoke').mockResolvedValue(null)
+    try {
+      await expect(listOwners()).rejects.toMatchObject({ code: 'not_configured' })
+      expect(invokeSpy.mock.calls.some(([cmd]) => cmd === 'vetcare_url')).toBe(true)
+    } finally {
+      invokeSpy.mockRestore()
+    }
   })
 })
 
