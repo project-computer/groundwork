@@ -2,9 +2,11 @@
 package api
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -15,13 +17,37 @@ import (
 
 const maxBodyBytes = 64 << 20
 
-type Server struct {
-	store  *store.Store
-	engine *sync.Engine
+// LoopbackSecretHeader carries the per-launch secret on every business
+// request (ADR 0020). /healthz stays unauthenticated: it is the readiness
+// probe and leaks nothing.
+const LoopbackSecretHeader = "X-VetCare-Loopback-Secret"
+
+// Options carries the process-wide settings the API needs beyond the store:
+// the per-launch loopback secret (ADR 0020), the backup file directory
+// (ADR 0021) and where request-level failures are logged. A nil logger logs
+// nothing; an empty Secret fails closed — every business request is rejected.
+type Options struct {
+	Secret     string
+	BackupsDir string
+	Logger     *log.Logger
 }
 
-func New(st *store.Store, engine *sync.Engine) *Server {
-	return &Server{store: st, engine: engine}
+type Server struct {
+	store      *store.Store
+	engine     *sync.Engine
+	secret     string
+	backupsDir string
+	logger     *log.Logger
+}
+
+func New(st *store.Store, engine *sync.Engine, opts Options) *Server {
+	return &Server{
+		store:      st,
+		engine:     engine,
+		secret:     opts.Secret,
+		backupsDir: opts.BackupsDir,
+		logger:     opts.Logger,
+	}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -30,7 +56,31 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/state", s.handleState)
 	mux.HandleFunc("/sync/run", s.handleSyncRun)
 	mux.HandleFunc("/sync/status", s.handleSyncStatus)
-	return cors(mux)
+	mux.HandleFunc("POST /backups", s.handleBackupSave)
+	mux.HandleFunc("GET /backups", s.handleBackupList)
+	mux.HandleFunc("GET /backups/{file}", s.handleBackupGet)
+	// CORS wraps the secret middleware so OPTIONS preflights short-circuit
+	// before authentication, like before.
+	return cors(requireSecret(mux, s.secret, s.logger))
+}
+
+// requireSecret enforces the per-launch loopback secret (ADR 0020). A random
+// port alone is not a defence — any local process can scan for it — so every
+// business request must carry the header the shell hands to the webview.
+func requireSecret(next http.Handler, secret string, logger *log.Logger) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/healthz" {
+			got := r.Header.Get(LoopbackSecretHeader)
+			if secret == "" || subtle.ConstantTimeCompare([]byte(got), []byte(secret)) != 1 {
+				if logger != nil {
+					logger.Printf("rejected unauthorized request to %s", r.URL.Path)
+				}
+				writeError(w, http.StatusUnauthorized, "unauthorized")
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func cors(next http.Handler) http.Handler {
@@ -41,7 +91,7 @@ func cors(next http.Handler) http.Handler {
 			w.Header().Set("Vary", "Origin")
 		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, "+LoopbackSecretHeader)
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return

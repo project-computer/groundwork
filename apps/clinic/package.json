@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "sidecar": "make -C ../.. sidecar",
     "tauri": "tauri",
@@ -20,7 +21,8 @@
     "test:pages": "playwright test",
     "test:rust": "make -C ../.. sidecar && cargo test --manifest-path src-tauri/Cargo.toml",
     "test:component": "vitest run --project browser component",
-    "test:browser": "vitest run --project browser"
+    "test:browser": "vitest run --project browser",
+    "test:ci": "pnpm run test:unit && vitest run --project browser component.test"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

@@ -13,8 +13,10 @@ SERVER  := server
 TAURI   := $(CLINIC)/src-tauri
 
 # Target triple for staging the sidecar binary where Tauri expects it.
+# Tauri's externalBin lookup requires an .exe suffix on Windows.
 TRIPLE      := $(shell rustc -vV 2>/dev/null | awk '/^host:/{print $$2}')
-SIDECAR_BIN := $(TAURI)/binaries/clinic-core-$(TRIPLE)
+EXE_EXT     := $(if $(findstring windows,$(TRIPLE)),.exe,)
+SIDECAR_BIN := $(TAURI)/binaries/clinic-core-$(TRIPLE)$(EXE_EXT)
 SIDECAR_SRC := $(shell find $(SIDECAR)/cmd $(SIDECAR)/internal -name '*.go' 2>/dev/null)
 
 GOLANGCI := github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
@@ -30,10 +32,10 @@ PAGES_LANDING ?= vetcare-landing
 SHELL := bash
 .DELETE_ON_ERROR:
 
-.PHONY: help install dev dev-landing build build-clinic build-landing tauri sidecar
+.PHONY: help install dev dev-landing build build-clinic build-landing tauri sidecar api vetcare
 .PHONY: lint lint-ts lint-landing lint-go lint-rust
 .PHONY: fmt fmt-go fmt-rust
-.PHONY: test test-ts test-landing test-go test-rust test-pages vuln-go
+.PHONY: test test-ts test-landing test-go test-rust test-pages test-screenshots vuln-go
 .PHONY: pages-init deploy deploy-clinic deploy-landing
 .PHONY: i18n-extract i18n-compile ci
 
@@ -76,6 +78,23 @@ $(SIDECAR_BIN): $(SIDECAR_SRC) $(SIDECAR)/go.mod | $(TAURI)/binaries
 	cd $(SIDECAR) && go build -trimpath -o bin/clinic-core ./cmd/clinic-core
 	cp $(SIDECAR)/bin/clinic-core $(SIDECAR_BIN)
 
+# ---------- Go REST API (offline-MVP; lives inside the server module) ----------
+
+api: ## build the normalized REST backend (server/cmd/vetcare)
+	cd $(SERVER) && go build -trimpath -o bin/vetcare ./cmd/vetcare
+
+## The staged vetcare binary Tauri bundles; rebuilt only when its Go sources
+## change (sidecar discipline: same staging, same announcement contract).
+VETCARE_BIN := $(TAURI)/binaries/vetcare-$(TRIPLE)$(EXE_EXT)
+SERVER_SRC := $(shell find $(SERVER)/cmd $(SERVER)/internal -name '*.go' 2>/dev/null)
+
+vetcare: $(VETCARE_BIN)
+
+$(VETCARE_BIN): $(SERVER_SRC) $(SERVER)/go.mod | $(TAURI)/binaries
+	@test -n '$(TRIPLE)' || { echo 'rustc not found — cannot determine the target triple to stage vetcare'; exit 1; }
+	cd $(SERVER) && go build -trimpath -o bin/vetcare ./cmd/vetcare
+	cp $(SERVER)/bin/vetcare $(VETCARE_BIN)
+
 # ---------- linting & formatting ----------
 
 lint: lint-ts lint-landing lint-go lint-rust ## every linter (TS, Go, Rust)
@@ -87,15 +106,18 @@ lint-ts: ## oxlint in apps/clinic + knip (unused files/exports)
 lint-landing: ## oxlint in apps/landing
 	pnpm -C $(LANDING) lint:strict
 
-lint-go: ## server: go vet + golangci-lint + gofmt check
+typecheck: ## TypeScript typecheck of the clinic app (tsc --noEmit)
+	pnpm -C $(CLINIC) typecheck
+
+lint-go: ## Go: vet + golangci-lint + gofmt check (server module)
 	cd $(SERVER) && go vet ./...
 	cd $(SERVER) && go run $(GOLANGCI) run ./...
 	@unformatted=$$(cd $(SERVER) && gofmt -l .); \
 	if [ -n "$$unformatted" ]; then \
-		echo 'Files need gofmt:'; echo "$$unformatted"; exit 1; \
+		echo 'Go files need gofmt:'; echo "$$unformatted"; exit 1; \
 	fi
 
-lint-rust: ## Tauri shell: cargo fmt --check + clippy -D warnings
+lint-rust: sidecar vetcare ## Tauri shell: cargo fmt --check + clippy -D warnings (stages externalBin resources first)
 	cargo fmt --check --manifest-path $(TAURI)/Cargo.toml
 	cargo clippy --manifest-path $(TAURI)/Cargo.toml --all-targets -- -D warnings
 
@@ -114,13 +136,18 @@ vuln-go: ## govulncheck — reachable known CVEs in the server
 
 test: test-ts test-landing test-go test-rust ## every test suite (builds the sidecar first)
 
-test-ts: ## vitest in apps/clinic (unit + component + screenshot)
-	pnpm -C $(CLINIC) test
+# Screenshot baselines are pixel-exact against the dev machine's fonts, so
+# they only pass where they were generated — keep them out of CI (issue 0018).
+test-ts: ## vitest in apps/clinic (unit + component; screenshots are local-only)
+	pnpm -C $(CLINIC) test:ci
+
+test-screenshots: ## visual baselines — dev machine only (pnpm test:screenshot:update to re-pin)
+	pnpm -C $(CLINIC) test:screenshot
 
 test-landing: ## vitest in apps/landing (unit)
 	pnpm -C $(LANDING) test
 
-test-go: ## go test -race in every Go module (sidecar + cloud server)
+test-go: ## go test -race in every Go module (sidecar + cloud/offline server)
 	cd $(SIDECAR) && go test -race ./...
 	cd $(SERVER) && go test -race ./...
 
@@ -167,4 +194,4 @@ deploy-landing: build-landing ## upload the download page
 
 # ---------- CI ----------
 
-ci: lint-ts lint-landing i18n-compile build test-ts test-landing lint-go vuln-go test-go lint-rust test-rust test-pages ## exactly what the CI workflow runs
+ci: lint-ts lint-landing typecheck i18n-compile build test-ts test-landing lint-go vuln-go test-go lint-rust test-rust test-pages ## exactly what the CI workflow runs

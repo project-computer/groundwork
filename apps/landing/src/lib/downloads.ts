@@ -24,31 +24,33 @@ export const RELEASE_VERSION = '0.1.0'
  * requirements live in the view (download-card.tsx) — this manifest stays
  * translation-free.
  */
-export const RELEASES_BASE_URL = 'https://github.com/vetcare/vetcare/releases/download'
+export const RELEASES_BASE_URL = 'https://github.com/project-computer/groundwork/releases/download'
 
 export const PLATFORMS: readonly PlatformDownloads[] = [
   {
     id: 'windows',
     name: 'Windows',
     files: [
-      { id: 'installer', name: 'Vet Clinic_0.1.0_x64-setup.exe' },
-      { id: 'msi', name: 'Vet Clinic_0.1.0_x64_en-US.msi' },
+      { id: 'installer', name: 'Vet.Clinic_0.1.0_x64-setup.exe' },
+      { id: 'msi', name: 'Vet.Clinic_0.1.0_x64_en-US.msi' },
     ],
   },
   {
     id: 'macos',
     name: 'macOS',
+    // The release workflow builds on an Apple Silicon runner only, so the
+    // Intel .dmg is not produced — do not list it until the matrix adds an
+    // x86_64-apple-darwin build.
     files: [
-      { id: 'apple-silicon', name: 'Vet Clinic_0.1.0_aarch64.dmg' },
-      { id: 'intel', name: 'Vet Clinic_0.1.0_x64.dmg' },
+      { id: 'apple-silicon', name: 'Vet.Clinic_0.1.0_aarch64.dmg' },
     ],
   },
   {
     id: 'linux',
     name: 'Linux',
     files: [
-      { id: 'appimage', name: 'Vet Clinic_0.1.0_amd64.AppImage' },
-      { id: 'deb', name: 'Vet Clinic_0.1.0_amd64.deb' },
+      { id: 'appimage', name: 'Vet.Clinic_0.1.0_amd64.AppImage' },
+      { id: 'deb', name: 'Vet.Clinic_0.1.0_amd64.deb' },
     ],
   },
 ]

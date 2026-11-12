@@ -1,14 +1,17 @@
 import { useState, type FormEvent } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { useClinic } from '@/lib/vet/store'
-import { createPinCredential, hasPin, isPinFormat, PIN_MAX_LENGTH } from '@/lib/vet/auth'
+import { hasPin, isPinFormat, PIN_MAX_LENGTH } from '@/lib/vet/auth'
 import { Field } from '@/components/patterns/fields'
 import { Modal } from '@/components/patterns/modal'
 import type { StaffUser } from '@/lib/vet/types'
 
-/** Admin/self dialog for setting, changing, or removing a member's PIN. */
+/** Admin/self dialog for setting, changing, or removing a member's PIN. The
+ * store orchestrates the write: the document hash commits first (the offline
+ * guarantee), then the change mirrors to the REST backend when the member is
+ * known there (ADR 0024, issue 0019). */
 export const PinDialog = ({ member, onClose }: { member: StaffUser; onClose: () => void }) => {
-  const { dispatch } = useClinic()
+  const { dispatch, setMemberPin } = useClinic()
   const { t } = useLingui()
   const existing = hasPin(member)
   const [pin, setPin] = useState('')
@@ -28,8 +31,7 @@ export const PinDialog = ({ member, onClose }: { member: StaffUser; onClose: () 
       return
     }
     setBusy(true)
-    const credential = await createPinCredential(pin)
-    dispatch({ type: 'setStaffPin', id: member.id, credential })
+    setMemberPin(member, pin)
     onClose()
   }
 

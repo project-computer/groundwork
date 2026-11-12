@@ -1,12 +1,24 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { plural } from '@lingui/core/macro'
 import { Plural, Trans, useLingui } from '@lingui/react/macro'
-import { Activity, AlertTriangle, Database, RotateCcw, ShieldCheck } from 'lucide-react'
+import { Activity, AlertTriangle, Database, History, RotateCcw, ShieldCheck } from 'lucide-react'
 import { Panel, PageHeader, Pill } from '@/components/patterns/fields'
 import { Modal } from '@/components/patterns/modal'
 import { useClinic, usePermission, useSyncState } from '@/lib/vet/store'
-import { formatDate, statusLabel, todayKey } from '@/lib/vet/format'
-import { buildBackup, downloadBackup, parseBackup, summarizeBackup, type BackupSummary, type ClinicBackup } from '@/lib/vet/backup'
+import { formatBytes, formatDate, statusLabel, todayKey } from '@/lib/vet/format'
+import {
+  buildBackup,
+  downloadBackup,
+  loadBackupHistory,
+  parseBackup,
+  restoreNeedsManualSafetyCopy,
+  readBackupFromHistory,
+  snapshotForRestore,
+  summarizeBackup,
+  type BackupFileEntry,
+  type BackupSummary,
+  type ClinicBackup,
+} from '@/lib/vet/backup'
 
 /** Settings View: local data, sync & plan, portability & recovery. */
 export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }) => {
@@ -14,10 +26,27 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
   const { t } = useLingui()
   const sync = useSyncState()
   const dataExport = usePermission('data.export')
+  const clinicManage = usePermission('clinic.manage')
   const restoreInput = useRef<HTMLInputElement>(null)
   const [restorePreview, setRestorePreview] = useState<{ backup: ClinicBackup; summary: BackupSummary } | null>(null)
   const [restoreError, setRestoreError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [backupFiles, setBackupFiles] = useState<BackupFileEntry[] | null>(null)
+  const [manualSafetyCopy, setManualSafetyCopy] = useState(false)
+  const [safetyCopied, setSafetyCopied] = useState(false)
+  const [restoring, setRestoring] = useState(false)
+
+  // Backup history comes from the desktop sidecar; in a browser the list
+  // stays empty and the panel shows the download-based flow only.
+  useEffect(() => {
+    let alive = true
+    void loadBackupHistory().then((files) => {
+      if (alive) setBackupFiles(files)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
 
   const exportData = () => {
     const exportedAt = new Date().toISOString()
@@ -56,22 +85,75 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
   const chooseBackup = async (file: File | undefined) => {
     setRestoreError(null)
     setNotice(null)
+    setSafetyCopied(false)
     if (!file) return
     const result = parseBackup(await file.text())
     if (!result.ok) {
       setRestoreError(result.error)
       return
     }
+    setManualSafetyCopy(await restoreNeedsManualSafetyCopy())
     setRestorePreview({ backup: result.backup, summary: summarizeBackup(result.backup) })
   }
 
-  const restoreBackup = () => {
-    if (!restorePreview) return
+  const openHistoryBackup = async (entry: BackupFileEntry) => {
+    setRestoreError(null)
+    setNotice(null)
+    setSafetyCopied(false)
+    const raw = await readBackupFromHistory(entry.file)
+    if (!raw) {
+      setRestoreError(t`That backup file could not be read from disk.`)
+      return
+    }
+    const result = parseBackup(JSON.stringify(raw))
+    if (!result.ok) {
+      setRestoreError(result.error)
+      return
+    }
+    setManualSafetyCopy(await restoreNeedsManualSafetyCopy())
+    setRestorePreview({ backup: result.backup, summary: summarizeBackup(result.backup) })
+  }
+
+  const downloadSafetyCopy = () => {
+    downloadBackup(buildBackup(data, new Date().toISOString(), 'manual'))
+    setSafetyCopied(true)
+  }
+
+  /**
+   * Restore (ADR 0021, fail closed): on the desktop the current document is
+   * snapshotted through the sidecar first — a failed snapshot aborts the
+   * restore. On the web there is no sidecar, so the user must download the
+   * safety copy explicitly before the destructive write is allowed.
+   */
+  const restoreBackup = async () => {
+    if (!restorePreview || restoring) return
+    if (manualSafetyCopy && !safetyCopied) return
+    setRestoring(true)
+    let snapshotNote = ''
+    if (!manualSafetyCopy) {
+      const snapshot = await snapshotForRestore(data)
+      if (!snapshot.ok) {
+        setRestoring(false)
+        setRestoreError(t`The safety copy of the current data could not be saved (${snapshot.reason}). Restore cancelled — nothing was changed.`)
+        return
+      }
+      snapshotNote = t` A safety copy was saved as ${snapshot.file}.`
+      dispatch({
+        type: 'recordAudit',
+        action: 'backup.pre_restore',
+        entityType: 'clinic',
+        entityId: data.clinic.id,
+        summary: `Pre-restore safety snapshot saved as ${snapshot.file}`,
+      })
+    }
     const summary = summarizeBackup(restorePreview.backup)
     dispatch({ type: 'restoreBackup', backup: restorePreview.backup })
+    setRestoring(false)
     setRestorePreview(null)
     if (restoreInput.current) restoreInput.current.value = ''
-    setNotice(t`Restored ${plural(summary.patients, { one: '# patient', other: '# patients' })} and ${plural(summary.encounters, { one: '# encounter', other: '# encounters' })} from the backup.`)
+    setNotice(
+      t`Restored ${plural(summary.patients, { one: '# patient', other: '# patients' })} and ${plural(summary.encounters, { one: '# encounter', other: '# encounters' })} from the backup.${snapshotNote}`,
+    )
   }
 
   return (
@@ -202,6 +284,25 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
           </div>
           <div className="export-card">
             <div className="export-icon">
+              <History size={20} />
+            </div>
+            <div>
+              <strong><Trans>Daily automatic backup</Trans></strong>
+              <span><Trans>Keeps the last 14 daily copies on this computer, next to the clinic database.</Trans></span>
+            </div>
+            <label className="auto-backup-toggle">
+              <input
+                type="checkbox"
+                checked={data.clinic.autoBackup !== false}
+                disabled={!clinicManage.allowed}
+                title={clinicManage.reason || undefined}
+                onChange={(e) => dispatch({ type: 'updateClinic', patch: { autoBackup: e.target.checked } })}
+              />
+              <span>{data.clinic.autoBackup !== false ? <Trans>On</Trans> : <Trans>Off</Trans>}</span>
+            </label>
+          </div>
+          <div className="export-card">
+            <div className="export-icon">
               <RotateCcw size={20} />
             </div>
             <div>
@@ -225,6 +326,36 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
               <Trans>Choose backup…</Trans>
             </button>
           </div>
+          {backupFiles && backupFiles.length > 0 && (
+            <div className="backup-history">
+              <strong><Trans>Backups on this computer</Trans></strong>
+              <div className="status-stack">
+                {backupFiles.map((entry) => (
+                  <div className="status-line" key={entry.file}>
+                    <span className="status-icon">
+                      <Database size={17} />
+                    </span>
+                    <div>
+                      <strong>{formatDate(entry.createdAt)}</strong>
+                      <span>
+                        {formatBytes(entry.sizeBytes)} ·{' '}
+                        {entry.trigger === 'auto' ? (
+                          <Trans>daily</Trans>
+                        ) : entry.trigger === 'pre-restore' ? (
+                          <Trans>safety copy</Trans>
+                        ) : (
+                          <Trans>manual</Trans>
+                        )}
+                      </span>
+                    </div>
+                    <button className="button secondary" onClick={() => void openHistoryBackup(entry)} disabled={!dataExport.allowed}>
+                      <Trans>Preview</Trans>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {restoreError && (
             <p className="form-hint is-bad" role="alert">
               {restoreError}
@@ -281,14 +412,33 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
               </Trans>
             </p>
           )}
-          <p className="form-hint">
-            <Trans>Everything currently on this computer will be replaced. Export a fresh archive first if you are unsure.</Trans>
-          </p>
+          {manualSafetyCopy ? (
+            <p className="form-hint">
+              {safetyCopied ? (
+                <Trans>Safety copy downloaded. Restoring will replace everything currently on this device.</Trans>
+              ) : (
+                <Trans>This device cannot hold a safety copy automatically — download one first; restoring is disabled until you do.</Trans>
+              )}
+            </p>
+          ) : (
+            <p className="form-hint">
+              <Trans>A safety copy of the current data will be saved on this computer first. Restoring never discards it without a trace.</Trans>
+            </p>
+          )}
           <div className="panel-footer">
             <button className="button secondary" onClick={() => setRestorePreview(null)}>
               <Trans>Cancel</Trans>
             </button>
-            <button className="button primary" onClick={restoreBackup}>
+            {manualSafetyCopy && !safetyCopied && (
+              <button className="button secondary" onClick={downloadSafetyCopy} disabled={!dataExport.allowed}>
+                <Trans>Download safety copy</Trans>
+              </button>
+            )}
+            <button
+              className="button primary"
+              onClick={() => void restoreBackup()}
+              disabled={restoring || (manualSafetyCopy && !safetyCopied)}
+            >
               <Trans>Restore backup</Trans>
             </button>
           </div>

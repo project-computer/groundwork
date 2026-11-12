@@ -15,6 +15,7 @@
   background: var(--sidebar-bg);
   border-right: 1px solid var(--sidebar-border);
   padding: 22px 14px 14px;
+  padding-top: calc(22px + env(safe-area-inset-top));
   padding-bottom: max(14px, env(safe-area-inset-bottom));
 }
 .brand {
@@ -205,12 +206,13 @@
   flex: 1;
 }
 .topbar {
-  height: 67px;
+  /* Phones draw edge-to-edge; keep the bar below the system status bar. */
+  min-height: calc(67px + env(safe-area-inset-top));
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 0 max(34px, calc(env(safe-area-inset-right) + 34px));
+  padding: env(safe-area-inset-top) max(34px, calc(env(safe-area-inset-right) + 34px)) 0;
   padding-left: max(34px, calc(env(safe-area-inset-left) + 34px));
   border-bottom: 1px solid var(--line);
   background: var(--topbar-bg);
@@ -880,6 +882,31 @@
   background: var(--teal-soft);
   color: var(--teal);
 }
+.auto-backup-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.auto-backup-toggle input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--teal);
+}
+.backup-history {
+  padding: 12px 0 0;
+  border-top: 1px solid var(--row-border);
+}
+.backup-history > strong {
+  display: block;
+  font-size: 12px;
+  padding-bottom: 8px;
+}
+.backup-history .status-line button {
+  margin-left: auto;
+}
 .empty-state {
   color: var(--ink-muted);
   font-size: 12px;
@@ -976,5 +1003,38 @@
   }
   .save-hint {
     width: 100%;
+  }
+}
+
+/* First paint while the persisted document is restored (no seed flash). */
+.boot-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  background: var(--canvas);
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+}
+.boot-screen .brand-mark {
+  animation: boot-pulse 1.4s ease-in-out infinite;
+}
+@keyframes boot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(0.96);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boot-screen .brand-mark {
+    animation: none;
   }
 }

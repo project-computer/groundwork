@@ -1,10 +1,14 @@
 package store
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/project-computer/groundwork/sidecar/internal/db"
 )
 
 // fixturePath resolves a file in the repo-root fixtures/ directory, the single
@@ -59,5 +63,40 @@ func TestValidateRejectsNonArrayCollection(t *testing.T) {
 	}
 	if err := Validate(raw); err == nil {
 		t.Fatal("non-array collection must be rejected")
+	}
+}
+
+// A crash or disk-full mid-write can leave a truncated row behind. The store
+// never persists one (Save validates first), and a truncated row that somehow
+// landed is refused on the next Save so the last good document is not
+// silently extended with partial data.
+func TestSaveRejectsTruncatedDocumentAtomically(t *testing.T) {
+	database, err := db.OpenInMemory()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { database.Close() })
+	st := New(database)
+	ctx := context.Background()
+
+	// A previous good save is the recovery point.
+	if err := st.Save(ctx, []byte(fixturePath(t, "clinic-document.json"))); err != nil {
+		t.Fatal(err)
+	}
+
+	// A truncated body (as an interrupted write would produce) is refused
+	// whole — no partial write, no error swallowed.
+	truncated := fixturePath(t, "clinic-document.json")[:200]
+	if err := st.Save(ctx, []byte(truncated)); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("truncated document must be rejected with ErrInvalidState, got %v", err)
+	}
+
+	// The row still holds the last good document, byte-for-byte.
+	loaded, err := st.Load(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(loaded) != fixturePath(t, "clinic-document.json") {
+		t.Fatal("a rejected save must leave the previous document untouched")
 	}
 }

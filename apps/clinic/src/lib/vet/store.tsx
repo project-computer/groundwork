@@ -1,9 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
 import { i18n } from '@lingui/core'
 import { msg } from '@lingui/core/macro'
-import { loadPlanPref, loadState, parseClinicState, savePlanPref, saveState } from './persistence'
+import { loadPlanPref, loadState, parseClinicState, restCreateOwnerAndPatient, restCreatePatient, restEnsureOwner, restSetStaffPin, restVerifyMember, savePlanPref, saveState } from './persistence'
+import { runAutoBackup } from './backup'
 import { useSyncWorker } from './sync'
 import { can, formatMoney, formatMrn, invoiceTotals, roleLabel } from './format'
+import { createPinCredential, verifyPin } from './auth'
 import { seedState } from './seed'
 import type {
   Appointment,
@@ -32,6 +34,10 @@ import type {
 import type { ClinicBackup } from './backup'
 
 type Plan = 'local' | 'cloud'
+
+/** Inert stand-in so a document without a matching member cannot crash the
+ * shell; the reducer refuses every write for an unknown actor anyway. */
+const EMPTY_USER: StaffUser = { id: '', name: '—', role: 'reception', active: false }
 export type View =
   | 'dashboard'
   | 'schedule'
@@ -84,8 +90,8 @@ const now = () => new Date().toISOString()
 /** Every store mutation. Consumed by the sync seam (lib/vet/sync.ts) too. */
 export type Action =
   | { type: 'session'; patch: Partial<Session> }
-  | { type: 'registerOwner'; owner: Omit<Owner, 'id' | 'version'>; patient: Omit<Patient, 'id' | 'ownerId' | 'mrn' | 'version'> }
-  | { type: 'addPatient'; patient: Omit<Patient, 'id' | 'mrn' | 'version'> }
+  | { type: 'registerOwner'; owner: Omit<Owner, 'id' | 'version'> & { id?: string; version?: number }; patient: Omit<Patient, 'id' | 'ownerId' | 'mrn' | 'version'> & { id?: string; mrn?: string; version?: number } }
+  | { type: 'addPatient'; patient: Omit<Patient, 'id' | 'mrn' | 'version'> & { id?: string; mrn?: string; version?: number } }
   | { type: 'updatePatient'; id: string; patch: Partial<Pick<Patient, 'name' | 'species' | 'breed' | 'sex' | 'birthDate' | 'weightKg' | 'weightUnit' | 'microchip' | 'allergies' | 'medicalAlerts'>> }
   | { type: 'updateOwner'; id: string; patch: Partial<Pick<Owner, 'name' | 'phone' | 'email' | 'address'>> }
   | { type: 'bookAppointment'; appointment: Omit<Appointment, 'id' | 'version' | 'status'> }
@@ -335,8 +341,16 @@ export const reducer = (store: Store, action: Action): Store => {
 
   switch (action.type) {
     case 'registerOwner': {
-      const owner: Owner = { ...action.owner, id: uid(), version: 1 }
-      const patient: Patient = { ...action.patient, id: uid(), ownerId: owner.id, mrn: formatMrn(data.patients.length + 1), version: 1 }
+      // ADR 0025: ids/mrn may arrive from a REST-first creation (client-minted
+      // id, server MRN); local writes mint their own.
+      const owner: Owner = { ...action.owner, id: action.owner.id ?? uid(), version: action.owner.version ?? 1 }
+      const patient: Patient = {
+        ...action.patient,
+        id: action.patient.id ?? uid(),
+        ownerId: owner.id,
+        mrn: action.patient.mrn ?? formatMrn(data.patients.length + 1),
+        version: action.patient.version ?? 1,
+      }
       return commit(store, { ...data, owners: [owner, ...data.owners], patients: [patient, ...data.patients] }, {
         action: 'owner.create',
         entityType: 'owner',
@@ -345,7 +359,15 @@ export const reducer = (store: Store, action: Action): Store => {
       })
     }
     case 'addPatient': {
-      const patient: Patient = { ...action.patient, id: uid(), mrn: formatMrn(data.patients.length + 1), version: 1 }
+      // ADR 0025: REST-first creation projects the server's row (client-minted
+      // id, server MRN) — ids are optional in the payload and minted here
+      // only when the write stayed local.
+      const patient: Patient = {
+        ...action.patient,
+        id: action.patient.id ?? uid(),
+        mrn: action.patient.mrn ?? formatMrn(data.patients.length + 1),
+        version: action.patient.version ?? 1,
+      }
       return commit(store, { ...data, patients: [patient, ...data.patients] }, {
         action: 'patient.create',
         entityType: 'patient',
@@ -1023,7 +1045,41 @@ export const initialSession: Session = {
   view: 'dashboard',
 }
 
-const StoreContext = createContext<{ store: Store; dispatch: (a: Action) => void } | null>(null)
+const StoreContext = createContext<{
+  store: Store
+  dispatch: (a: Action) => void
+  hydrated: boolean
+  signInWithPin: (member: StaffUser, pin: string) => Promise<'ok' | 'denied' | 'fallback'>
+  setMemberPin: (member: StaffUser, pin: string) => void
+  registerOwnerAndPatient: (
+    owner: { id?: string; name: string; phone: string; email: string; address: string },
+    patient: {
+      name: string
+      species: Patient['species']
+      breed: string
+      sex: Patient['sex']
+      birthDate: string
+      microchip?: string
+      allergies: string[]
+      medicalAlerts: string[]
+      weightUnit?: string
+    },
+  ) => Promise<void>
+  registerPatient: (
+    owner: Owner,
+    patient: {
+      name: string
+      species: Patient['species']
+      breed: string
+      sex: Patient['sex']
+      birthDate: string
+      microchip?: string
+      allergies: string[]
+      medicalAlerts: string[]
+      weightUnit?: string
+    },
+  ) => Promise<void>
+} | null>(null)
 
 export const ClinicProvider = ({ children }: { children: ReactNode }) => {
   const [hydrated, setHydrated] = useState(false)
@@ -1046,6 +1102,13 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
       if (!alive) return
       if (persisted) {
         dispatch({ type: 'restore', data: persisted })
+        // A stale member reference adopts the first active admin, mirroring
+        // the restore rule — the shell needs a signed-in member to render.
+        if (!persisted.users.some((u) => u.id === initialSession.currentUserId)) {
+          const fallback =
+            persisted.users.find((u) => u.role === 'admin' && u.active) ?? persisted.users.find((u) => u.active)
+          if (fallback) dispatch({ type: 'signIn', userId: fallback.id })
+        }
         // A document whose signed-in member holds a PIN starts locked, so
         // reopening the app on a shared terminal always asks for the PIN.
         const current = persisted.users.find((u) => u.id === initialSession.currentUserId)
@@ -1085,6 +1148,132 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
     dataRef.current = store.data
   }, [store.data])
 
+  // Daily automatic backup (ADR 0021): once per launch, on the hydrated
+  // document. In a browser this is a no-op (no sidecar to hold the file).
+  const autoBackupDone = useRef(false)
+  useEffect(() => {
+    if (!hydrated || autoBackupDone.current) return
+    autoBackupDone.current = true
+    void runAutoBackup(dataRef.current, dispatch)
+    // Runs exactly once per launch on the loaded document; later commits are
+    // deliberately out of scope.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated])
+
+  // Credential verification for the lock screen (ADR 0024): REST-authoritative
+  // when the vetcare backend knows the member, document PBKDF2 otherwise.
+  // The store owns the orchestration so no UI surface touches transports.
+  const signInWithPin = useCallback(
+    async (member: StaffUser, pin: string): Promise<'ok' | 'denied' | 'fallback'> => {
+      const outcome = await restVerifyMember(member.id, pin)
+      if (outcome === 'ok') {
+        dispatch({ type: 'signIn', userId: member.id })
+        return 'ok'
+      }
+      if (outcome === 'denied') return 'denied'
+      const localOk = await verifyPin(member, pin)
+      if (localOk) {
+        dispatch({ type: 'signIn', userId: member.id })
+        return 'ok'
+      }
+      return 'denied'
+    },
+    [dispatch],
+  )
+
+  // PIN writes commit to the document first (the offline guarantee), then
+  // best-effort mirror to REST when the member exists there (issue 0019).
+  // REST members without a mirrored PIN would break ADR-0024 verification,
+  // so a failure is logged loudly — but never blocks the local write.
+  const setMemberPin = useCallback(
+    (member: StaffUser, pin: string): void => {
+      void createPinCredential(pin).then((credential) => {
+        dispatch({ type: 'setStaffPin', id: member.id, credential })
+        void restSetStaffPin(member.id, pin).then((sync) => {
+          if (sync === 'failed') {
+            console.error(`setMemberPin: REST mirror failed for ${member.name}`)
+          }
+        })
+      })
+    },
+    [dispatch],
+  )
+
+  // Registration (ADR 0025, slice 1): REST-first with document projection.
+  // The client mints the owner id, so pre-cutover owners converge; the
+  // server's row (client id + server MRN) is projected through the ordinary
+  // reducer actions. REST unreachable → the reducer mints locally and the
+  // outbox path is untouched: the clinic never blocks on REST.
+  const registerOwnerAndPatient = useCallback(
+    async (
+      owner: { id?: string; name: string; phone: string; email: string; address: string },
+      patient: {
+        name: string
+        species: Patient['species']
+        breed: string
+        sex: Patient['sex']
+        birthDate: string
+        microchip?: string
+        allergies: string[]
+        medicalAlerts: string[]
+        weightUnit?: string
+      },
+    ): Promise<void> => {
+      const ownerId = owner.id ?? crypto.randomUUID()
+      const result = await restCreateOwnerAndPatient(ownerId, { owner, patient })
+      if (result.status === 'ok' && result.owner && result.pet) {
+        dispatch({
+          type: 'registerOwner',
+          owner: { ...owner, id: result.owner.id },
+          patient: {
+            ...patient,
+            id: result.pet.id,
+            mrn: result.pet.mrn,
+          },
+        })
+        return
+      }
+      dispatch({ type: 'registerOwner', owner, patient })
+    },
+    [dispatch],
+  )
+
+  const registerPatient = useCallback(
+    async (
+      owner: Owner,
+      patient: {
+        name: string
+        species: Patient['species']
+        breed: string
+        sex: Patient['sex']
+        birthDate: string
+        microchip?: string
+        allergies: string[]
+        medicalAlerts: string[]
+        weightUnit?: string
+      },
+    ): Promise<void> => {
+      const ensured = await restEnsureOwner(owner.id, {
+        name: owner.name,
+        phone: owner.phone,
+        email: owner.email,
+        address: owner.address ?? '',
+      })
+      const result = ensured
+        ? await restCreatePatient(owner.id, patient)
+        : ({ status: 'local' } as const)
+      if (result.status === 'ok' && result.pet) {
+        dispatch({
+          type: 'addPatient',
+          patient: { ...patient, ownerId: owner.id, id: result.pet.id, mrn: result.pet.mrn },
+        })
+        return
+      }
+      dispatch({ type: 'addPatient', patient: { ...patient, ownerId: owner.id } })
+    },
+    [dispatch],
+  )
+
   // Sync orchestration lives behind the lib/vet/sync seam (phase 5): debounced
   // push, periodic pull, connectivity resets and the in-flight mutation lock.
   const { guardedDispatch } = useSyncWorker({
@@ -1097,16 +1286,25 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
     dispatch,
   })
 
-  const value = useMemo(() => ({ store, dispatch: guardedDispatch }), [store, guardedDispatch])
+  const value = useMemo(
+    () => ({ store, dispatch: guardedDispatch, hydrated, signInWithPin, setMemberPin, registerOwnerAndPatient, registerPatient }),
+    [store, guardedDispatch, hydrated, signInWithPin, setMemberPin, registerOwnerAndPatient, registerPatient],
+  )
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }
 
 export const useClinic = () => {
   const ctx = useContext(StoreContext)
   if (!ctx) throw new Error('useClinic must be used inside ClinicProvider')
-  const { store, dispatch } = ctx
-  const user = store.data.users.find((u) => u.id === store.session.currentUserId)!
-  return { data: store.data, session: store.session, user, dispatch }
+  const { store, dispatch, hydrated, signInWithPin, setMemberPin, registerOwnerAndPatient, registerPatient } = ctx
+  // A stale or missing member (foreign document, emptied users collection)
+  // must not crash the shell — the inert placeholder holds no permissions on
+  // any write path because the reducer re-checks the actor on every action.
+  const user =
+    store.data.users.find((u) => u.id === store.session.currentUserId) ??
+    store.data.users.find((u) => u.active) ??
+    EMPTY_USER
+  return { data: store.data, session: store.session, user, dispatch, hydrated, signInWithPin, setMemberPin, registerOwnerAndPatient, registerPatient }
 }
 
 export const usePermission = (permission: Permission) => {

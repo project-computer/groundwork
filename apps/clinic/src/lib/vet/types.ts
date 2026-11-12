@@ -34,6 +34,9 @@ export interface Clinic {
   address?: string
   phone?: string
   email?: string
+  /** Daily automatic backup (ADR 0021). Undefined counts as on — the safe
+   * default for documents written before the toggle existed. */
+  autoBackup?: boolean
 }
 
 export interface Owner {

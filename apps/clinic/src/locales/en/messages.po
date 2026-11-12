@@ -11,6 +11,11 @@ msgstr ""
 msgid " · {0}% completion rate"
 msgstr " · {0}% completion rate"
 
+#. placeholder {0}: snapshot.file
+#: src/features/vet/settings/index.tsx
+msgid " A safety copy was saved as {0}."
+msgstr " A safety copy was saved as {0}."
+
 #: src/features/vet/inventory/index.tsx
 msgid "— none —"
 msgstr "— none —"
@@ -19,11 +24,11 @@ msgstr "— none —"
 msgid "— select item —"
 msgstr "— select item —"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "— select medication —"
 msgstr "— select medication —"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "…or paste bundle JSON"
 msgstr "…or paste bundle JSON"
 
@@ -84,7 +89,7 @@ msgid "{0, plural, one {# no-show} other {# no-shows}}"
 msgstr "{0, plural, one {# no-show} other {# no-shows}}"
 
 #. placeholder {0}: entry.encounter.notes.length
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "{0, plural, one {# note} other {# notes}}"
 msgstr "{0, plural, one {# note} other {# notes}}"
 
@@ -127,7 +132,7 @@ msgstr "{0, plural, one {# to reorder} other {# to reorder}}"
 
 #. placeholder {0}: dayLabel(iso)
 #. placeholder {1}: list.length
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "{0} — {1, plural, one {# appointment} other {# appointments}}"
 msgstr "{0} — {1, plural, one {# appointment} other {# appointments}}"
 
@@ -182,7 +187,7 @@ msgid "{0} {unit} · expires {1}"
 msgstr "{0} {unit} · expires {1}"
 
 #. placeholder {0}: monthLabel(dayIso)
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "{0} calendar"
 msgstr "{0} calendar"
 
@@ -202,7 +207,7 @@ msgid "{0} invoices"
 msgstr "{0} invoices"
 
 #. placeholder {0}: patient.name
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "{0} is allergic to “{allergyHit}” — check this prescription before dispensing."
 msgstr "{0} is allergic to “{allergyHit}” — check this prescription before dispensing."
 
@@ -211,8 +216,8 @@ msgstr "{0} is allergic to “{allergyHit}” — check this prescription before
 msgid "{0} items"
 msgstr "{0} items"
 
-#. placeholder {0}: dialogConflict.durationMin
-#: src/features/vet/schedule/index.tsx
+#. placeholder {0}: conflict.durationMin
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "{0} min"
 msgstr "{0} min"
 
@@ -237,10 +242,10 @@ msgstr "{0} patients"
 msgid "{0} payments"
 msgstr "{0} payments"
 
-#. placeholder {0}: formatCurrency(refundPayment.amount)
-#. placeholder {1}: formatDate(refundPayment.receivedAt)
+#. placeholder {0}: formatCurrency(payment.amount)
+#. placeholder {1}: formatDate(payment.receivedAt)
 #. placeholder {2}: formatCurrency(refundable)
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "{0} recorded on {1} · up to {2} refundable"
 msgstr "{0} recorded on {1} · up to {2} refundable"
 
@@ -261,12 +266,12 @@ msgid "{0}/{1} completed ·"
 msgstr "{0}/{1} completed ·"
 
 #. placeholder {0}: a.durationMin
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
 msgid "{0}min"
 msgstr "{0}min"
 
-#. placeholder {0}: formatTime(dialogConflict.startsAt)
-#: src/features/vet/schedule/index.tsx
+#. placeholder {0}: formatTime(conflict.startsAt)
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "{conflictVetName} is already booked at {0}"
 msgstr "{conflictVetName} is already booked at {0}"
 
@@ -275,7 +280,7 @@ msgstr "{conflictVetName} is already booked at {0}"
 msgid "{itemName} — lot {0}"
 msgstr "{itemName} — lot {0}"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "{m, plural, one {# minute} other {# minutes}}"
 msgstr "{m, plural, one {# minute} other {# minutes}}"
 
@@ -295,12 +300,12 @@ msgid "{patientName} — {0}"
 msgstr "{patientName} — {0}"
 
 #. placeholder {0}: selectedRx.unit
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "{selectedStock} {0} available in stock."
 msgstr "{selectedStock} {0} available in stock."
 
 #. placeholder {0}: c.unit
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "{stock} {0} in stock"
 msgstr "{stock} {0} in stock"
 
@@ -316,22 +321,26 @@ msgstr "1 item"
 msgid "1 patient"
 msgstr "1 patient"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "30 days"
 msgstr "30 days"
 
-#: src/features/vet/consultations/index.tsx
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "7 days"
 msgstr "7 days"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "A PIN is set for this account."
 msgstr "A PIN is set for this account."
 
 #: src/features/vet/settings/index.tsx
 msgid "A restorable copy of this installation — patients, visits, billing and settings."
 msgstr "A restorable copy of this installation — patients, visits, billing and settings."
+
+#: src/features/vet/settings/index.tsx
+msgid "A safety copy of the current data will be saved on this computer first. Restoring never discards it without a trace."
+msgstr "A safety copy of the current data will be saved on this computer first. Restoring never discards it without a trace."
 
 #: src/features/vet/dashboard/index.tsx
 msgid "A traceable history of clinic changes"
@@ -350,7 +359,7 @@ msgstr "active"
 msgid "Active lots expiring within 30 days"
 msgstr "Active lots expiring within 30 days"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/walk-in-form.tsx
 msgid "Add"
 msgstr "Add"
 
@@ -367,16 +376,16 @@ msgstr "Add inventory item"
 msgid "Add item"
 msgstr "Add item"
 
+#: src/features/vet/staff/components/team-panel.tsx
 #: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
 msgid "Add member"
 msgstr "Add member"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Add note"
 msgstr "Add note"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Add prescription"
 msgstr "Add prescription"
 
@@ -392,12 +401,12 @@ msgstr "Add supplier"
 msgid "Add to invoice"
 msgstr "Add to invoice"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/waiting-queue.tsx
 msgid "Add walk-in"
 msgstr "Add walk-in"
 
-#: src/features/vet/owners/patient-dialog.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Address"
 msgstr "Address"
 
@@ -410,7 +419,7 @@ msgid "All"
 msgstr "All"
 
 #. placeholder {0}: label.end
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "All activity through {0}"
 msgstr "All activity through {0}"
 
@@ -434,15 +443,15 @@ msgstr "All items are above their reorder levels."
 msgid "All patients"
 msgstr "All patients"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "All time"
 msgstr "All time"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Allergies (comma-separated)"
 msgstr "Allergies (comma-separated)"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Allergy warning"
 msgstr "Allergy warning"
 
@@ -451,31 +460,32 @@ msgstr "Allergy warning"
 msgid "Allergy: {a}"
 msgstr "Allergy: {a}"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/roles-panel.tsx
 msgid "Allowed"
 msgstr "Allowed"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Amend"
 msgstr "Amend"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Amended note"
 msgstr "Amended note"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Amendment"
 msgstr "Amendment"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Amount"
 msgstr "Amount"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Amount (THB)"
 msgstr "Amount (THB)"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Another patient"
 msgstr "Another patient"
 
@@ -483,11 +493,11 @@ msgstr "Another patient"
 msgid "Appointment completion"
 msgstr "Appointment completion"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Appointment completion (%)"
 msgstr "Appointment completion (%)"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Appointment date"
 msgstr "Appointment date"
 
@@ -508,7 +518,7 @@ msgstr "Appointments & Queue"
 msgid "Appointments across the clinic week — click or drag empty space to book"
 msgstr "Appointments across the clinic week — click or drag empty space to book"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Appointments are saved to the local clinic database."
 msgstr "Appointments are saved to the local clinic database."
 
@@ -517,15 +527,15 @@ msgstr "Appointments are saved to the local clinic database."
 msgid "Appointments at {0}"
 msgstr "Appointments at {0}"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Appointments by status"
 msgstr "Appointments by status"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Appointments per day — select a day to open it"
 msgstr "Appointments per day — select a day to open it"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Apr"
 msgstr "Apr"
 
@@ -534,11 +544,11 @@ msgstr "Apr"
 msgid "archived"
 msgstr "archived"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Archived"
 msgstr "Archived"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 msgid "Archived visit"
 msgstr "Archived visit"
 
@@ -546,15 +556,16 @@ msgstr "Archived visit"
 msgid "Audit trail"
 msgstr "Audit trail"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Aug"
 msgstr "Aug"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Authentication"
 msgstr "Authentication"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Authored notes are preserved as a revision history"
 msgstr "Authored notes are preserved as a revision history"
 
@@ -563,6 +574,7 @@ msgid "Available on Cloud plan"
 msgstr "Available on Cloud plan"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Average per visit"
 msgstr "Average per visit"
 
@@ -570,24 +582,33 @@ msgstr "Average per visit"
 msgid "Backup downloaded. Keep it somewhere outside this computer."
 msgstr "Backup downloaded. Keep it somewhere outside this computer."
 
+#: src/features/vet/settings/index.tsx
+msgid "Backups on this computer"
+msgstr "Backups on this computer"
+
 #: src/features/vet/billing/index.tsx
 msgid "Balance"
 msgstr "Balance"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Balance due"
 msgstr "Balance due"
 
-#. placeholder {0}: formatCurrency(paymentBalance)
-#: src/features/vet/billing/index.tsx
+#. placeholder {0}: formatCurrency(balance)
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Balance due {0} · partial payments are supported"
 msgstr "Balance due {0} · partial payments are supported"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Bank transfer"
 msgstr "Bank transfer"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
+msgid "Baseline weight (kg)"
+msgstr "Baseline weight (kg)"
+
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Billed"
 msgstr "Billed"
 
@@ -612,19 +633,20 @@ msgstr "Billing & Payments"
 msgid "Bird"
 msgstr "Bird"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Book anyway — double-book this veterinarian"
 msgstr "Book anyway — double-book this veterinarian"
 
+#: src/features/vet/schedule/components/booking-dialog.tsx
 #: src/features/vet/schedule/index.tsx
 msgid "Book appointment"
 msgstr "Book appointment"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/follow-up-panel.tsx
 msgid "Book follow-up"
 msgstr "Book follow-up"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/follow-up-panel.tsx
 msgid "Book the next visit before closing"
 msgstr "Book the next visit before closing"
 
@@ -636,7 +658,7 @@ msgstr "Book, check in and run the day. Walk-ins land in the waiting queue."
 msgid "booked"
 msgstr "booked"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Booked"
 msgstr "Booked"
 
@@ -644,16 +666,16 @@ msgstr "Booked"
 msgid "Boosters due or overdue within 30 days"
 msgstr "Boosters due or overdue within 30 days"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "Breed"
 msgstr "Breed"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Bucket"
 msgstr "Bucket"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "Bundle file (.json)"
 msgstr "Bundle file (.json)"
 
@@ -665,16 +687,18 @@ msgstr "By dispensed quantity over the last 30 days"
 msgid "Calendar mode"
 msgstr "Calendar mode"
 
-#: src/features/vet/billing/index.tsx
-#: src/features/vet/consultations/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
-#: src/features/vet/pin-dialog.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/billing/components/payment-dialog.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 #: src/features/vet/settings/index.tsx
 msgid "Cancel"
 msgstr "Cancel"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/walk-in-form.tsx
 msgid "Cancel walk-in"
 msgstr "Cancel walk-in"
 
@@ -682,15 +706,15 @@ msgstr "Cancel walk-in"
 msgid "cancelled"
 msgstr "cancelled"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Cancelled"
 msgstr "Cancelled"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Card"
 msgstr "Card"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Cash"
 msgstr "Cash"
 
@@ -702,22 +726,19 @@ msgstr "Cat"
 msgid "Category"
 msgstr "Category"
 
-#: src/features/vet/pin-dialog.tsx
-#: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Change PIN"
 msgstr "Change PIN"
 
 #. placeholder {0}: member.name
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "Change PIN — {0}"
 msgstr "Change PIN — {0}"
 
 #. placeholder {0}: member.name
-#. placeholder {0}: user.name
-#: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
 msgid "Change PIN for {0}"
 msgstr "Change PIN for {0}"
 
@@ -727,15 +748,15 @@ msgstr "Change PIN for {0}"
 msgid "Change theme (current: {0}, switches to {1})"
 msgstr "Change theme (current: {0}, switches to {1})"
 
-#: src/features/vet/save-error-banner.tsx
+#: src/components/patterns/save-error-banner.tsx
 msgid "Changes are not being saved to this computer"
 msgstr "Changes are not being saved to this computer"
 
-#: src/features/vet/save-error-banner.tsx
+#: src/components/patterns/save-error-banner.tsx
 msgid "check free disk space or the clinic server before continuing."
 msgstr "check free disk space or the clinic server before continuing."
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
 msgid "Check in"
 msgstr "Check in"
 
@@ -743,15 +764,15 @@ msgstr "Check in"
 msgid "checked in"
 msgstr "checked in"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Checked in"
 msgstr "Checked in"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/waiting-queue.tsx
 msgid "Checked-in patients waiting for the vet"
 msgstr "Checked-in patients waiting for the vet"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "Checking…"
 msgstr "Checking…"
 
@@ -759,11 +780,11 @@ msgstr "Checking…"
 msgid "Choose a backup file"
 msgstr "Choose a backup file"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 msgid "Choose a booked appointment from the calendar to begin, or open a past visit below."
 msgstr "Choose a booked appointment from the calendar to begin, or open a past visit below."
 
-#: src/components/vet/date-picker.tsx
+#: src/components/patterns/date-picker.tsx
 msgid "Choose a date"
 msgstr "Choose a date"
 
@@ -771,7 +792,7 @@ msgstr "Choose a date"
 msgid "Choose backup…"
 msgstr "Choose backup…"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 #: src/features/vet/settings/index.tsx
 #: src/features/vet/workspace/index.tsx
 msgid "Clinic"
@@ -812,11 +833,11 @@ msgstr "Clinic identity"
 msgid "Clinic identity, data portability and plan."
 msgstr "Clinic identity, data portability and plan."
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "Clinic locked"
 msgstr "Clinic locked"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Clinic name"
 msgstr "Clinic name"
 
@@ -828,7 +849,7 @@ msgstr "Clinic server connected · writes are enabled"
 msgid "Clinic workspace"
 msgstr "Clinic workspace"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Clinical"
 msgstr "Clinical"
 
@@ -836,12 +857,13 @@ msgstr "Clinical"
 msgid "Clinical care — records visits, diagnoses and prescriptions."
 msgstr "Clinical care — records visits, diagnoses and prescriptions."
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Clinical notes"
 msgstr "Clinical notes"
 
 #. placeholder {0}: patient.name
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Clinical profile for {0}"
 msgstr "Clinical profile for {0}"
 
@@ -856,7 +878,7 @@ msgstr "Clinical record for {0} · {1} · {2}{apptSuffix}"
 msgid "Clinical records"
 msgstr "Clinical records"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Close"
 msgstr "Close"
 
@@ -864,11 +886,11 @@ msgstr "Close"
 msgid "Close clinic and account management"
 msgstr "Close clinic and account management"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Close consultation"
 msgstr "Close consultation"
 
-#: src/components/vet/modal.tsx
+#: src/components/patterns/modal.tsx
 msgid "Close dialog"
 msgstr "Close dialog"
 
@@ -896,7 +918,7 @@ msgstr "closed"
 
 #. placeholder {0}: encounter.closedAt ? formatDate(encounter.closedAt) : ''
 #. placeholder {0}: formatDate(open.closedAt)
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/records/index.tsx
 msgid "Closed {0}"
 msgstr "Closed {0}"
@@ -910,6 +932,7 @@ msgid "Cloud synchronization"
 msgstr "Cloud synchronization"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Collected"
 msgstr "Collected"
 
@@ -926,7 +949,7 @@ msgstr "Collected today"
 msgid "completed"
 msgstr "completed"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Completed"
 msgstr "Completed"
 
@@ -939,7 +962,7 @@ msgstr "Confirm"
 msgid "Confirm diagnosis {0}"
 msgstr "Confirm diagnosis {0}"
 
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "Confirm PIN"
 msgstr "Confirm PIN"
 
@@ -959,26 +982,27 @@ msgstr "Connected"
 msgid "Connection"
 msgstr "Connection"
 
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 #: src/features/vet/consultations/index.tsx
 #: src/features/vet/shell/index.tsx
 msgid "Consultation"
 msgstr "Consultation"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Consultation closed"
 msgstr "Consultation closed"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 #: src/features/vet/records/index.tsx
 msgid "Consultation in progress"
 msgstr "Consultation in progress"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 #: src/features/vet/records/index.tsx
 msgid "Continue"
 msgstr "Continue"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "Continue without PIN"
 msgstr "Continue without PIN"
 
@@ -986,7 +1010,7 @@ msgstr "Continue without PIN"
 msgid "Cost/unit (THB)"
 msgstr "Cost/unit (THB)"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Count"
 msgstr "Count"
 
@@ -1009,7 +1033,7 @@ msgstr "created {0}"
 msgid "Created a clinic backup — {0, plural, one {# patient} other {# patients}}, {1, plural, one {# encounter} other {# encounters}}"
 msgstr "Created a clinic backup — {0, plural, one {# patient} other {# patients}}, {1, plural, one {# encounter} other {# encounters}}"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Currency"
 msgstr "Currency"
 
@@ -1022,17 +1046,25 @@ msgstr "currency {0}"
 msgid "Current clinic team"
 msgstr "Current clinic team"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/patient-snapshot.tsx
 msgid "Current patient details"
 msgstr "Current patient details"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/settings/index.tsx
+msgid "daily"
+msgstr "daily"
+
+#: src/features/vet/reports/components/labels.ts
 msgid "Daily · last 7 days"
 msgstr "Daily · last 7 days"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Daily · selected period"
 msgstr "Daily · selected period"
+
+#: src/features/vet/settings/index.tsx
+msgid "Daily automatic backup"
+msgstr "Daily automatic backup"
 
 #: src/features/vet/shell/theme-toggle.tsx
 msgid "dark"
@@ -1050,7 +1082,7 @@ msgstr "Data export"
 msgid "Data status"
 msgstr "Data status"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Date"
 msgstr "Date"
 
@@ -1058,8 +1090,8 @@ msgstr "Date"
 msgid "Date administered"
 msgstr "Date administered"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "Date of birth"
 msgstr "Date of birth"
 
@@ -1067,12 +1099,11 @@ msgstr "Date of birth"
 msgid "Day"
 msgstr "Day"
 
-#: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
 msgid "Deactivate"
 msgstr "Deactivate"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "deactivated"
 msgstr "deactivated"
 
@@ -1080,7 +1111,7 @@ msgstr "deactivated"
 msgid "Deactivated"
 msgstr "Deactivated"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Dec"
 msgstr "Dec"
 
@@ -1088,6 +1119,7 @@ msgstr "Dec"
 msgid "Define the stock-keeping unit; lots are received against it."
 msgstr "Define the stock-keeping unit; lots are received against it."
 
+#: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/consultations/index.tsx
 #: src/features/vet/records/index.tsx
 msgid "Diagnoses"
@@ -1097,7 +1129,7 @@ msgstr "Diagnoses"
 msgid "Diagnosis"
 msgstr "Diagnosis"
 
-#: src/features/vet/save-error-banner.tsx
+#: src/components/patterns/save-error-banner.tsx
 msgid "Dismiss saving warning"
 msgstr "Dismiss saving warning"
 
@@ -1105,7 +1137,8 @@ msgstr "Dismiss saving warning"
 msgid "Dispense 1"
 msgstr "Dispense 1"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Dispensed from pharmacy stock when the visit closes"
 msgstr "Dispensed from pharmacy stock when the visit closes"
 
@@ -1117,20 +1150,24 @@ msgstr "Dispensing — manages stock, lots and pharmacy billing."
 msgid "Dog"
 msgstr "Dog"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "Done"
 msgstr "Done"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Dose"
 msgstr "Dose"
+
+#: src/features/vet/settings/index.tsx
+msgid "Download safety copy"
+msgstr "Download safety copy"
 
 #: src/lib/vet/format.ts
 msgid "draft"
 msgstr "draft"
 
 #. placeholder {0}: invoice.number
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Draft invoice {0} was created and is ready to post in Billing."
 msgstr "Draft invoice {0} was created and is ready to post in Billing."
 
@@ -1142,7 +1179,7 @@ msgstr "Draft invoices"
 msgid "Draft invoices can be edited and posted when settled at the desk."
 msgstr "Draft invoices can be edited and posted when settled at the desk."
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Draft is saved locally"
 msgstr "Draft is saved locally"
 
@@ -1150,7 +1187,7 @@ msgstr "Draft is saved locally"
 msgid "Drafts can be reviewed before posting; posted invoices are immutable."
 msgstr "Drafts can be reviewed before posting; posted invoices are immutable."
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
 msgid "Drag to another hour to reschedule"
 msgstr "Drag to another hour to reschedule"
 
@@ -1163,54 +1200,54 @@ msgstr "Due {0}"
 msgid "due soon"
 msgstr "due soon"
 
-#: src/features/vet/consultations/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Duration"
 msgstr "Duration"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "e.g. 0.1 mg/kg"
 msgstr "e.g. 0.1 mg/kg"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "e.g. 02 234 5678…"
 msgstr "e.g. 02 234 5678…"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "e.g. 081 234 5678…"
 msgstr "e.g. 081 234 5678…"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "e.g. 22"
 msgstr "e.g. 22"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "e.g. 28.6"
 msgstr "e.g. 28.6"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "e.g. 38.6"
 msgstr "e.g. 38.6"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "e.g. 4.2…"
 msgstr "e.g. 4.2…"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "e.g. 7 days"
 msgstr "e.g. 7 days"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "e.g. 96"
 msgstr "e.g. 96"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "e.g. 985141002341238…"
 msgstr "e.g. 985141002341238…"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "e.g. Aggressive during handling — muzzle first…"
 msgstr "e.g. Aggressive during handling — muzzle first…"
 
@@ -1222,64 +1259,64 @@ msgstr "e.g. Amoxicillin 250 mg…"
 msgid "e.g. AMX-2611C…"
 msgstr "e.g. AMX-2611C…"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "e.g. Annual vaccination…"
 msgstr "e.g. Annual vaccination…"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 #: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
 msgid "e.g. Anong Srisuk…"
 msgstr "e.g. Anong Srisuk…"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "e.g. anong@clinic.vet…"
 msgstr "e.g. anong@clinic.vet…"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "e.g. anong@example.com…"
 msgstr "e.g. anong@example.com…"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "e.g. Baan Sathorn Animal Clinic…"
 msgstr "e.g. Baan Sathorn Animal Clinic…"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "e.g. Corrected the recorded dose…"
 msgstr "e.g. Corrected the recorded dose…"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "e.g. Dispensed the wrong strength…"
 msgstr "e.g. Dispensed the wrong strength…"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "e.g. Golden Retriever…"
 msgstr "e.g. Golden Retriever…"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "e.g. hello@clinic.vet…"
 msgstr "e.g. hello@clinic.vet…"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "e.g. Milo…"
 msgstr "e.g. Milo…"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/walk-in-form.tsx
 msgid "e.g. Nail trim…"
 msgstr "e.g. Nail trim…"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "e.g. Penicillin, Flea topical (pyrethrin)…"
 msgstr "e.g. Penicillin, Flea topical (pyrethrin)…"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 msgid "e.g. RAB-2610B…"
 msgstr "e.g. RAB-2610B…"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 msgid "e.g. Rabies vaccine…"
 msgstr "e.g. Rabies vaccine…"
 
@@ -1291,16 +1328,17 @@ msgstr "e.g. Soft tissue strain, right stifle…"
 msgid "e.g. Thai Vet Pharma Co.…"
 msgstr "e.g. Thai Vet Pharma Co.…"
 
-#: src/features/vet/owners/patient-dialog.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Email"
 msgstr "Email"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "Email (optional)"
 msgstr "Email (optional)"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "Enter your 4–8 digit PIN"
 msgstr "Enter your 4–8 digit PIN"
 
@@ -1320,17 +1358,13 @@ msgstr "Every item is above its reorder level."
 msgid "Every payment is appended to an immutable ledger."
 msgstr "Every payment is appended to an immutable ledger."
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/roles-panel.tsx
 msgid "Every role is a fixed set of permissions. Assign a member's role from the Team tab; their access updates immediately."
 msgstr "Every role is a fixed set of permissions. Assign a member's role from the Team tab; their access updates immediately."
 
 #: src/features/vet/staff/index.tsx
 msgid "Every write lands here with actor and timestamp"
 msgstr "Every write lands here with actor and timestamp"
-
-#: src/features/vet/settings/index.tsx
-msgid "Everything currently on this computer will be replaced. Export a fresh archive first if you are unsure."
-msgstr "Everything currently on this computer will be replaced. Export a fresh archive first if you are unsure."
 
 #: src/features/vet/owners/index.tsx
 msgid "Existing owner"
@@ -1381,7 +1415,7 @@ msgstr "Export this patient's case bundle for another clinic"
 msgid "Exported the clinic archive — {0, plural, one {# patient} other {# patients}}, {1, plural, one {# invoice} other {# invoices}}"
 msgstr "Exported the clinic archive — {0, plural, one {# patient} other {# patients}}, {1, plural, one {# invoice} other {# invoices}}"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Feb"
 msgstr "Feb"
 
@@ -1401,26 +1435,26 @@ msgstr "Figures are calculated from local records only — no cloud connection r
 msgid "Find a record quickly or register a new patient."
 msgstr "Find a record quickly or register a new patient."
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/follow-up-panel.tsx
 msgid "Follow-up"
 msgstr "Follow-up"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/follow-up-panel.tsx
 msgid "Follow-up date"
 msgstr "Follow-up date"
 
 #. placeholder {0}: appt.reason
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/follow-up-panel.tsx
 msgid "Follow-up: {0}"
 msgstr "Follow-up: {0}"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Frequency"
 msgstr "Frequency"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Fri"
 msgstr "Fri"
 
@@ -1429,7 +1463,7 @@ msgid "Front desk — registers patients, books appointments and takes payments.
 msgstr "Front desk — registers patients, books appointments and takes payments."
 
 #: src/features/vet/staff/index.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Full name"
 msgstr "Full name"
 
@@ -1437,7 +1471,7 @@ msgstr "Full name"
 msgid "Full workspace control, including staff and clinic identity."
 msgstr "Full workspace control, including staff and clinic identity."
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Generated"
 msgstr "Generated"
 
@@ -1445,7 +1479,7 @@ msgstr "Generated"
 msgid "Given"
 msgstr "Given"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Go to billing"
 msgstr "Go to billing"
 
@@ -1461,7 +1495,8 @@ msgstr "Good evening"
 msgid "Good morning"
 msgstr "Good morning"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Heart rate (bpm)"
 msgstr "Heart rate (bpm)"
 
@@ -1469,11 +1504,11 @@ msgstr "Heart rate (bpm)"
 msgid "Hide lots"
 msgstr "Hide lots"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Hourly · 08:00–19:00"
 msgstr "Hourly · 08:00–19:00"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "Import a case bundle"
 msgstr "Import a case bundle"
 
@@ -1481,15 +1516,15 @@ msgstr "Import a case bundle"
 msgid "Import case"
 msgstr "Import case"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "Import case bundle"
 msgstr "Import case bundle"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "Import pasted bundle"
 msgstr "Import pasted bundle"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "In consult"
 msgstr "In consult"
 
@@ -1509,7 +1544,7 @@ msgstr "inactive"
 msgid "Includes roles and PIN credentials as they were when the backup was taken."
 msgstr "Includes roles and PIN credentials as they were when the backup was taken."
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "Incorrect PIN — try again"
 msgstr "Incorrect PIN — try again"
 
@@ -1518,6 +1553,7 @@ msgid "Internet unavailable"
 msgstr "Internet unavailable"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Inventory attention"
 msgstr "Inventory attention"
 
@@ -1529,11 +1565,11 @@ msgstr "Inventory category filter"
 msgid "Inventory changes require admin or pharmacist access."
 msgstr "Inventory changes require admin or pharmacist access."
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Inventory value at cost"
 msgstr "Inventory value at cost"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "invoice"
 msgstr "invoice"
 
@@ -1541,7 +1577,7 @@ msgstr "invoice"
 msgid "Invoice"
 msgstr "Invoice"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Invoice / Receipt"
 msgstr "Invoice / Receipt"
 
@@ -1553,11 +1589,11 @@ msgstr "Invoices"
 msgid "Invoices, payments and adjustments stay traceable."
 msgstr "Invoices, payments and adjustments stay traceable."
 
+#: src/features/vet/billing/components/receipt-dialog.tsx
 #: src/features/vet/billing/index.tsx
-#: src/features/vet/billing/receipt-dialog.tsx
 #: src/features/vet/dashboard/index.tsx
 #: src/features/vet/inventory/index.tsx
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 #: src/features/vet/shell/notification-center.tsx
 msgid "Item"
 msgstr "Item"
@@ -1578,11 +1614,11 @@ msgstr "Items at or below their reorder level, from live lot quantities."
 msgid "Items, batch lots and an append-only stock ledger with clear reorder signals."
 msgstr "Items, batch lots and an append-only stock ledger with clear reorder signals."
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Jan"
 msgstr "Jan"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Jul"
 msgstr "Jul"
 
@@ -1590,17 +1626,21 @@ msgstr "Jul"
 msgid "Jump to date"
 msgstr "Jump to date"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Jun"
 msgstr "Jun"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/void-dialog.tsx
 msgid "Keep invoice"
 msgstr "Keep invoice"
 
+#: src/features/vet/settings/index.tsx
+msgid "Keeps the last 14 daily copies on this computer, next to the clinic database."
+msgstr "Keeps the last 14 daily copies on this computer, next to the clinic database."
+
 #. placeholder {0}: localeLabel[locale]
 #. placeholder {1}: localeLabel[next]
-#: src/features/vet/language-toggle.tsx
+#: src/features/vet/session/components/language-toggle.tsx
 msgid "Language: {0} — switch to {1}"
 msgstr "Language: {0} — switch to {1}"
 
@@ -1608,6 +1648,12 @@ msgstr "Language: {0} — switch to {1}"
 #: src/features/vet/dashboard/index.tsx
 msgid "Last given {0}"
 msgstr "Last given {0}"
+
+#. placeholder {0}: recordedWeight.valueKg
+#. placeholder {1}: formatDate(recordedWeight.recordedAt)
+#: src/features/vet/owners/components/patient-dialog.tsx
+msgid "Last recorded {0} kg on {1} — from the visit's vitals."
+msgstr "Last recorded {0} kg on {1} — from the visit's vitals."
 
 #: src/features/vet/settings/index.tsx
 msgid "Last sync attempt failed"
@@ -1647,18 +1693,18 @@ msgid "Local server"
 msgstr "Local server"
 
 #: src/features/vet/shell/index.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Lock screen"
 msgstr "Lock screen"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Locked"
 msgstr "Locked"
 
 #. placeholder {0}: entry.vaccination.lotNumber
 #. placeholder {0}: v.lotNumber
-#: src/features/vet/consultations/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "lot {0}"
 msgstr "lot {0}"
 
@@ -1667,7 +1713,7 @@ msgstr "lot {0}"
 msgid "Lot {0}"
 msgstr "Lot {0}"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 #: src/features/vet/inventory/index.tsx
 #: src/features/vet/records/index.tsx
 msgid "Lot number"
@@ -1686,7 +1732,7 @@ msgstr "Lots can be tagged with the vendor they were purchased from."
 msgid "Lots expiring ≤ 30 days"
 msgstr "Lots expiring ≤ 30 days"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Lots expiring within 30 days"
 msgstr "Lots expiring within 30 days"
 
@@ -1733,19 +1779,23 @@ msgstr "Manage clinic & account"
 msgid "Management sections"
 msgstr "Management sections"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/settings/index.tsx
+msgid "manual"
+msgstr "manual"
+
+#: src/features/vet/reports/components/labels.ts
 msgid "Mar"
 msgstr "Mar"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
 msgid "Mark no-show"
 msgstr "Mark no-show"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "May"
 msgstr "May"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Medical alerts (comma-separated)"
 msgstr "Medical alerts (comma-separated)"
 
@@ -1757,11 +1807,11 @@ msgstr "Medical records"
 msgid "Medical Records"
 msgstr "Medical Records"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Medical timeline"
 msgstr "Medical timeline"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Medication"
 msgstr "Medication"
 
@@ -1773,15 +1823,15 @@ msgstr "Medicine"
 msgid "Member"
 msgstr "Member"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Method"
 msgstr "Method"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Metric"
 msgstr "Metric"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Microchip"
 msgstr "Microchip"
 
@@ -1793,9 +1843,9 @@ msgstr "Microchip (optional)"
 msgid "Mixed breed"
 msgstr "Mixed breed"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Mon"
 msgstr "Mon"
 
@@ -1803,11 +1853,11 @@ msgstr "Mon"
 msgid "Month"
 msgstr "Month"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Monthly · last 12 months"
 msgstr "Monthly · last 12 months"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Monthly · this year"
 msgstr "Monthly · this year"
 
@@ -1824,7 +1874,7 @@ msgstr "Name"
 msgid "New invoice"
 msgstr "New invoice"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "New member"
 msgstr "New member"
 
@@ -1832,7 +1882,7 @@ msgstr "New member"
 msgid "New members start active with the permissions of their role"
 msgstr "New members start active with the permissions of their role"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "New members start active with the permissions of their role."
 msgstr "New members start active with the permissions of their role."
 
@@ -1844,7 +1894,7 @@ msgstr "New owner"
 msgid "New patient"
 msgstr "New patient"
 
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "New PIN (4–8 digits)"
 msgstr "New PIN (4–8 digits)"
 
@@ -1852,7 +1902,7 @@ msgstr "New PIN (4–8 digits)"
 msgid "Newest first"
 msgstr "Newest first"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/upcoming-list.tsx
 msgid "Next booked appointments after this day"
 msgstr "Next booked appointments after this day"
 
@@ -1860,15 +1910,15 @@ msgstr "Next booked appointments after this day"
 msgid "Next day"
 msgstr "Next day"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 #: src/features/vet/records/index.tsx
 msgid "Next due"
 msgstr "Next due"
 
 #. placeholder {0}: entry.vaccination.nextDueAt
 #. placeholder {0}: v.nextDueAt
-#: src/features/vet/consultations/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "next due {0}"
 msgstr "next due {0}"
 
@@ -1876,7 +1926,7 @@ msgstr "next due {0}"
 msgid "Next due date"
 msgstr "Next due date"
 
-#: src/components/vet/date-picker.tsx
+#: src/components/patterns/date-picker.tsx
 msgid "Next month"
 msgstr "Next month"
 
@@ -1885,11 +1935,11 @@ msgstr "Next month"
 msgid "Next: {0}"
 msgstr "Next: {0}"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 msgid "No active consultation"
 msgstr "No active consultation"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "No active staff members are on file for this clinic."
 msgstr "No active staff members are on file for this clinic."
 
@@ -1921,6 +1971,7 @@ msgstr "No clinical activity in this period."
 msgid "No contact details"
 msgstr "No contact details"
 
+#: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/consultations/index.tsx
 msgid "No diagnoses recorded yet."
 msgstr "No diagnoses recorded yet."
@@ -1933,7 +1984,7 @@ msgstr "No dispenses recorded in the last 30 days."
 msgid "No encounters match your search."
 msgstr "No encounters match your search."
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "No invoice was created for this visit."
 msgstr "No invoice was created for this visit."
 
@@ -1949,15 +2000,15 @@ msgstr "No items in this category yet."
 msgid "No lots received yet."
 msgstr "No lots received yet."
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "No notes were recorded for this visit."
 msgstr "No notes were recorded for this visit."
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/waiting-queue.tsx
 msgid "No one waiting right now."
 msgstr "No one waiting right now."
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "No owner"
 msgstr "No owner"
 
@@ -1965,7 +2016,7 @@ msgstr "No owner"
 msgid "No patients match your search."
 msgstr "No patients match your search."
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/void-dialog.tsx
 msgid "No payments are held against this invoice. Voiding cannot be undone."
 msgstr "No payments are held against this invoice. Voiding cannot be undone."
 
@@ -1977,13 +2028,13 @@ msgstr "No payments or invoices recorded in this period."
 msgid "No payments recorded yet."
 msgstr "No payments recorded yet."
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 #: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
 msgid "no PIN"
 msgstr "no PIN"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "No PIN set"
 msgstr "No PIN set"
 
@@ -1991,7 +2042,8 @@ msgstr "No PIN set"
 msgid "No posted invoices in this period."
 msgstr "No posted invoices in this period."
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "No prescriptions on this visit."
 msgstr "No prescriptions on this visit."
 
@@ -2003,11 +2055,11 @@ msgstr "no reason"
 msgid "no show"
 msgstr "no show"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "No staff on file"
 msgstr "No staff on file"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "No staff PINs are set up yet. An admin can add them under Staff & Permissions."
 msgstr "No staff PINs are set up yet. An admin can add them under Staff & Permissions."
 
@@ -2015,7 +2067,7 @@ msgstr "No staff PINs are set up yet. An admin can add them under Staff & Permis
 msgid "No suppliers recorded yet."
 msgstr "No suppliers recorded yet."
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 msgid "No vaccinations recorded for this patient."
 msgstr "No vaccinations recorded for this patient."
 
@@ -2023,12 +2075,12 @@ msgstr "No vaccinations recorded for this patient."
 msgid "No vaccinations recorded yet."
 msgstr "No vaccinations recorded yet."
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "No visits or vaccinations recorded yet."
 msgstr "No visits or vaccinations recorded yet."
 
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/appointment-card.tsx
 msgid "No-show"
 msgstr "No-show"
 
@@ -2036,11 +2088,12 @@ msgstr "No-show"
 msgid "None upcoming"
 msgstr "None upcoming"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/roles-panel.tsx
 msgid "Not allowed"
 msgstr "Not allowed"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "not recorded"
 msgstr "not recorded"
 
@@ -2048,7 +2101,7 @@ msgstr "not recorded"
 msgid "Notes"
 msgstr "Notes"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/upcoming-list.tsx
 msgid "Nothing booked ahead."
 msgstr "Nothing booked ahead."
 
@@ -2069,13 +2122,17 @@ msgstr "Notifications"
 msgid "Notifications ({0} pending)"
 msgstr "Notifications ({0} pending)"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Nov"
 msgstr "Nov"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Oct"
 msgstr "Oct"
+
+#: src/features/vet/settings/index.tsx
+msgid "Off"
+msgstr "Off"
 
 #: src/features/vet/settings/index.tsx
 msgid "Offline"
@@ -2085,7 +2142,7 @@ msgstr "Offline"
 msgid "Offline · read-only mode"
 msgstr "Offline · read-only mode"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Offline from clinic server — account changes are read-only"
 msgstr "Offline from clinic server — account changes are read-only"
 
@@ -2093,18 +2150,22 @@ msgstr "Offline from clinic server — account changes are read-only"
 msgid "Offline from clinic server — read-only"
 msgstr "Offline from clinic server — read-only"
 
+#: src/features/vet/settings/index.tsx
+msgid "On"
+msgstr "On"
+
 #: src/features/vet/inventory/index.tsx
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "On hand"
 msgstr "On hand"
 
 #. placeholder {0}: Math.max(0, selectedStock)
 #. placeholder {1}: selectedRx.unit
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Only {0} {1} left in stock — reduce the quantity or receive a delivery first."
 msgstr "Only {0} {1} left in stock — reduce the quantity or receive a delivery first."
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Only a clinic admin can change clinic identity."
 msgstr "Only a clinic admin can change clinic identity."
 
@@ -2112,7 +2173,7 @@ msgstr "Only a clinic admin can change clinic identity."
 msgid "open"
 msgstr "open"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 msgid "Open an appointment to start a consultation."
 msgstr "Open an appointment to start a consultation."
 
@@ -2141,11 +2202,11 @@ msgstr "Open menu"
 msgid "Open my account ({0})"
 msgstr "Open my account ({0})"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "Open Staff & Permissions"
 msgstr "Open Staff & Permissions"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Open visit"
 msgstr "Open visit"
 
@@ -2153,7 +2214,11 @@ msgstr "Open visit"
 msgid "Opened"
 msgstr "Opened"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/shell/boot-screen.tsx
+msgid "Opening clinic…"
+msgstr "Opening clinic…"
+
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "original note no longer on file"
 msgstr "original note no longer on file"
 
@@ -2167,6 +2232,7 @@ msgstr "Outstanding"
 
 #: src/features/vet/billing/index.tsx
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Outstanding balance"
 msgstr "Outstanding balance"
 
@@ -2184,8 +2250,8 @@ msgid "Overdue {0}"
 msgstr "Overdue {0}"
 
 #: src/features/vet/billing/index.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "Owner"
 msgstr "Owner"
 
@@ -2193,8 +2259,8 @@ msgstr "Owner"
 msgid "Owner and patient records are saved in one local transaction."
 msgstr "Owner and patient records are saved in one local transaction."
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "Owner name"
 msgstr "Owner name"
 
@@ -2202,9 +2268,12 @@ msgstr "Owner name"
 msgid "Owner phone"
 msgstr "Owner phone"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
+msgid "Owner-reported starting weight; the clinical weight comes from each visit's vitals."
+msgstr "Owner-reported starting weight; the clinical weight comes from each visit's vitals."
+
 #. placeholder {0}: data.owners.find((o) => o.id === patient.ownerId)?.name
-#. placeholder {0}: owner?.name
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/patient-snapshot.tsx
 msgid "Owner: {0}"
 msgstr "Owner: {0}"
 
@@ -2220,15 +2289,15 @@ msgstr "Owners & Patients"
 msgid "paid"
 msgstr "paid"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Paid"
 msgstr "Paid"
 
 #: src/features/vet/dashboard/index.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 #: src/features/vet/records/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Patient"
 msgstr "Patient"
 
@@ -2236,12 +2305,12 @@ msgstr "Patient"
 msgid "Patient identity and owner contact details"
 msgstr "Patient identity and owner contact details"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "Patient name"
 msgstr "Patient name"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/patient-snapshot.tsx
 msgid "Patient snapshot"
 msgstr "Patient snapshot"
 
@@ -2250,14 +2319,15 @@ msgid "Patients & records"
 msgstr "Patients & records"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Payments collected"
 msgstr "Payments collected"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Period"
 msgstr "Period"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/roles-panel.tsx
 msgid "Permission"
 msgstr "Permission"
 
@@ -2265,7 +2335,7 @@ msgstr "Permission"
 msgid "Permissions"
 msgstr "Permissions"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Permissions from your role"
 msgstr "Permissions from your role"
 
@@ -2283,38 +2353,39 @@ msgid "Pharmacy & Inventory"
 msgstr "Pharmacy & Inventory"
 
 #: src/features/vet/inventory/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Phone"
 msgstr "Phone"
 
 #. placeholder {0}: selected.name
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "PIN for {0}"
 msgstr "PIN for {0}"
 
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "PIN must be 4–8 digits"
 msgstr "PIN must be 4–8 digits"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "PIN protected"
 msgstr "PIN protected"
 
+#: src/features/vet/staff/components/team-panel.tsx
 #: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
 msgid "PIN set"
 msgstr "PIN set"
 
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "PINs are hashed on this device and never synced in plain text."
 msgstr "PINs are hashed on this device and never synced in plain text."
 
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "PINs do not match"
 msgstr "PINs do not match"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "PO / SC / IM"
 msgstr "PO / SC / IM"
 
@@ -2330,9 +2401,14 @@ msgstr "Post invoice"
 msgid "posted"
 msgstr "posted"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Prescriptions"
 msgstr "Prescriptions"
+
+#: src/features/vet/settings/index.tsx
+msgid "Preview"
+msgstr "Preview"
 
 #: src/features/vet/settings/index.tsx
 msgid "Preview Cloud plan"
@@ -2342,23 +2418,23 @@ msgstr "Preview Cloud plan"
 msgid "Previous day"
 msgstr "Previous day"
 
-#: src/components/vet/date-picker.tsx
+#: src/components/patterns/date-picker.tsx
 msgid "Previous month"
 msgstr "Previous month"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Price"
 msgstr "Price"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Print receipt"
 msgstr "Print receipt"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Profile saved"
 msgstr "Profile saved"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "PromptPay"
 msgstr "PromptPay"
 
@@ -2370,23 +2446,25 @@ msgstr "provisional"
 msgid "Provisional"
 msgstr "Provisional"
 
+#: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/consultations/index.tsx
 msgid "Provisional working diagnoses and confirmed findings"
 msgstr "Provisional working diagnoses and confirmed findings"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Qty"
 msgstr "Qty"
 
 #. placeholder {0}: rx.quantity
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "qty {0}"
 msgstr "qty {0}"
 
 #: src/features/vet/billing/index.tsx
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 #: src/features/vet/inventory/index.tsx
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Quantity"
 msgstr "Quantity"
 
@@ -2398,8 +2476,7 @@ msgstr "Quantity-on-hand is derived from lot quantities"
 msgid "Rabbit"
 msgstr "Rabbit"
 
-#: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
 msgid "Reactivate"
 msgstr "Reactivate"
 
@@ -2411,19 +2488,20 @@ msgstr "Ready for notes"
 msgid "Ready to post"
 msgstr "Ready to post"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Reason"
 msgstr "Reason"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "Reason (recorded on the receipt)"
 msgstr "Reason (recorded on the receipt)"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Reason for amendment"
 msgstr "Reason for amendment"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Reason: {amendmentReason}"
 msgstr "Reason: {amendmentReason}"
 
@@ -2432,7 +2510,7 @@ msgid "Receipt"
 msgstr "Receipt"
 
 #. placeholder {0}: invoice.number
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Receipt for {0}"
 msgstr "Receipt for {0}"
 
@@ -2444,7 +2522,7 @@ msgstr "Receive stock"
 #. placeholder {1}: bundle.fromClinic.name
 #. placeholder {2}: bundle.encounters.length
 #. placeholder {3}: bundle.vaccinations.length
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "Received {0} from {1}: {2, plural, one {# visit} other {# visits}} and {3, plural, one {# vaccination} other {# vaccinations}} copied into this clinic with a new MRN."
 msgstr "Received {0} from {1}: {2, plural, one {# visit} other {# visits}} and {3, plural, one {# vaccination} other {# vaccinations}} copied into this clinic with a new MRN."
 
@@ -2453,7 +2531,7 @@ msgstr "Received {0} from {1}: {2, plural, one {# visit} other {# visits}} and {
 msgid "Received from {0}"
 msgstr "Received from {0}"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "Receives a shared case from another clinic. Copies are stamped with the source clinic — nothing is shared in place."
 msgstr "Receives a shared case from another clinic. Copies are stamped with the source clinic — nothing is shared in place."
 
@@ -2477,17 +2555,18 @@ msgstr "Reconnect server"
 msgid "Record"
 msgstr "Record"
 
+#: src/features/vet/billing/components/payment-dialog.tsx
 #: src/features/vet/billing/index.tsx
 msgid "Record payment"
 msgstr "Record payment"
 
-#. placeholder {0}: paymentInvoice.number
-#: src/features/vet/billing/index.tsx
+#. placeholder {0}: invoice.number
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Record payment — {0}"
 msgstr "Record payment — {0}"
 
-#. placeholder {0}: paymentInvoice.number
-#: src/features/vet/billing/index.tsx
+#. placeholder {0}: invoice.number
+#: src/features/vet/billing/components/payment-dialog.tsx
 msgid "Record payment for {0}"
 msgstr "Record payment for {0}"
 
@@ -2495,23 +2574,23 @@ msgstr "Record payment for {0}"
 msgid "Record receipt"
 msgstr "Record receipt"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "Record refund"
 msgstr "Record refund"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Record the consultation findings, assessment and plan…"
 msgstr "Record the consultation findings, assessment and plan…"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 msgid "Record vaccination"
 msgstr "Record vaccination"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Record vitals"
 msgstr "Record vitals"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 msgid "Recorded during this visit and prior history"
 msgstr "Recorded during this visit and prior history"
 
@@ -2519,8 +2598,8 @@ msgstr "Recorded during this visit and prior history"
 msgid "refund"
 msgstr "refund"
 
+#: src/features/vet/billing/components/receipt-dialog.tsx
 #: src/features/vet/billing/index.tsx
-#: src/features/vet/billing/receipt-dialog.tsx
 msgid "Refund"
 msgstr "Refund"
 
@@ -2529,16 +2608,16 @@ msgstr "Refund"
 msgid "Refund — {0}"
 msgstr "Refund — {0}"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "Refund amount (THB)"
 msgstr "Refund amount (THB)"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "Refund payment"
 msgstr "Refund payment"
 
-#. placeholder {0}: data.invoices.find((i) => i.id === refundPayment.invoiceId)?.number ?? t`invoice`
-#: src/features/vet/billing/index.tsx
+#. placeholder {0}: data.invoices.find((i) => i.id === payment.invoiceId)?.number ?? t`invoice`
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "Refund payment on {0}"
 msgstr "Refund payment on {0}"
 
@@ -2546,7 +2625,7 @@ msgstr "Refund payment on {0}"
 msgid "refunded"
 msgstr "refunded"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/refund-dialog.tsx
 msgid "Refunds are appended to the payment ledger; the original payment and the receipt stay unchanged."
 msgstr "Refunds are appended to the payment ledger; the original payment and the receipt stay unchanged."
 
@@ -2563,15 +2642,15 @@ msgstr "Register Patient"
 msgid "Registration mode"
 msgstr "Registration mode"
 
-#: src/features/vet/error-boundary.tsx
+#: src/app/error-boundary.tsx
 msgid "Reload the app"
 msgstr "Reload the app"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Remove"
 msgstr "Remove"
 
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "Remove PIN"
 msgstr "Remove PIN"
 
@@ -2582,7 +2661,7 @@ msgid "reorder at {0} {1}"
 msgstr "reorder at {0} {1}"
 
 #: src/features/vet/inventory/index.tsx
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Reorder level"
 msgstr "Reorder level"
 
@@ -2599,15 +2678,17 @@ msgstr "Report period"
 msgid "Reports"
 msgstr "Reports"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
+#: src/features/vet/schedule/components/upcoming-list.tsx
 msgid "Reschedule"
 msgstr "Reschedule"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Reschedule appointment"
 msgstr "Reschedule appointment"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Respiratory rate"
 msgstr "Respiratory rate"
 
@@ -2626,14 +2707,16 @@ msgstr "Restore from backup"
 #. placeholder {0}: summary.patients
 #. placeholder {1}: summary.encounters
 #: src/features/vet/settings/index.tsx
-msgid "Restored {0, plural, one {# patient} other {# patients}} and {1, plural, one {# encounter} other {# encounters}} from the backup."
-msgstr "Restored {0, plural, one {# patient} other {# patients}} and {1, plural, one {# encounter} other {# encounters}} from the backup."
+msgid "Restored {0, plural, one {# patient} other {# patients}} and {1, plural, one {# encounter} other {# encounters}} from the backup.{snapshotNote}"
+msgstr "Restored {0, plural, one {# patient} other {# patients}} and {1, plural, one {# encounter} other {# encounters}} from the backup.{snapshotNote}"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Revenue"
 msgstr "Revenue"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Revenue trend"
 msgstr "Revenue trend"
 
@@ -2641,15 +2724,15 @@ msgstr "Revenue trend"
 msgid "Revenue, appointments and clinical activity from your local data."
 msgstr "Revenue, appointments and clinical activity from your local data."
 
+#: src/features/vet/staff/components/team-panel.tsx
 #: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
 msgid "Role"
 msgstr "Role"
 
 #. placeholder {0}: member.name
 #. placeholder {0}: user.name
+#: src/features/vet/staff/components/team-panel.tsx
 #: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
 msgid "Role for {0}"
 msgstr "Role for {0}"
 
@@ -2661,26 +2744,34 @@ msgstr "Roles & permissions"
 msgid "Roles decide who can write records, bill, adjust stock and export."
 msgstr "Roles decide who can write records, bill, adjust stock and export."
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Route"
 msgstr "Route"
 
 #. placeholder {0}: entry.encounter.prescriptions.map((rx) => `${rx.medication} (${rx.dose} ${rx.frequency})`).join(', ')
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Rx: {0}"
 msgstr "Rx: {0}"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/settings/index.tsx
+msgid "safety copy"
+msgstr "safety copy"
+
+#: src/features/vet/settings/index.tsx
+msgid "Safety copy downloaded. Restoring will replace everything currently on this device."
+msgstr "Safety copy downloaded. Restoring will replace everything currently on this device."
+
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Sat"
 msgstr "Sat"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Save amendment"
 msgstr "Save amendment"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Save clinic"
 msgstr "Save clinic"
 
@@ -2688,15 +2779,15 @@ msgstr "Save clinic"
 msgid "Save item"
 msgstr "Save item"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Save new time"
 msgstr "Save new time"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Save profile"
 msgstr "Save profile"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Save Profile"
 msgstr "Save Profile"
 
@@ -2709,11 +2800,11 @@ msgid "Save supplier"
 msgstr "Save supplier"
 
 #: src/features/vet/consultations/index.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Saved locally"
 msgstr "Saved locally"
 
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "Saving…"
 msgstr "Saving…"
 
@@ -2746,7 +2837,7 @@ msgstr "Select patient…"
 msgid "Selling price (THB)"
 msgstr "Selling price (THB)"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "Sep"
 msgstr "Sep"
 
@@ -2754,35 +2845,32 @@ msgstr "Sep"
 msgid "Server offline"
 msgstr "Server offline"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Service"
 msgstr "Service"
 
 #. placeholder {0}: member.name
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "Set a PIN for {0}"
 msgstr "Set a PIN for {0}"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Set a PIN so this account is protected on shared terminals."
 msgstr "Set a PIN so this account is protected on shared terminals."
 
-#: src/features/vet/pin-dialog.tsx
-#: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Set PIN"
 msgstr "Set PIN"
 
 #. placeholder {0}: member.name
-#: src/features/vet/pin-dialog.tsx
+#: src/features/vet/session/components/pin-dialog.tsx
 msgid "Set PIN — {0}"
 msgstr "Set PIN — {0}"
 
 #. placeholder {0}: member.name
-#. placeholder {0}: user.name
-#: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
 msgid "Set PIN for {0}"
 msgstr "Set PIN for {0}"
 
@@ -2791,8 +2879,8 @@ msgstr "Set PIN for {0}"
 msgid "Settings"
 msgstr "Settings"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "Sex"
 msgstr "Sex"
 
@@ -2810,24 +2898,23 @@ msgid "Show recent"
 msgstr "Show recent"
 
 #: src/features/vet/settings/index.tsx
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Shown across the workspace and on printed documents."
 msgstr "Shown across the workspace and on printed documents."
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "SID / BID / TID"
 msgstr "SID / BID / TID"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
 msgid "Sign in (PIN)"
 msgstr "Sign in (PIN)"
 
-#: src/features/vet/staff/index.tsx
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/member-row-actions.tsx
 msgid "Sign in as"
 msgstr "Sign in as"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Signed in"
 msgstr "Signed in"
 
@@ -2840,16 +2927,16 @@ msgid "Simulate server offline"
 msgstr "Simulate server offline"
 
 #. placeholder {0}: formatTime(a.startsAt)
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/waiting-queue.tsx
 msgid "Since {0}"
 msgstr "Since {0}"
 
-#: src/features/vet/error-boundary.tsx
+#: src/app/error-boundary.tsx
 msgid "Something went wrong while drawing the workspace"
 msgstr "Something went wrong while drawing the workspace"
 
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
 msgid "Species"
 msgstr "Species"
 
@@ -2865,11 +2952,12 @@ msgstr "Staff & Permissions"
 msgid "Staff management"
 msgstr "Staff management"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "Staff members"
 msgstr "Staff members"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
+#: src/features/vet/schedule/components/waiting-queue.tsx
 msgid "Start"
 msgstr "Start"
 
@@ -2879,7 +2967,7 @@ msgstr "Start consult"
 
 #: src/features/vet/billing/index.tsx
 #: src/features/vet/consultations/index.tsx
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Status"
 msgstr "Status"
 
@@ -2903,7 +2991,7 @@ msgstr "Stock levels are a projection of the append-only movement ledger."
 msgid "stock out"
 msgstr "stock out"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Stock valuation"
 msgstr "Stock valuation"
 
@@ -2911,29 +2999,29 @@ msgstr "Stock valuation"
 msgid "Stock value at cost"
 msgstr "Stock value at cost"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Street, city, postcode…"
 msgstr "Street, city, postcode…"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Street, district, city, postal code…"
 msgstr "Street, district, city, postal code…"
 
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Subtotal"
 msgstr "Subtotal"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Summary"
 msgstr "Summary"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Sun"
 msgstr "Sun"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "supersedes an earlier note"
 msgstr "supersedes an earlier note"
 
@@ -2958,7 +3046,7 @@ msgstr "Suppliers ({0})"
 msgid "Supply"
 msgstr "Supply"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "Switch accounts here or open the full staff view for the audit trail."
 msgstr "Switch accounts here or open the full staff view for the audit trail."
 
@@ -2986,24 +3074,34 @@ msgstr "Team"
 msgid "Team member"
 msgstr "Team member"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Temperature (°C)"
 msgstr "Temperature (°C)"
 
 #. placeholder {0}: data.clinic.name
 #. placeholder {1}: data.clinic.timezone
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Thank you — {0} · {1}"
 msgstr "Thank you — {0} · {1}"
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/settings/index.tsx
+msgid "That backup file could not be read from disk."
+msgstr "That backup file could not be read from disk."
+
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "That is not valid JSON — paste the case bundle file contents or choose a .json file."
 msgstr "That is not valid JSON — paste the case bundle file contents or choose a .json file."
 
 #. placeholder {0}: patient.name
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "The clinical record for {0} is archived — notes, diagnoses and prescriptions are preserved."
 msgstr "The clinical record for {0} is archived — notes, diagnoses and prescriptions are preserved."
+
+#. placeholder {0}: snapshot.reason
+#: src/features/vet/settings/index.tsx
+msgid "The safety copy of the current data could not be saved ({0}). Restore cancelled — nothing was changed."
+msgstr "The safety copy of the current data could not be saved ({0}). Restore cancelled — nothing was changed."
 
 #. placeholder {0}: i18n._(themeName[choice])
 #. placeholder {1}: i18n._(themeName[next])
@@ -3011,7 +3109,7 @@ msgstr "The clinical record for {0} is archived — notes, diagnoses and prescri
 msgid "Theme: {0} — switch to {1}"
 msgstr "Theme: {0} — switch to {1}"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "This appointment starts in the past. Saving is allowed for record-keeping."
 msgstr "This appointment starts in the past. Saving is allowed for record-keeping."
 
@@ -3020,47 +3118,51 @@ msgstr "This appointment starts in the past. Saving is allowed for record-keepin
 msgid "This backup belongs to a different clinic ({0}). Restoring it will replace this clinic's records."
 msgstr "This backup belongs to a different clinic ({0}). Restoring it will replace this clinic's records."
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/settings/index.tsx
+msgid "This device cannot hold a safety copy automatically — download one first; restoring is disabled until you do."
+msgstr "This device cannot hold a safety copy automatically — download one first; restoring is disabled until you do."
+
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "This device unlocks with your staff PIN."
 msgstr "This device unlocks with your staff PIN."
 
-#: src/features/vet/records/import-case-dialog.tsx
+#: src/features/vet/records/components/import-case-dialog.tsx
 msgid "This file is not a VetCare case bundle."
 msgstr "This file is not a VetCare case bundle."
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "This member has no PIN configured yet."
 msgstr "This member has no PIN configured yet."
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "This month"
 msgstr "This month"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "This vet"
 msgstr "This vet"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/components/labels.ts
 msgid "This year"
 msgstr "This year"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Thu"
 msgstr "Thu"
 
-#: src/features/vet/consultations/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/consultations/components/follow-up-panel.tsx
+#: src/features/vet/schedule/components/booking-dialog.tsx
 msgid "Time"
 msgstr "Time"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "Timezone"
 msgstr "Timezone"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
 #: src/features/vet/schedule/index.tsx
 msgid "Today"
 msgstr "Today"
@@ -3074,6 +3176,7 @@ msgid "Today’s schedule"
 msgstr "Today’s schedule"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Top services"
 msgstr "Top services"
 
@@ -3081,30 +3184,30 @@ msgstr "Top services"
 msgid "Top used medicines"
 msgstr "Top used medicines"
 
+#: src/features/vet/billing/components/receipt-dialog.tsx
 #: src/features/vet/billing/index.tsx
-#: src/features/vet/billing/receipt-dialog.tsx
 msgid "Total"
 msgstr "Total"
 
-#: src/features/vet/error-boundary.tsx
+#: src/app/error-boundary.tsx
 msgid "Try again"
 msgstr "Try again"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Tue"
 msgstr "Tue"
 
 #: src/features/vet/billing/index.tsx
 #: src/features/vet/dashboard/index.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/appointment-card.tsx
 msgid "Unassigned"
 msgstr "Unassigned"
 
 #: src/features/vet/inventory/index.tsx
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Unit"
 msgstr "Unit"
 
@@ -3114,22 +3217,22 @@ msgid "units"
 msgstr "units"
 
 #: src/features/vet/records/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/appointment-card.tsx
 #: src/features/vet/shell/notification-center.tsx
 #: src/lib/vet/format.ts
 msgid "Unknown"
 msgstr "Unknown"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 #: src/features/vet/shell/notification-center.tsx
 msgid "Unknown patient"
 msgstr "Unknown patient"
 
-#: src/features/vet/lock-screen.tsx
+#: src/features/vet/session/components/lock-screen.tsx
 msgid "Unlock"
 msgstr "Unlock"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/upcoming-list.tsx
 msgid "Upcoming"
 msgstr "Upcoming"
 
@@ -3143,7 +3246,7 @@ msgstr "Vaccination due — {0}"
 msgid "Vaccination overdue — {0}"
 msgstr "Vaccination overdue — {0}"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 #: src/features/vet/records/index.tsx
 msgid "Vaccinations"
 msgstr "Vaccinations"
@@ -3156,9 +3259,9 @@ msgstr "Vaccinations due"
 msgid "Vaccinations due (30d)"
 msgstr "Vaccinations due (30d)"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/vaccination-panel.tsx
 #: src/features/vet/inventory/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/records/index.tsx
 msgid "Vaccine"
 msgstr "Vaccine"
@@ -3171,16 +3274,17 @@ msgstr "Vaccine history and next-due dates"
 msgid "Vaccine name"
 msgstr "Vaccine name"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Value"
 msgstr "Value"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "VAT"
 msgstr "VAT"
 
 #. placeholder {0}: Math.round(data.clinic.vatRate * 100)
-#: src/features/vet/billing/receipt-dialog.tsx
+#: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "VAT ({0}%)"
 msgstr "VAT ({0}%)"
 
@@ -3189,7 +3293,7 @@ msgstr "VAT ({0}%)"
 msgid "VAT {0}%"
 msgstr "VAT {0}%"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/clinic-panel.tsx
 msgid "VAT rate (%)"
 msgstr "VAT rate (%)"
 
@@ -3206,34 +3310,37 @@ msgid "Vet"
 msgstr "Vet"
 
 #: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
+#: src/features/vet/schedule/components/booking-dialog.tsx
 #: src/lib/vet/format.ts
 msgid "Veterinarian"
 msgstr "Veterinarian"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Veterinarian activity"
 msgstr "Veterinarian activity"
 
-#: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Vettera clinic report"
 msgstr "Vettera clinic report"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/no-active-consultation.tsx
 #: src/features/vet/owners/index.tsx
 #: src/features/vet/records/index.tsx
 msgid "View"
 msgstr "View"
 
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Visit"
 msgstr "Visit"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Visit complete"
 msgstr "Visit complete"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/reports/utils/export-csv.ts
 msgid "Visits"
 msgstr "Visits"
 
@@ -3241,7 +3348,8 @@ msgstr "Visits"
 msgid "Visits attended and revenue billed in this period."
 msgstr "Visits attended and revenue billed in this period."
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Vitals"
 msgstr "Vitals"
 
@@ -3253,29 +3361,29 @@ msgstr "void"
 msgid "Void"
 msgstr "Void"
 
-#. placeholder {0}: voidInvoice.number
-#: src/features/vet/billing/index.tsx
+#. placeholder {0}: invoice.number
+#: src/features/vet/billing/components/void-dialog.tsx
 msgid "Void {0}"
 msgstr "Void {0}"
 
-#. placeholder {0}: voidInvoice.number
-#: src/features/vet/billing/index.tsx
+#. placeholder {0}: invoice.number
+#: src/features/vet/billing/components/void-dialog.tsx
 msgid "Void {0}?"
 msgstr "Void {0}?"
 
-#: src/features/vet/billing/index.tsx
+#: src/features/vet/billing/components/void-dialog.tsx
 msgid "Void invoice"
 msgstr "Void invoice"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/waiting-queue.tsx
 msgid "Waiting queue"
 msgstr "Waiting queue"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/walk-in-form.tsx
 msgid "Walk-in patient"
 msgstr "Walk-in patient"
 
-#: src/features/vet/schedule/index.tsx
+#: src/features/vet/schedule/components/walk-in-form.tsx
 msgid "Walk-in reason"
 msgstr "Walk-in reason"
 
@@ -3292,9 +3400,9 @@ msgstr "waste"
 msgid "Waste 1"
 msgstr "Waste 1"
 
-#: src/components/vet/date-picker.tsx
-#: src/features/vet/reports/index.tsx
-#: src/features/vet/schedule/index.tsx
+#: src/components/patterns/date-picker.tsx
+#: src/features/vet/reports/components/labels.ts
+#: src/features/vet/schedule/components/month-calendar.tsx
 msgid "Wed"
 msgstr "Wed"
 
@@ -3311,32 +3419,33 @@ msgstr "Week of {0}"
 msgid "Week overview"
 msgstr "Week overview"
 
-#: src/features/vet/consultations/index.tsx
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Weight (kg)"
 msgstr "Weight (kg)"
 
 #. placeholder {0}: entry.encounter.vitals.weightKg
-#: src/features/vet/owners/patient-dialog.tsx
+#: src/features/vet/owners/components/patient-dialog.tsx
 msgid "weight {0} kg"
 msgstr "weight {0} kg"
 
-#: src/features/vet/consultations/index.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Weight, temperature, pulse and respiration"
 msgstr "Weight, temperature, pulse and respiration"
 
-#: src/features/vet/staff/team-panel.tsx
+#: src/features/vet/staff/components/team-panel.tsx
 msgid "You"
 msgstr "You"
 
 #. placeholder {0}: roleLabel[user.role]
 #. placeholder {1}: permissionsFor(user.role).length
 #. placeholder {2}: PERMISSIONS.length
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/roles-panel.tsx
 msgid "You are signed in as {0}. {1} of {2} permissions."
 msgstr "You are signed in as {0}. {1} of {2} permissions."
 
-#: src/features/vet/error-boundary.tsx
+#: src/app/error-boundary.tsx
 msgid "Your records are saved on this computer — nothing was lost."
 msgstr "Your records are saved on this computer — nothing was lost."
 
@@ -3344,6 +3453,6 @@ msgstr "Your records are saved on this computer — nothing was lost."
 msgid "Your role does not permit this action"
 msgstr "Your role does not permit this action"
 
-#: src/features/vet/workspace/index.tsx
+#: src/features/vet/workspace/components/account-panel.tsx
 msgid "Your teammates see this name on notes and the audit trail."
 msgstr "Your teammates see this name on notes and the audit trail."

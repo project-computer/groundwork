@@ -7,6 +7,9 @@ import { seedState } from "@/lib/vet/seed"
 
 const seed = (state: object) => localStorage.setItem("clinicbook:state:v1", JSON.stringify({ ...state, lastSyncedAt: undefined }))
 
+/** ISO date `days` from now — clock-proof near-expiry fixtures. */
+const soon = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10)
+
 afterEach(() => {
   cleanup()
   localStorage.clear()
@@ -14,7 +17,17 @@ afterEach(() => {
 
 it("surfaces overdue vaccinations and stock warnings, and navigates on click", async () => {
   await page.viewport(1280, 900)
-  seed(seedState)
+  // The static seed's near-expiry lots rot with the calendar; this test is
+  // about the worklist logic, so the near-expiry dates roll with the clock.
+  const clockProof = {
+    ...seedState,
+    inventoryLots: seedState.inventoryLots.map((lot) =>
+      Object.assign({}, lot, {
+        expiryDate: lot.id === "lot-2" ? soon(25) : lot.id === "lot-3" ? soon(20) : lot.expiryDate,
+      }),
+    ),
+  }
+  seed(clockProof)
   render(<App />)
   await new Promise((r) => setTimeout(r, 50))
 

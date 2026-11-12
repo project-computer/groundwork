@@ -15,17 +15,47 @@ concurrency:
 jobs:
   checks:
     name: lint + tests
-    runs-on: self-hosted
+    # GitHub-hosted runners: the self-hosted runner is not always online, and
+    # a queued-for-hours CI is worse than a slower hosted one. Same rationale
+    # as the release workflow, which already builds on hosted runners.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      # cargo clippy/fmt compile the Tauri shell, which needs the webkit
+      # system libraries on Linux (same list as the release workflow).
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
 
       - name: Install JS deps
         run: |
           pnpm -C apps/clinic install --frozen-lockfile
           pnpm -C apps/landing install --frozen-lockfile
 
+      # Browser-mode vitest (component + screenshot) drives real Chromium.
+      - name: Install Playwright Chromium
+        run: pnpm -C apps/clinic exec playwright install --with-deps chromium
+
       - name: Lint (TS)
         run: make lint-ts lint-landing
+
+      # `make lint-ts` is oxlint + knip only; keep the production build's
+      # typecheck in CI so unused-module regressions cannot ship.
+      - name: Typecheck (TS)
+        run: make typecheck
 
       - name: i18n catalogs
         run: make i18n-compile

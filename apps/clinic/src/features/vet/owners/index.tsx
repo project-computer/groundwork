@@ -28,7 +28,7 @@ export const Owners = ({
   setShowForm: (b: boolean) => void
   canWrite: boolean
 }) => {
-  const { data, dispatch } = useClinic()
+  const { data, dispatch, registerOwnerAndPatient, registerPatient } = useClinic()
   const { t } = useLingui()
   const [formMode, setFormMode] = useState<'new-owner' | 'existing-owner'>('new-owner')
   const [ownerId, setOwnerId] = useState('')
@@ -67,48 +67,47 @@ export const Owners = ({
     if (!name) return
     if (formMode === 'new-owner') {
       if (!ownerName.trim()) return
-      dispatch({
-        type: 'registerOwner',
-        owner: { name: ownerName.trim(), phone: ownerPhone.trim(), email: '', address: '' },
-        patient: {
+      // ADR 0025 slice 1: REST-first creation with document projection —
+      // the store mints the owner id, creates both rows in vetcare, and
+      // projects the server rows (ids + server MRN) through the reducer.
+      // REST unreachable → the store dispatches a local-only registration.
+      void registerOwnerAndPatient(
+        { name: ownerName.trim(), phone: ownerPhone.trim(), email: '', address: '' },
+        {
           name: patientName.trim(),
           species,
           breed: breed.trim() || t`Mixed breed`,
           sex,
           birthDate,
-          weightKg: undefined,
           microchip: microchip.trim() || undefined,
           allergies: [],
           medicalAlerts: [],
           weightUnit: 'kg',
         },
-      })
+      )
       setOwnerName('')
       setOwnerPhone('')
     } else {
       const owner = data.owners.find((o) => o.id === ownerId) ?? data.owners[0]
       if (!owner) return
-      dispatch({
-        type: 'addPatient',
-        patient: {
-          ownerId: owner.id,
+      void registerPatient(
+        owner,
+        {
           name: patientName.trim(),
           species,
           breed: breed.trim() || t`Mixed breed`,
           sex,
           birthDate,
-          weightKg: undefined,
           microchip: microchip.trim() || undefined,
           allergies: [],
           medicalAlerts: [],
           weightUnit: 'kg',
         },
-      })
+      )
     }
     resetForm()
     setQuery('')
     setNotice(t`${name} registered.`)
-    setShowForm(false)
   }
   return (
     <>

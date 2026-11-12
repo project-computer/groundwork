@@ -10,7 +10,8 @@
   "ignorePatterns": [
     "dist",
     "src-tauri/target",
-    "node_modules"
+    "node_modules",
+    "debug-*.mjs"
   ],
   "categories": {
     "correctness": "error",

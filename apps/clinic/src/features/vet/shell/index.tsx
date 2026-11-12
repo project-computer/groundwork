@@ -38,6 +38,7 @@ import { LanguageToggle } from '@/features/vet/session'
 import { SaveErrorBanner } from '@/components/patterns/save-error-banner'
 import { RejectionBanner } from './rejection-banner'
 import { WorkspaceDialog, type WorkspaceTab } from '../workspace'
+import { BootScreen } from './boot-screen'
 
 interface NavEntry {
   id: View
@@ -63,7 +64,7 @@ const nav: readonly NavEntry[] = [
 type SetView = (view: View) => void
 
 export const ClinicApp = () => {
-  const { data, session, user, dispatch } = useClinic()
+  const { data, session, user, dispatch, hydrated } = useClinic()
   const { t, i18n } = useLingui()
   const [mobileNav, setMobileNav] = useState(false)
   const [query, setQuery] = useState('')
@@ -96,6 +97,10 @@ export const ClinicApp = () => {
     }),
     [data, today],
   )
+
+  // Never paint the demo seed: hold on a neutral splash until the persisted
+  // document has been restored (ADR 0012).
+  if (!hydrated) return <BootScreen />
 
   // A locked session never renders clinic data — the gate is the only screen.
   if (session.locked) return <LockScreen />

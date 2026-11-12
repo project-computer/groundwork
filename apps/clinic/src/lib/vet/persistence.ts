@@ -1,7 +1,8 @@
 import { invoke } from '@tauri-apps/api/core'
-import { isTauri } from '@/lib/platform'
+import { isMobilePlatform, isTauri } from '@/lib/platform'
 import { fetchState, pushState } from './backend'
 import { formatMrn } from './format'
+import { RestError, getOwner as restGetOwner, createOwner as restCreateOwner, createPet as restCreatePet, listStaff, login as restLogin, setStaffPin as restSetStaffPinCall } from './rest'
 import { CLINIC_STATE_COLLECTIONS, type ClinicState, type Patient } from './types'
 
 /**
@@ -64,14 +65,17 @@ export const parseClinicState = (raw: unknown): ClinicState | null => {
 }
 
 /** Load order per ADR 0012: sidecar first, Rust fallback second; the web
- * target has localStorage only. Returns null when nothing usable is stored. */
+ * target has localStorage only. The mobile shell skips the sidecar probe —
+ * there is no sidecar in an APK and polling it delays hydration by seconds. */
 export const loadState = async (): Promise<ClinicState | null> => {
   if (isTauri()) {
-    try {
-      const fromSidecar = parseClinicState(await fetchState())
-      if (fromSidecar) return fromSidecar
-    } catch (error) {
-      console.error('failed to load clinic state from sidecar', error)
+    if (!isMobilePlatform()) {
+      try {
+        const fromSidecar = parseClinicState(await fetchState())
+        if (fromSidecar) return fromSidecar
+      } catch (error) {
+        console.error('failed to load clinic state from sidecar', error)
+      }
     }
     try {
       return parseClinicState(await invoke<unknown>('state_load_command'))
@@ -114,10 +118,155 @@ export const savePlanPref = (plan: PlanPref) => {
   }
 }
 
+// --- REST auth bridge (ADR 0024) ---------------------------------------------
+// Credential verification for the lock screen. When the vetcare REST backend
+// is reachable, credentials are authoritative there (bcrypt, server-side);
+// `fallback` falls back to the document's PBKDF2 hash — the same degraded
+// path philosophy as the ADR-0012 adapter order.
+
+export type RestAuthOutcome = 'ok' | 'denied' | 'fallback'
+
+/**
+ * Verifies a member's PIN against the REST backend when the member exists in
+ * its staff directory. Returns 'fallback' when REST is unreachable or the
+ * member is document-only, so the caller can verify against the document
+ * hash. A directory hit is authoritative: wrong PIN means denied — the
+ * document hash is never consulted for REST-known members.
+ */
+export const restVerifyMember = async (memberId: string, pin: string): Promise<RestAuthOutcome> => {
+  try {
+    const directory = await listStaff()
+    const match = directory.users.find((user) => user.id === memberId && user.active)
+    if (!match) return 'fallback'
+    const session = await restLogin(match.username, pin)
+    return session.token ? 'ok' : 'denied'
+  } catch (error) {
+    // Wrong PIN on a directory hit is a denial; anything else (sidecar
+    // absent, network hiccup) degrades to the document path.
+    if (error instanceof RestError && error.status === 401) return 'denied'
+    return 'fallback'
+  }
+}
+
+export type RestPinSync = 'synced' | 'skipped' | 'failed'
+
+// --- REST-first owner/patient creation (ADR 0025) -----------------------------
+// The client mints UUIDs so the document and the normalized store never
+// diverge on identity; REST is the durable store, the document write is the
+// projection the UI reads. Unreachable backend degrades to a local-only
+// commit (the clinic never blocks on REST).
+
+export interface RestRegistrationPayload {
+  owner: { name: string; phone: string; email: string; address: string }
+  patient: {
+    name: string
+    species: string
+    breed: string
+    sex: string
+    birthDate: string
+    microchip?: string
+  }
+}
+
+export interface RestRegistrationResult {
+  status: 'ok' | 'local'
+  /** The server rows: the document projects these (id, server MRN). Present
+   * only when status === 'ok'. */
+  owner?: { id: string }
+  pet?: { id: string; mrn: string }
+}
+
+/** Document sex vocabulary → the REST schema's base sex. Neutered/spayed
+ * nuances stay in the document (mirroring the importer's note-folding). */
+export const toRestSex = (sex: string): string => {
+  if (sex.startsWith('Male')) return 'male'
+  if (sex.startsWith('Female')) return 'female'
+  return 'unknown'
+}
+
+const toRestPatient = (patient: RestRegistrationPayload['patient']) => ({
+  name: patient.name,
+  species: patient.species.toLowerCase(),
+  breed: patient.breed,
+  sex: toRestSex(patient.sex),
+  dateOfBirth: patient.birthDate,
+  microchipNumber: patient.microchip,
+})
+
+/** Ensures the owner exists under the document's own id (client-minted ids
+ * are honored server-side), so pre-cutover owners converge instead of
+ * forking identities. Returns false when REST is unavailable. */
+export const restEnsureOwner = async (
+  ownerId: string,
+  profile: RestRegistrationPayload['owner'],
+): Promise<boolean> => {
+  try {
+    try {
+      await restGetOwner(ownerId)
+      return true
+    } catch (error) {
+      if (!(error instanceof RestError) || error.status !== 404) throw error
+    }
+    await restCreateOwner({ id: ownerId, ...profile })
+    return true
+  } catch (error) {
+    console.error('restEnsureOwner: REST unavailable, degrading to local-only commit', error)
+    return false
+  }
+}
+
+/** Creates the owner + patient in REST, projecting the caller-minted ids. */
+export const restCreateOwnerAndPatient = async (
+  ownerId: string,
+  payload: RestRegistrationPayload,
+): Promise<RestRegistrationResult> => {
+  try {
+    const owner = await restCreateOwner({ id: ownerId, ...payload.owner })
+    const pet = await restCreatePet({ id: crypto.randomUUID(), ownerId: owner.id, ...toRestPatient(payload.patient) })
+    return { status: 'ok', owner: { id: owner.id }, pet: { id: pet.id, mrn: pet.mrn } }
+  } catch (error) {
+    console.error('restCreateOwnerAndPatient: degraded to local-only commit', error)
+    return { status: 'local' }
+  }
+}
+
+/** Creates a patient under an owner that already exists in REST. */
+export const restCreatePatient = async (
+  ownerId: string,
+  patient: RestRegistrationPayload['patient'],
+): Promise<RestRegistrationResult> => {
+  try {
+    const pet = await restCreatePet({ id: crypto.randomUUID(), ownerId, ...toRestPatient(patient) })
+    return { status: 'ok', owner: { id: ownerId }, pet: { id: pet.id, mrn: pet.mrn } }
+  } catch (error) {
+    console.error('restCreatePatient: degraded to local-only commit', error)
+    return { status: 'local' }
+  }
+}
+
+/**
+ * Mirrors a PIN change to the REST backend (issue 0019) so the bridge in
+ * ADR 0024 can verify it server-side. REST-known members are updated; members
+ * only the document knows are skipped (there is nothing to sync); failures
+ * never block the document write — offline-first means the local hash is the
+ * guarantee, the mirror is an upgrade. Best-effort by contract.
+ */
+export const restSetStaffPin = async (memberId: string, pin: string): Promise<RestPinSync> => {
+  try {
+    const directory = await listStaff()
+    if (!directory.users.some((user) => user.id === memberId && user.active)) return 'skipped'
+    await restSetStaffPinCall(memberId, pin)
+    return 'synced'
+  } catch (error) {
+    if (error instanceof RestError && error.status === 404) return 'skipped'
+    console.error('restSetStaffPin: mirror failed (document PIN remains authoritative)', error)
+    return 'failed'
+  }
+}
+
 /** Save order per ADR 0012: Rust command first (source of truth), then the
  * sidecar copy for cloud sync. The web target has localStorage only. */
-export const saveState = (data: ClinicState, onResult?: SaveResult) => {
-  const fail = (error: unknown, scope: string) => {
+export const saveState = (data: ClinicState, onResult?: SaveResult) => {  const fail = (error: unknown, scope: string) => {
     console.error(scope, error)
     onResult?.(error instanceof Error ? error.message : String(error))
   }

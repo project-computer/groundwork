@@ -13,8 +13,12 @@ Store API (src/lib/vet/store.tsx — same API on every platform)
    |
    +---> Tauri desktop: HTTP -> Go sidecar clinic-core (desktop/)
    |         |                     127.0.0.1:<random port>
+   |         |                     X-VetCare-Loopback-Secret per launch (ADR 0020)
    |         v
    |     SQLite clinic_state (WAL, FK enforcement)
+   |         |
+   |         +-- backup files: <data dir>/backups, daily + pre-restore (ADR 0021)
+   |         +-- rotating logs: <data dir>/logs (issue 0017)
    |         |
    |         v
    |     sync engine: entity outbox + pull cursor
@@ -24,6 +28,9 @@ Store API (src/lib/vet/store.tsx — same API on every platform)
    |
    +---> Tauri fallback (sidecar missing): invoke() -> Rust commands
    |         (apps/clinic/src-tauri/src/clinic.rs) -> same SQLite file
+   |
+   +---> Tauri mobile (Android/iOS): invoke() -> Rust commands
+   |         (no sidecar ships in an app bundle; discovery is skipped)
    |
    +---> Web fallback: localStorage (dev/browser only, NOT durable)
 ```
@@ -46,6 +53,29 @@ Store API (src/lib/vet/store.tsx — same API on every platform)
   to it by tests on both sides.
 - The Go sidecar (`apps/sidecar/`) validates the document and persists atomically.
   It also owns push/pull; the Rust commands are a degraded fallback only.
+- Every sidecar business request carries the per-launch loopback secret
+  (ADR 0020): the shell generates it, passes it through the environment and
+  answers the webview via the `backend_secret` command; `/healthz` stays open.
+  A URL without a secret is treated as sidecar-unavailable (adapter order).
+- On Tauri mobile there is no sidecar to discover: `isMobilePlatform()`
+  short-circuits discovery and the Rust SQLite document is read directly, so a
+  cold start never waits on a loopback probe that cannot answer.
+- Restorable backups are the ADR-0014 envelope written by the sidecar to
+  `<data dir>/backups` (ADR 0021): one automatic backup on the first launch
+  of each day (gated on the `backup.auto` audit event + clinic toggle), a
+  pre-restore safety snapshot that must succeed before any restore, rotating
+  retention of 14 files. The web target keeps the download-based manual flow.
+- Weight shown as clinical fact derives from encounter vitals
+  (`latestWeightKg` selector, ADR 0022); `patient.weightKg` is the
+  owner-reported baseline only.
+- Sidecar logs tee stderr with a rotating file in `<data dir>/logs`; the
+  Rust shell mirrors its own events to `shell.log` (issue 0017).
+- A normalized resource API (the offline-MVP plan's `/api/v1` surface:
+  setup/login, owners, pets, weights, appointments, consultations,
+  prescriptions, audit, settings) lives complete and tested in
+  `server/internal/offlineapi` with its own embedded SQLite migrations and
+  sqlc query set. It is not wired into the sidecar's loopback surface yet;
+  the document model (ADR 0012) remains the desktop source of truth.
 - `src/platform/` detects Tauri vs browser (`isTauri`).
 - Schema lives in two places and must stay in sync for the shared migrations
   0001–0003 and 0005: `apps/clinic/src-tauri/migrations/` (Rust fallback) and

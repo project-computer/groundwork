@@ -53,6 +53,10 @@ export const formatMoney = (minor: number) => money.format(minor / 100)
 export const formatTime = (iso: string) => time.format(new Date(iso))
 export const formatDate = (iso: string) => date.format(new Date(iso))
 
+/** Human-readable file size for backup history (KB/MB). */
+export const formatBytes = (bytes: number): string =>
+  bytes >= 1_048_576 ? `${(bytes / 1_048_576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`
+
 /**
  * Chronological comparison for ISO timestamps that may mix UTC (`Z`) and
  * offset (`+07:00`) forms. String order is wrong across offsets —

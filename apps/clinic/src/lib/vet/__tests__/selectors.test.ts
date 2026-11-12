@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { lowStockItems, openInvoices, outstandingBalance, overdueVaccinations } from '../selectors'
+import { latestWeightKg, lowStockItems, openInvoices, outstandingBalance, overdueVaccinations } from '../selectors'
 import type { InventoryItem, InventoryLot, Invoice, Payment, Vaccination } from '../types'
 
 const item = (id: string, reorderLevel: number): InventoryItem => ({
@@ -83,5 +83,49 @@ describe('overdueVaccinations', () => {
 describe('openInvoices', () => {
   it('excludes paid and void invoices', () => {
     expect(openInvoices([invoice('draft', 0, 'draft'), invoice('posted', 0, 'posted'), invoice('paid', 0, 'paid'), invoice('void', 0, 'void')]).map((i) => i.id)).toEqual(['draft', 'posted'])
+  })
+})
+
+describe('latestWeightKg (ADR 0022)', () => {
+  // eslint-disable-next-line unicorn/consistent-function-scoping -- fixture builder reads nothing from this scope
+  const encounter = (id: string, patientId: string, weightKg: string, openedAt: string, closedAt?: string) => ({
+    id,
+    patientId,
+    attendingId: 'u-pim',
+    status: closedAt ? ('closed' as const) : ('open' as const),
+    openedAt,
+    closedAt,
+    vitals: { weightKg, tempC: '', heartRate: '', respRate: '' },
+    notes: [],
+    diagnoses: [],
+    prescriptions: [],
+    version: 1,
+  })
+
+  it('returns null before the first recorded weight', () => {
+    expect(latestWeightKg('p-1', [encounter('e-1', 'p-2', '28.6', '2026-10-01T09:00:00Z')])).toBeNull()
+    expect(latestWeightKg('p-1', [])).toBeNull()
+  })
+
+  it('ignores encounters whose vitals left the weight empty', () => {
+    const encounters = [encounter('e-1', 'p-1', '', '2026-10-01T09:00:00Z'), encounter('e-2', 'p-1', '4.2', '2026-10-02T09:00:00Z')]
+    expect(latestWeightKg('p-1', encounters)?.valueKg).toBe('4.2')
+  })
+
+  it('returns the latest weight with its encounter time', () => {
+    const encounters = [
+      encounter('e-1', 'p-1', '28.6', '2026-10-01T09:00:00Z', '2026-10-01T09:40:00Z'),
+      encounter('e-2', 'p-1', '29.1', '2026-10-20T10:00:00Z'),
+    ]
+    expect(latestWeightKg('p-1', encounters)).toEqual({ valueKg: '29.1', recordedAt: '2026-10-20T10:00:00Z' })
+  })
+
+  it('orders mixed UTC and offset timestamps chronologically', () => {
+    // 09:42+07:00 = 02:42Z, earlier than 08:56Z despite sorting later as a string.
+    const encounters = [
+      encounter('e-1', 'p-1', '28.6', '2026-10-01T08:56:00Z'),
+      encounter('e-2', 'p-1', '28.9', '2026-10-01T09:42:00+07:00'),
+    ]
+    expect(latestWeightKg('p-1', encounters)?.valueKg).toBe('28.6')
   })
 })
