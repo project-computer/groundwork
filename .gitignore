@@ -53,3 +53,7 @@ server/bin/
 
 # Cloudflare (deploy tooling artifacts)
 .wrangler/
+
+# Tauri build-time generated schemas
+target/
+apps/clinic/src-tauri/gen/
