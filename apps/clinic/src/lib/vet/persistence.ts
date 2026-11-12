@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { isMobilePlatform, isTauri } from '@/lib/platform'
 import { fetchState, pushState } from './backend'
 import { formatMrn } from './format'
-import { RestError, listStaff, login as restLogin, setStaffPin as restSetStaffPinCall } from './rest'
+import { RestError, getOwner as restGetOwner, createOwner as restCreateOwner, createPet as restCreatePet, listStaff, login as restLogin, setStaffPin as restSetStaffPinCall } from './rest'
 import { CLINIC_STATE_COLLECTIONS, type ClinicState, type Patient } from './types'
 
 /**
@@ -149,6 +149,100 @@ export const restVerifyMember = async (memberId: string, pin: string): Promise<R
 }
 
 export type RestPinSync = 'synced' | 'skipped' | 'failed'
+
+// --- REST-first owner/patient creation (ADR 0025) -----------------------------
+// The client mints UUIDs so the document and the normalized store never
+// diverge on identity; REST is the durable store, the document write is the
+// projection the UI reads. Unreachable backend degrades to a local-only
+// commit (the clinic never blocks on REST).
+
+export interface RestRegistrationPayload {
+  owner: { name: string; phone: string; email: string; address: string }
+  patient: {
+    name: string
+    species: string
+    breed: string
+    sex: string
+    birthDate: string
+    microchip?: string
+  }
+}
+
+export interface RestRegistrationResult {
+  status: 'ok' | 'local'
+  /** The server rows: the document projects these (id, server MRN). Present
+   * only when status === 'ok'. */
+  owner?: { id: string }
+  pet?: { id: string; mrn: string }
+}
+
+/** Document sex vocabulary → the REST schema's base sex. Neutered/spayed
+ * nuances stay in the document (mirroring the importer's note-folding). */
+export const toRestSex = (sex: string): string => {
+  if (sex.startsWith('Male')) return 'male'
+  if (sex.startsWith('Female')) return 'female'
+  return 'unknown'
+}
+
+const toRestPatient = (patient: RestRegistrationPayload['patient']) => ({
+  name: patient.name,
+  species: patient.species.toLowerCase(),
+  breed: patient.breed,
+  sex: toRestSex(patient.sex),
+  dateOfBirth: patient.birthDate,
+  microchipNumber: patient.microchip,
+})
+
+/** Ensures the owner exists under the document's own id (client-minted ids
+ * are honored server-side), so pre-cutover owners converge instead of
+ * forking identities. Returns false when REST is unavailable. */
+export const restEnsureOwner = async (
+  ownerId: string,
+  profile: RestRegistrationPayload['owner'],
+): Promise<boolean> => {
+  try {
+    try {
+      await restGetOwner(ownerId)
+      return true
+    } catch (error) {
+      if (!(error instanceof RestError) || error.status !== 404) throw error
+    }
+    await restCreateOwner({ id: ownerId, ...profile })
+    return true
+  } catch (error) {
+    console.error('restEnsureOwner: REST unavailable, degrading to local-only commit', error)
+    return false
+  }
+}
+
+/** Creates the owner + patient in REST, projecting the caller-minted ids. */
+export const restCreateOwnerAndPatient = async (
+  ownerId: string,
+  payload: RestRegistrationPayload,
+): Promise<RestRegistrationResult> => {
+  try {
+    const owner = await restCreateOwner({ id: ownerId, ...payload.owner })
+    const pet = await restCreatePet({ id: crypto.randomUUID(), ownerId: owner.id, ...toRestPatient(payload.patient) })
+    return { status: 'ok', owner: { id: owner.id }, pet: { id: pet.id, mrn: pet.mrn } }
+  } catch (error) {
+    console.error('restCreateOwnerAndPatient: degraded to local-only commit', error)
+    return { status: 'local' }
+  }
+}
+
+/** Creates a patient under an owner that already exists in REST. */
+export const restCreatePatient = async (
+  ownerId: string,
+  patient: RestRegistrationPayload['patient'],
+): Promise<RestRegistrationResult> => {
+  try {
+    const pet = await restCreatePet({ id: crypto.randomUUID(), ownerId, ...toRestPatient(patient) })
+    return { status: 'ok', owner: { id: ownerId }, pet: { id: pet.id, mrn: pet.mrn } }
+  } catch (error) {
+    console.error('restCreatePatient: degraded to local-only commit', error)
+    return { status: 'local' }
+  }
+}
 
 /**
  * Mirrors a PIN change to the REST backend (issue 0019) so the bridge in

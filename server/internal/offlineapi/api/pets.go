@@ -14,6 +14,8 @@ import (
 )
 
 type createPetRequest struct {
+	// Optional client-minted id (ADR 0025) — see createOwnerRequest.
+	ID              string `json:"id"`
 	OwnerID         string `json:"ownerId"`
 	Name            string `json:"name"`
 	Species         string `json:"species"`
@@ -111,8 +113,13 @@ func (s *Server) handleCreatePet(w http.ResponseWriter, r *http.Request, p *prin
 	}
 	mrn := fmt.Sprintf("PT-%s-%04d", time.Now().UTC().Format("2006"), count+1)
 	now := db.UtcNow()
+	clientID, idErr := requestID(req.ID)
+	if idErr != nil {
+		writeError(w, http.StatusBadRequest, "validation_error", idErr.Error())
+		return
+	}
 	row, err := s.q.CreatePet(r.Context(), db.CreatePetParams{
-		ID: uuid.NewString(), ClinicID: p.ClinicID, OwnerID: req.OwnerID,
+		ID: clientID, ClinicID: p.ClinicID, OwnerID: req.OwnerID,
 		Mrn: mrn, Name: req.Name, Species: req.Species, Breed: req.Breed,
 		Sex: defaultSex(req.Sex), DateOfBirth: req.DateOfBirth, Color: req.Color,
 		MicrochipNumber: req.MicrochipNumber, Notes: req.Notes,

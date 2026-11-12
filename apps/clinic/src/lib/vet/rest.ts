@@ -303,6 +303,7 @@ export const listOwners = (search?: string): Promise<{ owners: RestOwner[] }> =>
   request('GET', withQuery('/api/v1/owners', { search }))
 
 export const createOwner = (payload: {
+  id?: string
   name: string
   phone: string
   email?: string
@@ -311,6 +312,8 @@ export const createOwner = (payload: {
   secondaryContactPhone?: string
   notes?: string
 }): Promise<RestOwner> => request('POST', '/api/v1/owners', payload)
+
+export const getOwner = (id: string): Promise<RestOwner> => request('GET', `/api/v1/owners/${id}`)
 
 export const updateOwner = (
   id: string,
@@ -321,6 +324,7 @@ export const listPets = (search?: string): Promise<{ pets: RestPet[] }> =>
   request('GET', withQuery('/api/v1/pets', { search }))
 
 export const createPet = (payload: {
+  id?: string
   ownerId: string
   name: string
   species: string

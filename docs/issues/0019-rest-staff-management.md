@@ -52,6 +52,7 @@ Frontend (after the backend lands):
 - Frontend: `rest.ts` staff client methods; the PIN dialog writes through the
   store's `setMemberPin` (document PBKDF2 first, best-effort REST mirror for
   REST-known members; failures logged, never blocking the offline guarantee).
+- Follow-ups: the reconciliation pass (issue 0021) covers local-only writes; see also issue 0020 for the feature-cutover slices.
 - Still open: Staff & Permissions UI for REST-side member creation and
   activate/deactivate (document actions remain in place until the owners/
   pets-style per-feature cutover reaches staff).

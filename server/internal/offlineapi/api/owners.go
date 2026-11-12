@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -12,6 +13,10 @@ import (
 )
 
 type createOwnerRequest struct {
+	// Optional client-minted id (ADR 0025): the offline-first client owns
+	// identity so the document and the normalized store never diverge. Must
+	// be a UUID when present; absent means the server mints one.
+	ID                    string `json:"id"`
 	Name                  string `json:"name"`
 	Phone                 string `json:"phone"`
 	Email                 string `json:"email"`
@@ -19,6 +24,19 @@ type createOwnerRequest struct {
 	SecondaryContactName  string `json:"secondaryContactName"`
 	SecondaryContactPhone string `json:"secondaryContactPhone"`
 	Notes                 string `json:"notes"`
+}
+
+// requestID validates an optional client-minted id: empty means mint one.
+func requestID(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return uuid.NewString(), nil
+	}
+	parsed, err := uuid.Parse(raw)
+	if err != nil {
+		return "", fmt.Errorf("id must be a UUID")
+	}
+	return parsed.String(), nil
 }
 
 type updateOwnerRequest struct {
@@ -67,8 +85,13 @@ func (s *Server) handleCreateOwner(w http.ResponseWriter, r *http.Request, p *pr
 		return
 	}
 	now := db.UtcNow()
+	clientID, idErr := requestID(req.ID)
+	if idErr != nil {
+		writeError(w, http.StatusBadRequest, "validation_error", idErr.Error())
+		return
+	}
 	row, err := s.q.CreateOwner(r.Context(), db.CreateOwnerParams{
-		ID: uuid.NewString(), ClinicID: p.ClinicID, Name: req.Name,
+		ID: clientID, ClinicID: p.ClinicID, Name: req.Name,
 		Phone: req.Phone, Email: req.Email, Address: req.Address,
 		SecondaryContactName:  req.SecondaryContactName,
 		SecondaryContactPhone: req.SecondaryContactPhone,

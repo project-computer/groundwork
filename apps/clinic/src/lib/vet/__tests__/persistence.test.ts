@@ -201,3 +201,127 @@ describe('restSetStaffPin', () => {
     await expect(restSetStaffPin('u-pim', '4321')).resolves.toBe('failed')
   })
 })
+
+// --- REST-first registration (ADR 0025, slice 1) -----------------------------
+
+import { restCreateOwnerAndPatient, restCreatePatient, restEnsureOwner, toRestSex } from '../persistence'
+
+describe('toRestSex', () => {
+  it('folds neutered/spayed into the base sex like the importer', () => {
+    expect(toRestSex('Male')).toBe('male')
+    expect(toRestSex('Male (neutered)')).toBe('male')
+    expect(toRestSex('Female (spayed)')).toBe('female')
+    expect(toRestSex('Unknown')).toBe('unknown')
+  })
+})
+
+const registrationFetch = () => {
+  const calls: { url: string; body: unknown }[] = []
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      const payload = init?.body ? JSON.parse(String(init.body)) : undefined
+      calls.push({ url: String(url), body: payload })
+      if (String(url).endsWith('/owners')) return restJson(201, { id: payload.id, mrn: '' })
+      // Pet creation: the server allocates the MRN.
+      return restJson(201, { id: payload.id, mrn: 'PT-2026-0042' })
+    }),
+  )
+  return calls
+}
+
+describe('restCreateOwnerAndPatient', () => {
+  beforeEach(() => {
+    configureRest({ baseUrl: 'http://127.0.0.1:51731', secret: 'launch-secret' })
+    window.sessionStorage.clear()
+  })
+  afterEach(() => {
+    resetRest()
+    vi.unstubAllGlobals()
+  })
+
+  it('mints the owner id client-side and projects the server MRN', async () => {
+    const calls = registrationFetch()
+    const result = await restCreateOwnerAndPatient('owner-uuid-1', {
+      owner: { name: 'Nok', phone: '0812345678', email: '', address: '' },
+      patient: {
+        name: 'Mochi', species: 'Cat', breed: 'mix', sex: 'Female (spayed)',
+        birthDate: '2021-03-01', microchip: '98511',
+      },
+    })
+    expect(result.status).toBe('ok')
+    expect(result.owner?.id).toBe('owner-uuid-1')
+    expect(result.pet?.mrn).toBe('PT-2026-0042')
+    expect(calls[0].body).toMatchObject({ id: 'owner-uuid-1', name: 'Nok' })
+    expect(calls[1].body).toMatchObject({
+      ownerId: 'owner-uuid-1', species: 'cat', sex: 'female', microchipNumber: '98511',
+    })
+  })
+
+  it('degrades to a local-only commit when REST is unreachable', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new TypeError('Failed to fetch')
+    }))
+    const result = await restCreateOwnerAndPatient('owner-uuid-2', {
+      owner: { name: 'Nok', phone: '0812345678', email: '', address: '' },
+      patient: { name: 'Mochi', species: 'Dog', breed: '', sex: 'Male', birthDate: '' },
+    })
+    expect(result.status).toBe('local')
+  })
+})
+
+describe('restEnsureOwner', () => {
+  beforeEach(() => {
+    configureRest({ baseUrl: 'http://127.0.0.1:51731', secret: 'launch-secret' })
+    window.sessionStorage.clear()
+  })
+  afterEach(() => {
+    resetRest()
+    vi.unstubAllGlobals()
+  })
+
+  it('keeps an existing REST owner without recreating it', async () => {
+    const fetchSpy = vi.fn(async () => restJson(200, { id: 'owner-1', name: 'Nok' }))
+    vi.stubGlobal('fetch', fetchSpy)
+    await expect(restEnsureOwner('owner-1', { name: 'Nok', phone: '', email: '', address: '' })).resolves.toBe(true)
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('creates a missing owner under the document id (convergence)', async () => {
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValueOnce(restJson(404, { error: { code: 'not_found', message: 'owner not found' } }))
+      .mockResolvedValueOnce(restJson(201, { id: 'owner-2' }))
+    vi.stubGlobal('fetch', fetchSpy)
+    await expect(restEnsureOwner('owner-2', { name: 'Nok', phone: '0812345678', email: '', address: '' })).resolves.toBe(true)
+    expect(JSON.parse(String(fetchSpy.mock.calls[1][1]?.body))).toMatchObject({ id: 'owner-2', name: 'Nok' })
+  })
+
+  it('reports unavailable when REST is unreachable', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new TypeError('Failed to fetch')
+    }))
+    await expect(restEnsureOwner('owner-3', { name: 'Nok', phone: '', email: '', address: '' })).resolves.toBe(false)
+  })
+})
+
+describe('restCreatePatient', () => {
+  beforeEach(() => {
+    configureRest({ baseUrl: 'http://127.0.0.1:51731', secret: 'launch-secret' })
+    window.sessionStorage.clear()
+  })
+  afterEach(() => {
+    resetRest()
+    vi.unstubAllGlobals()
+  })
+
+  it('projects the server MRN for the second patient', async () => {
+    registrationFetch()
+    const result = await restCreatePatient(
+      'owner-1',
+      { name: 'Tiger', species: 'Dog', breed: '', sex: 'Male', birthDate: '', microchip: undefined },
+    )
+    expect(result.status).toBe('ok')
+    expect(result.pet?.mrn).toBe('PT-2026-0042')
+  })
+})
