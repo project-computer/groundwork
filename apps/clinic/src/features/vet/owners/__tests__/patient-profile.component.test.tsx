@@ -56,6 +56,34 @@ it("shows the last recorded vital weight as the clinical weight (ADR 0022)", asy
   await expect.element(page.getByText(/weight 32\.4 kg/)).toBeVisible()
 })
 
+it("shows the weight measurement history across visits (ADR 0022)", async () => {
+  await page.viewport(1280, 900)
+  // A second, earlier closed visit for Tiger gives the trend two points.
+  const secondVisit = {
+    id: "e-2",
+    patientId: "p-3",
+    appointmentId: "a-1",
+    attendingId: "u-pim",
+    status: "closed",
+    openedAt: "2026-09-01T09:00:00+07:00",
+    closedAt: "2026-09-01T09:30:00+07:00",
+    vitals: { weightKg: "33.8", tempC: "38.4", heartRate: "92", respRate: "20" },
+    notes: [],
+    diagnoses: [],
+    prescriptions: [],
+    version: 1,
+  }
+  seed({ ...seedState, encounters: [seedState.encounters[0], secondVisit] })
+  await renderApp()
+  await page.getByRole("button", { name: "Owners & Patients" }).click()
+
+  await rowButton("Tiger", "View")
+  await expect.element(page.getByText(/Last recorded 32\.4 kg/)).toBeVisible()
+  // Newest → oldest display order: the selector returns oldest first, and the
+  // dialog shows the last five as an arrow chain ending on the current weight.
+  await expect.element(page.getByText(/Weight history: 33\.8 kg .* → 32\.4 kg/)).toBeVisible()
+})
+
 it("blocks saving when the patient name is blank", async () => {
   await page.viewport(1280, 900)
   seed(seedState)

@@ -136,34 +136,42 @@ export const StaffView = () => {
           })}
         </DataTable>
       </Panel>
-      <Panel
-        title={t`Audit trail`}
-        description={t`Every write lands here with actor and timestamp`}
-        action={
-          data.audit.length > 12 ? (
-            <button className="small-button" onClick={() => setShowAllAudit((v) => !v)}>
-              {showAllAudit ? <Trans>Show recent</Trans> : <Trans>Show all {data.audit.length}</Trans>}
-            </button>
-          ) : undefined
-        }
-      >
-        <div className="activity-list">
-          {(showAllAudit ? data.audit : data.audit.slice(0, 12)).map((item) => (
-            <div className="activity-row" key={item.id}>
-              <div className="activity-mark">
-                <ShieldCheck size={14} />
+      {manage.allowed ? (
+        <Panel
+          title={t`Audit trail`}
+          description={t`Every write lands here with actor and timestamp`}
+          action={
+            data.audit.length > 12 ? (
+              <button className="small-button" onClick={() => setShowAllAudit((v) => !v)}>
+                {showAllAudit ? <Trans>Show recent</Trans> : <Trans>Show all {data.audit.length}</Trans>}
+              </button>
+            ) : undefined
+          }
+        >
+          <div className="activity-list">
+            {(showAllAudit ? data.audit : data.audit.slice(0, 12)).map((item) => (
+              <div className="activity-row" key={item.id}>
+                <div className="activity-mark">
+                  <ShieldCheck size={14} />
+                </div>
+                <div>
+                  <strong>{item.summary}</strong>
+                  <span>
+                    {data.users.find((u) => u.id === item.actorId)?.name ?? item.actorId} · {formatDate(item.occurredAt)} · {item.action}
+                  </span>
+                </div>
               </div>
-              <div>
-                <strong>{item.summary}</strong>
-                <span>
-                  {data.users.find((u) => u.id === item.actorId)?.name ?? item.actorId} · {formatDate(item.occurredAt)} · {item.action}
-                </span>
-              </div>
-            </div>
-          ))}
-          {data.audit.length === 0 && <p className="empty-state"><Trans>No activity recorded yet.</Trans></p>}
-        </div>
-      </Panel>
+            ))}
+            {data.audit.length === 0 && <p className="empty-state"><Trans>No activity recorded yet.</Trans></p>}
+          </div>
+        </Panel>
+      ) : (
+        <Panel title={t`Audit trail`} description={t`Every write lands here with actor and timestamp`}>
+          <p className="empty-state">
+            <Trans>The audit trail is reserved for clinic admins.</Trans>
+          </p>
+        </Panel>
+      )}
       {pinFor && <PinDialog member={pinFor} onClose={() => setPinFor(null)} />}
     </>
   )
