@@ -109,6 +109,11 @@ Evidence: [`.github/workflows/release.yml`](../.github/workflows/release.yml),
 
 ### P1-6. Printable consultation summary (MED-11)
 
+DONE — shipped in `feature/pilot-print-and-polish` (PR #8): a summary sheet
+dialog on every archived visit (clinic header, patient/owner identity, vet,
+dates, vitals, diagnoses, prescriptions, amended notes) behind the existing
+`.print-area` print discipline.
+
 `window.print()` exists only in the receipt dialog.
 
 - [ ] A consultation summary prints patient identity, owner, date, vet,
@@ -119,6 +124,10 @@ Evidence: [`receipt-dialog.tsx`](../apps/clinic/src/features/vet/billing/compone
 [`base.css`](../apps/clinic/src/styles/base.css).
 
 ### P1-7. Printable prescription (RX-05)
+
+DONE — same PR: a prescription sheet (medication, dose/route/frequency/
+duration/qty, prescriber signature line) reachable from the live consultation
+panel once a prescription exists, and from the archived record.
 
 - [ ] One-click prescription print from an open or closed encounter, with
       clinic identity, patient/owner, medication, dose, route, frequency,
@@ -231,7 +240,9 @@ Owners/pets and invoices render every row; there is no invoice search.
 
 ### P2-16. Audit viewer access (AUD-03)
 
-The audit panel is rendered for every role in Staff & Permissions.
+DONE — same PR: the audit panel renders only for `staff.manage` members;
+everyone else sees a read-only explanation. App + staff component tests
+cover both sides.
 
 - [ ] Gate the audit trail on `staff.manage` (or a dedicated audit
       permission); show a read-only reason otherwise.
