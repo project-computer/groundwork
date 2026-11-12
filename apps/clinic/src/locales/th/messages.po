@@ -450,6 +450,10 @@ msgstr "ผู้ป่วยทั้งหมด"
 msgid "All time"
 msgstr "ตลอดกาล"
 
+#: src/lib/vet/exports.ts
+msgid "Allergies"
+msgstr "อาการแพ้"
+
 #: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Allergies (comma-separated)"
 msgstr "การแพ้ (คั่นด้วยเครื่องหมายจุลภาค)"
@@ -611,6 +615,7 @@ msgid "Bank transfer"
 msgstr "โอนเงินผ่านธนาคาร"
 
 #: src/features/vet/owners/components/patient-dialog.tsx
+#: src/lib/vet/exports.ts
 msgid "Baseline weight (kg)"
 msgstr "น้ำหนักฐานเริ่มต้น (กก.)"
 
@@ -675,6 +680,7 @@ msgstr "เข็มกระตุ้นที่ครบกำหนดหร
 
 #: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
+#: src/lib/vet/exports.ts
 msgid "Breed"
 msgstr "สายพันธุ์"
 
@@ -1110,6 +1116,7 @@ msgstr "วันที่ให้วัคซีน"
 
 #: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
+#: src/lib/vet/exports.ts
 msgid "Date of birth"
 msgstr "วันเกิด"
 
@@ -1417,6 +1424,7 @@ msgid "Export and manual backup are included in the free Local plan."
 msgstr "การส่งออกและสำรองข้อมูลด้วยตนเองรวมอยู่ในแพ็กเกจ Local ฟรี"
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/settings/index.tsx
 msgid "Export CSV"
 msgstr "ส่งออก CSV"
 
@@ -1424,15 +1432,31 @@ msgstr "ส่งออก CSV"
 msgid "Export data"
 msgstr "ส่งออกข้อมูล"
 
+#: src/features/vet/settings/index.tsx
+msgid "Export records"
+msgstr "ส่งออกเวชระเบียน"
+
 #: src/features/vet/owners/index.tsx
 msgid "Export this patient's case bundle for another clinic"
 msgstr "ส่งออกชุดข้อมูลเคสของผู้ป่วยนี้ให้คลินิกอื่น"
+
+#. placeholder {0}: data.patients.length
+#. placeholder {1}: data.encounters.length
+#: src/features/vet/settings/index.tsx
+msgid "Exported medical records — {0, plural, one {# patient} other {# patients}}, {1, plural, one {# visit} other {# visits}}"
+msgstr "ส่งออกเวชระเบียนแล้ว — ผู้ป่วย {0, plural, one {# ราย} other {# ราย}}, การรักษา {1, plural, one {# ครั้ง} other {# ครั้ง}}"
 
 #. placeholder {0}: data.patients.length
 #. placeholder {1}: data.invoices.length
 #: src/features/vet/settings/index.tsx
 msgid "Exported the clinic archive — {0, plural, one {# patient} other {# patients}}, {1, plural, one {# invoice} other {# invoices}}"
 msgstr "ส่งออกไฟล์จัดเก็บของคลินิกแล้ว — {0, plural, other {# ผู้ป่วย}}, {1, plural, other {# ใบแจ้งหนี้}}"
+
+#. placeholder {0}: data.owners.length
+#. placeholder {1}: data.patients.length
+#: src/features/vet/settings/index.tsx
+msgid "Exported the owner & patient register — {0, plural, one {# owner} other {# owners}}, {1, plural, one {# patient} other {# patients}}"
+msgstr "ส่งออกทะเบียนเจ้าของและสัตว์เลี้ยงแล้ว — เจ้าของ {0, plural, one {# ราย} other {# ราย}}, ผู้ป่วย {1, plural, one {# ราย} other {# ราย}}"
 
 #: src/features/vet/reports/components/labels.ts
 msgid "Feb"
@@ -1816,17 +1840,28 @@ msgstr "ทำเครื่องหมายไม่มาตามนัด
 msgid "May"
 msgstr "พ.ค."
 
+#: src/lib/vet/exports.ts
+msgid "Medical alerts"
+msgstr "คำเตือนทางการแพทย์"
+
 #: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Medical alerts (comma-separated)"
 msgstr "การแจ้งเตือนทางการแพทย์ (คั่นด้วยเครื่องหมายจุลภาค)"
 
 #: src/features/vet/records/index.tsx
+#: src/features/vet/settings/index.tsx
 msgid "Medical records"
 msgstr "เวชระเบียน"
 
 #: src/features/vet/shell/index.tsx
 msgid "Medical Records"
 msgstr "เวชระเบียน"
+
+#. placeholder {0}: data.patients.length
+#. placeholder {1}: data.encounters.length
+#: src/features/vet/settings/index.tsx
+msgid "Medical records exported ({0, plural, one {# patient} other {# patients}}, {1, plural, one {# visit} other {# visits}})."
+msgstr "ส่งออกเวชระเบียนแล้ว (ผู้ป่วย {0, plural, one {# ราย} other {# ราย}}, การรักษา {1, plural, one {# ครั้ง} other {# ครั้ง}})"
 
 #: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Medical timeline"
@@ -1857,6 +1892,7 @@ msgid "Metric"
 msgstr "ตัวชี้วัด"
 
 #: src/features/vet/owners/components/patient-dialog.tsx
+#: src/lib/vet/exports.ts
 msgid "Microchip"
 msgstr "ไมโครชิป"
 
@@ -1885,6 +1921,10 @@ msgstr "รายเดือน · 12 เดือนที่ผ่านม�
 #: src/features/vet/reports/components/labels.ts
 msgid "Monthly · this year"
 msgstr "รายเดือน · ปีนี้"
+
+#: src/lib/vet/exports.ts
+msgid "MRN"
+msgstr "เลขประจำตัวผู้ป่วย"
 
 #: src/features/vet/shell/index.tsx
 #: src/features/vet/workspace/index.tsx
@@ -2184,6 +2224,10 @@ msgstr "เปิด"
 msgid "On hand"
 msgstr "คงเหลือ"
 
+#: src/features/vet/settings/index.tsx
+msgid "One CSV row per patient — the clinic's contactable roster for external systems."
+msgstr "หนึ่งแถว CSV ต่อผู้ป่วย — รายชื่อติดต่อของคลินิกสำหรับระบบภายนอก"
+
 #. placeholder {0}: Math.max(0, selectedStock)
 #. placeholder {1}: selectedRx.unit
 #: src/features/vet/consultations/components/prescription-panel.tsx
@@ -2279,12 +2323,25 @@ msgstr "เลยกำหนด {0}"
 #: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
+#: src/lib/vet/exports.ts
 msgid "Owner"
 msgstr "เจ้าของ"
+
+#: src/features/vet/settings/index.tsx
+msgid "Owner & patient register"
+msgstr "ทะเบียนเจ้าของและผู้ป่วย"
+
+#: src/lib/vet/exports.ts
+msgid "Owner address"
+msgstr "ที่อยู่เจ้าของ"
 
 #: src/features/vet/owners/index.tsx
 msgid "Owner and patient records are saved in one local transaction."
 msgstr "บันทึกเจ้าของและผู้ป่วยถูกบันทึกพร้อมกันในหนึ่งรายการ"
+
+#: src/lib/vet/exports.ts
+msgid "Owner email"
+msgstr "อีเมลเจ้าของ"
 
 #: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
@@ -2292,6 +2349,7 @@ msgid "Owner name"
 msgstr "ชื่อเจ้าของ"
 
 #: src/features/vet/owners/index.tsx
+#: src/lib/vet/exports.ts
 msgid "Owner phone"
 msgstr "โทรศัพท์เจ้าของ"
 
@@ -2326,6 +2384,7 @@ msgstr "ชำระแล้ว"
 #: src/features/vet/owners/index.tsx
 #: src/features/vet/records/index.tsx
 #: src/features/vet/schedule/components/booking-dialog.tsx
+#: src/lib/vet/exports.ts
 msgid "Patient"
 msgstr "ผู้ป่วย"
 
@@ -2685,6 +2744,12 @@ msgstr "คืนเงินแล้ว"
 msgid "Refunds are appended to the payment ledger; the original payment and the receipt stay unchanged."
 msgstr "การคืนเงินจะถูกเพิ่มในบัญชีการชำระเงิน โดยรายการเดิมและใบเสร็จคงสภาพเดิม"
 
+#. placeholder {0}: data.owners.length
+#. placeholder {1}: data.patients.length
+#: src/features/vet/settings/index.tsx
+msgid "Register exported ({0, plural, one {# owner} other {# owners}}, {1, plural, one {# patient} other {# patients}})."
+msgstr "ส่งออกทะเบียนแล้ว (เจ้าของ {0, plural, one {# ราย} other {# ราย}}, ผู้ป่วย {1, plural, one {# ราย} other {# ราย}})"
+
 #: src/features/vet/dashboard/index.tsx
 #: src/features/vet/owners/index.tsx
 msgid "Register patient"
@@ -2938,6 +3003,7 @@ msgstr "การตั้งค่า"
 
 #: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
+#: src/lib/vet/exports.ts
 msgid "Sex"
 msgstr "เพศ"
 
@@ -2998,6 +3064,7 @@ msgstr "เกิดข้อผิดพลาดขณะแสดงผลพ
 
 #: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
+#: src/lib/vet/exports.ts
 msgid "Species"
 msgstr "ชนิดสัตว์"
 
@@ -3415,6 +3482,10 @@ msgstr "การรักษา"
 #: src/features/vet/reports/index.tsx
 msgid "Visits attended and revenue billed in this period."
 msgstr "การรักษาที่ให้บริการและรายได้ที่ออกบิลในช่วงนี้"
+
+#: src/features/vet/settings/index.tsx
+msgid "Visits with vitals, diagnoses, prescriptions and notes, plus vaccinations — one readable JSON."
+msgstr "การรักษาพร้อมสัญญาณชีพ การวินิจฉัย ใบสั่งยา บันทึก และวัคซีน — ในไฟล์ JSON ที่อ่านง่ายไฟล์เดียว"
 
 #: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/consultations/components/vitals-panel.tsx

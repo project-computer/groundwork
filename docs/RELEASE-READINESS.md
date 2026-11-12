@@ -165,6 +165,10 @@ Evidence: [`billing/index.tsx`](../apps/clinic/src/features/vet/billing/index.ts
 
 ### P1-10. Owner/pet and medical-record exports (BKP-06/07)
 
+DONE — owner/patient CSV register + medical-records JSON (visits, vitals,
+diagnoses, prescriptions, notes, vaccinations) from Settings, both gated on
+data.export and audited. The only CSV export is the reports spreadsheet
+
 The only CSV export is the reports spreadsheet; the JSON archive is not the
 portable owner/pet or medical-record export the plan asks for.
 
