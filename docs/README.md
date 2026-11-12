@@ -12,7 +12,7 @@ code.
 | `architecture.md` | System architecture: app/sidecar/server split, persistence, sync |
 | `data-model.md` | Clinic document shape, entities, migration history |
 | `RELEASE-READINESS.md` | Prioritized release-gap checklist (P0–P2) with acceptance criteria |
-| `decisions/` | ADRs 0001–0023, the single decision series (append-only) |
+| `decisions/` | ADRs 0001–0024, the single decision series (append-only) |
 
 ## Historical records (do not update to match later code)
 

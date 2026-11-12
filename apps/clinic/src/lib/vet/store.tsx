@@ -1,10 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
 import { i18n } from '@lingui/core'
 import { msg } from '@lingui/core/macro'
-import { loadPlanPref, loadState, parseClinicState, savePlanPref, saveState } from './persistence'
+import { loadPlanPref, loadState, parseClinicState, restVerifyMember, savePlanPref, saveState } from './persistence'
 import { runAutoBackup } from './backup'
 import { useSyncWorker } from './sync'
 import { can, formatMoney, formatMrn, invoiceTotals, roleLabel } from './format'
+import { verifyPin } from './auth'
 import { seedState } from './seed'
 import type {
   Appointment,
@@ -1028,7 +1029,12 @@ export const initialSession: Session = {
   view: 'dashboard',
 }
 
-const StoreContext = createContext<{ store: Store; dispatch: (a: Action) => void; hydrated: boolean } | null>(null)
+const StoreContext = createContext<{
+  store: Store
+  dispatch: (a: Action) => void
+  hydrated: boolean
+  signInWithPin: (member: StaffUser, pin: string) => Promise<'ok' | 'denied' | 'fallback'>
+} | null>(null)
 
 export const ClinicProvider = ({ children }: { children: ReactNode }) => {
   const [hydrated, setHydrated] = useState(false)
@@ -1109,6 +1115,27 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated])
 
+  // Credential verification for the lock screen (ADR 0024): REST-authoritative
+  // when the vetcare backend knows the member, document PBKDF2 otherwise.
+  // The store owns the orchestration so no UI surface touches transports.
+  const signInWithPin = useCallback(
+    async (member: StaffUser, pin: string): Promise<'ok' | 'denied' | 'fallback'> => {
+      const outcome = await restVerifyMember(member.id, pin)
+      if (outcome === 'ok') {
+        dispatch({ type: 'signIn', userId: member.id })
+        return 'ok'
+      }
+      if (outcome === 'denied') return 'denied'
+      const localOk = await verifyPin(member, pin)
+      if (localOk) {
+        dispatch({ type: 'signIn', userId: member.id })
+        return 'ok'
+      }
+      return 'denied'
+    },
+    [dispatch],
+  )
+
   // Sync orchestration lives behind the lib/vet/sync seam (phase 5): debounced
   // push, periodic pull, connectivity resets and the in-flight mutation lock.
   const { guardedDispatch } = useSyncWorker({
@@ -1121,14 +1148,17 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
     dispatch,
   })
 
-  const value = useMemo(() => ({ store, dispatch: guardedDispatch, hydrated }), [store, guardedDispatch, hydrated])
+  const value = useMemo(
+    () => ({ store, dispatch: guardedDispatch, hydrated, signInWithPin }),
+    [store, guardedDispatch, hydrated, signInWithPin],
+  )
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }
 
 export const useClinic = () => {
   const ctx = useContext(StoreContext)
   if (!ctx) throw new Error('useClinic must be used inside ClinicProvider')
-  const { store, dispatch, hydrated } = ctx
+  const { store, dispatch, hydrated, signInWithPin } = ctx
   // A stale or missing member (foreign document, emptied users collection)
   // must not crash the shell — the inert placeholder holds no permissions on
   // any write path because the reducer re-checks the actor on every action.
@@ -1136,7 +1166,7 @@ export const useClinic = () => {
     store.data.users.find((u) => u.id === store.session.currentUserId) ??
     store.data.users.find((u) => u.active) ??
     EMPTY_USER
-  return { data: store.data, session: store.session, user, dispatch, hydrated }
+  return { data: store.data, session: store.session, user, dispatch, hydrated, signInWithPin }
 }
 
 export const usePermission = (permission: Permission) => {

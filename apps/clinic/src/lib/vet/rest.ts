@@ -214,6 +214,18 @@ export const logout = async (): Promise<void> => {
 export const me = (): Promise<{ user: RestUser; clinic: RestClinic }> =>
   request('GET', '/api/v1/auth/me')
 
+export interface RestStaff {
+  id: string
+  username: string
+  name: string
+  active: boolean
+}
+
+/** Pre-auth staff directory: maps a document member id to a REST username
+ * before login (the lock screen has no token yet). Secret-gated server-side;
+ * never carries PIN material. */
+export const listStaff = (): Promise<{ users: RestStaff[] }> => request('GET', '/api/v1/users')
+
 /** Whether the backend still honours the stored session (shell restart, tab
  * restore). Returns false and clears the session when it does not. */
 export const restoreSession = async (): Promise<RestSession | null> => {

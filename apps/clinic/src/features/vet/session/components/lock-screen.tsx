@@ -2,19 +2,20 @@ import { useState, type FormEvent } from 'react'
 import { Lock, PawPrint } from 'lucide-react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { useClinic } from '@/lib/vet/store'
-import { hasPin, isPinFormat, verifyPin } from '@/lib/vet/auth'
+import { hasPin, isPinFormat } from '@/lib/vet/auth'
 import { initials, roleLabel } from '@/lib/vet/format'
 import type { StaffUser } from '@/lib/vet/types'
 
 /**
- * Full-screen gate shown when the session is locked. Signing in is local: the
- * PIN is verified against the member's PBKDF2 hash, then a plain `signIn`
- * dispatch replaces the session user. Members without a PIN (a clinic that has
- * not finished setup) can enter directly — admins are prompted in Staff &
- * Permissions to set one.
+ * Full-screen gate shown when the session is locked. Credential verification
+ * is orchestrated by the store (`signInWithPin`, ADR 0024): REST-authoritative
+ * when the vetcare backend knows the member, document PBKDF2 otherwise. Then
+ * a plain `signIn` dispatch replaces the session user. Members without a PIN
+ * (a clinic that has not finished setup) can enter directly — admins are
+ * prompted in Staff & Permissions to set one.
  */
 export const LockScreen = () => {
-  const { data, session, dispatch } = useClinic()
+  const { data, session, dispatch, signInWithPin } = useClinic()
   const { t } = useLingui()
   const members = data.users.filter((u) => u.active)
   const [selectedId, setSelectedId] = useState(session.currentUserId)
@@ -44,14 +45,13 @@ export const LockScreen = () => {
       return
     }
     setBusy(true)
-    const ok = await verifyPin(selected, pin)
+    const outcome = await signInWithPin(selected, pin)
     setBusy(false)
-    if (!ok) {
+    if (outcome !== 'ok') {
       setError(t`Incorrect PIN — try again`)
       setPin('')
       return
     }
-    dispatch({ type: 'signIn', userId: selected.id })
   }
 
   return (

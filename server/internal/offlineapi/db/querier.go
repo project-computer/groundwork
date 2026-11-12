@@ -53,6 +53,10 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id string) (User, error)
 	GetUserByUsername(ctx context.Context, arg GetUserByUsernameParams) (User, error)
 	LatestPetWeight(ctx context.Context, arg LatestPetWeightParams) (PetWeight, error)
+	// Pre-auth staff directory for the lock screen (staff.go). The database
+	// serves exactly one clinic (ADR 0019); when multi-tenancy lands this gains
+	// a clinic parameter. Never select pin_hash here.
+	ListAllStaff(ctx context.Context) ([]ListAllStaffRow, error)
 	ListAppointments(ctx context.Context, arg ListAppointmentsParams) ([]ListAppointmentsRow, error)
 	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
 	ListConsultationsByPet(ctx context.Context, arg ListConsultationsByPetParams) ([]Consultation, error)

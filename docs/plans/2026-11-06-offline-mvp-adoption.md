@@ -39,7 +39,7 @@ The offline binary writes its own `vetcare.db` (distinct from the legacy
 | 1 | scaffold, migrations 001–010, sqlc, health + setup/login/logout + RBAC, owners, pets, weights | `go test ./...` green; `curl` exercises setup → login → create owner → create pet | **done 2026-11-06** |
 | 2 | Appointments, consultations, prescriptions, medication catalog | APT-01…09, MED-01…11, RX-01…06 covered by handlers/tests | **done 2026-11-06** |
 | 3 | Services/invoices/payments, settings, audit, backups | BILL-01…10, SET-01…04, AUD-01…03, BKP-01…04 | **done 2026-11-07** — billing/settings/audit (`6d5fc53`) + backup endpoints (`1582e65`) |
-| 4 | Frontend REST client + `clinic_state` importer; replace document store per feature | Full visit E2E against the REST backend; restart persistence | **importer done 2026-11-07** · **visit E2E done 2026-11-07** · **shell wiring done 2026-11-07** (Tauri spawns `vetcare`, `vetcare_url`/`vetcare_secret` commands, Makefile staging + `externalBin`, lazy discovery in `rest.ts`); per-feature frontend cutover still open |
+| 4 | Frontend REST client + `clinic_state` importer; replace document store per feature | Full visit E2E against the REST backend; restart persistence | **importer done 2026-11-07** · **visit E2E done 2026-11-07** · **shell wiring done 2026-11-07** (Tauri spawns `vetcare`, `vetcare_url`/`vetcare_secret` commands, Makefile staging + `externalBin`, lazy discovery in `rest.ts`); **auth cutover done 2026-11-12** (ADR 0024 bridge: REST-authoritative credentials, document fallback); remaining feature cutover open |
 | 5 | Delete document store, sync engine, legacy sidecar paths, update repo-structure docs | No references to `clinic_state` / `outbox` in runtime code | open |
 
 ## Phase 1 file map

@@ -109,6 +109,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/v1/settings", s.authed(nil, s.handleGetSettings))
 	mux.HandleFunc("PATCH /api/v1/settings", s.authed(ownedBy(auth.RoleAdmin), s.handleUpdateSettings))
 
+	// Staff directory (pre-auth): the lock screen maps members to usernames
+	// before login. Loopback secret only — no bearer, no PIN material.
+	mux.HandleFunc("GET /api/v1/users", s.handleListStaff)
+
 	// Backups (ADR 0021): any signed-in member may save or list; the storage
 	// discipline matches the document-model sidecar.
 	mux.HandleFunc("POST /api/v1/backups", s.authed(nil, s.handleBackupSave))

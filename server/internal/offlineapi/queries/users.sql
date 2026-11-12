@@ -75,3 +75,9 @@ DELETE FROM sessions WHERE token_hash = sqlc.arg(token_hash);
 
 -- name: DeleteExpiredSessions :exec
 DELETE FROM sessions WHERE expires_at <= sqlc.arg(now);
+
+-- name: ListAllStaff :many
+-- Pre-auth staff directory for the lock screen (staff.go). The database
+-- serves exactly one clinic (ADR 0019); when multi-tenancy lands this gains
+-- a clinic parameter. Never select pin_hash here.
+SELECT id, username, name, active FROM users ORDER BY name;

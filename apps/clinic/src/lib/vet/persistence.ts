@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { isMobilePlatform, isTauri } from '@/lib/platform'
 import { fetchState, pushState } from './backend'
 import { formatMrn } from './format'
+import { RestError, listStaff, login as restLogin } from './rest'
 import { CLINIC_STATE_COLLECTIONS, type ClinicState, type Patient } from './types'
 
 /**
@@ -117,10 +118,39 @@ export const savePlanPref = (plan: PlanPref) => {
   }
 }
 
+// --- REST auth bridge (ADR 0024) ---------------------------------------------
+// Credential verification for the lock screen. When the vetcare REST backend
+// is reachable, credentials are authoritative there (bcrypt, server-side);
+// `fallback` falls back to the document's PBKDF2 hash — the same degraded
+// path philosophy as the ADR-0012 adapter order.
+
+export type RestAuthOutcome = 'ok' | 'denied' | 'fallback'
+
+/**
+ * Verifies a member's PIN against the REST backend when the member exists in
+ * its staff directory. Returns 'fallback' when REST is unreachable or the
+ * member is document-only, so the caller can verify against the document
+ * hash. A directory hit is authoritative: wrong PIN means denied — the
+ * document hash is never consulted for REST-known members.
+ */
+export const restVerifyMember = async (memberId: string, pin: string): Promise<RestAuthOutcome> => {
+  try {
+    const directory = await listStaff()
+    const match = directory.users.find((user) => user.id === memberId && user.active)
+    if (!match) return 'fallback'
+    const session = await restLogin(match.username, pin)
+    return session.token ? 'ok' : 'denied'
+  } catch (error) {
+    // Wrong PIN on a directory hit is a denial; anything else (sidecar
+    // absent, network hiccup) degrades to the document path.
+    if (error instanceof RestError && error.status === 401) return 'denied'
+    return 'fallback'
+  }
+}
+
 /** Save order per ADR 0012: Rust command first (source of truth), then the
  * sidecar copy for cloud sync. The web target has localStorage only. */
-export const saveState = (data: ClinicState, onResult?: SaveResult) => {
-  const fail = (error: unknown, scope: string) => {
+export const saveState = (data: ClinicState, onResult?: SaveResult) => {  const fail = (error: unknown, scope: string) => {
     console.error(scope, error)
     onResult?.(error instanceof Error ? error.message : String(error))
   }

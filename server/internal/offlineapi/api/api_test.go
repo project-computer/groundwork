@@ -226,6 +226,37 @@ func TestOwnersPetsWeightsFlow(t *testing.T) {
 	}
 }
 
+// TestStaffDirectoryIsPreAuth pins the lock-screen contract: the staff
+// directory answers with the loopback secret alone (no bearer), and it never
+// leaks PIN material.
+func TestStaffDirectoryIsPreAuth(t *testing.T) {
+	s := newTestServer(t)
+	setupClinic(t, s)
+
+	res := call(t, s, http.MethodGet, "/api/v1/users", testSecret, "", nil)
+	if res.status != http.StatusOK {
+		t.Fatalf("staff directory = %d, want 200 (secret only)", res.status)
+	}
+	users, _ := res.body["users"].([]any)
+	if len(users) != 1 {
+		t.Fatalf("users = %d, want 1", len(users))
+	}
+	user, _ := users[0].(map[string]any)
+	if user["username"] != "admin" || user["active"] != true {
+		t.Fatalf("unexpected staff entry: %s", res.raw)
+	}
+	for _, key := range []string{"pinHash", "pin_hash", "pinSalt", "password"} {
+		if _, present := user[key]; present {
+			t.Fatalf("staff directory leaked %q", key)
+		}
+	}
+
+	noSecret := call(t, s, http.MethodGet, "/api/v1/users", "", "", nil)
+	if noSecret.status != http.StatusUnauthorized {
+		t.Fatalf("staff directory without secret = %d, want 401", noSecret.status)
+	}
+}
+
 func TestMissingBearerIsUnauthorized(t *testing.T) {
 	s := newTestServer(t)
 	setupClinic(t, s)

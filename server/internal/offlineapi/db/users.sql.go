@@ -324,6 +324,48 @@ func (q *Queries) GetUserByUsername(ctx context.Context, arg GetUserByUsernamePa
 	return i, err
 }
 
+const listAllStaff = `-- name: ListAllStaff :many
+SELECT id, username, name, active FROM users ORDER BY name
+`
+
+type ListAllStaffRow struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	Name     string `json:"name"`
+	Active   int64  `json:"active"`
+}
+
+// Pre-auth staff directory for the lock screen (staff.go). The database
+// serves exactly one clinic (ADR 0019); when multi-tenancy lands this gains
+// a clinic parameter. Never select pin_hash here.
+func (q *Queries) ListAllStaff(ctx context.Context) ([]ListAllStaffRow, error) {
+	rows, err := q.db.QueryContext(ctx, listAllStaff)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAllStaffRow{}
+	for rows.Next() {
+		var i ListAllStaffRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Name,
+			&i.Active,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUserRoles = `-- name: ListUserRoles :many
 SELECT r.name
 FROM user_roles ur
