@@ -302,3 +302,37 @@ describe('rejection channel (ADR-0015)', () => {
     expect(allowed.data.inventoryLots.find((l) => l.id === 'lot-2')!.quantity).toBe(23)
   })
 })
+
+describe('service catalog (SET-04 / P1-9)', () => {
+  it('creates a service as an admin and patterns its sku', () => {
+    const next = reducer(baseStore(), {
+      type: 'addService',
+      service: { name: 'Dental cleaning', unit: 'visit', unitPrice: 80000 },
+    })
+    const service = next.data.products.find((p) => p.kind === 'service' && p.name === 'Dental cleaning')
+    expect(service).toBeDefined()
+    expect(service?.sku).toMatch(/^SVC-\d+$/)
+    expect(service?.active).toBe(true)
+    expect(next.data.audit[0]).toMatchObject({ action: 'service.create', actorId: 'u-mai' })
+  })
+
+  it('rejects a blank name and a negative price', () => {
+    expect(reducer(baseStore(), { type: 'addService', service: { name: '  ', unit: 'visit', unitPrice: 0 } }).session.lastRejection?.code).toBe('service.empty_name')
+    expect(reducer(baseStore(), { type: 'addService', service: { name: 'X', unit: 'visit', unitPrice: -1 } }).session.lastRejection?.code).toBe('service.invalid_price')
+  })
+
+  it('lets an admin edit price and deactivation, audited', () => {
+    let next = reducer(baseStore(), { type: 'updateService', id: 'svc-1', patch: { unitPrice: 65000 } })
+    expect(next.data.products.find((p) => p.id === 'svc-1')!.unitPrice).toBe(65000)
+    expect(next.data.audit[0]).toMatchObject({ action: 'service.update' })
+
+    next = reducer(next, { type: 'updateService', id: 'svc-1', patch: { active: false } })
+    expect(next.data.products.find((p) => p.id === 'svc-1')!.active).toBe(false)
+  })
+
+  it('rejects service edits from a veterinarian', () => {
+    const vet = { ...baseStore(), session: { ...initialSession, currentUserId: 'u-pim' } }
+    const next = reducer(vet, { type: 'updateService', id: 'svc-1', patch: { unitPrice: 1 } })
+    expect(next.session.lastRejection?.code).toBe('rbac.services')
+  })
+})

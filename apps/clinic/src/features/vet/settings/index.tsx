@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { plural } from '@lingui/core/macro'
 import { Plural, Trans, useLingui } from '@lingui/react/macro'
 import { Activity, AlertTriangle, Database, History, RotateCcw, ShieldCheck } from 'lucide-react'
-import { Panel, PageHeader, Pill } from '@/components/patterns/fields'
+import { Panel, PageHeader, Pill, Field, NativeSelect } from '@/components/patterns/fields'
 import { Modal } from '@/components/patterns/modal'
 import { useClinic, usePermission, useSyncState } from '@/lib/vet/store'
-import { formatBytes, formatDate, statusLabel, todayKey } from '@/lib/vet/format'
+import { formatBytes, formatDate, formatMoney, statusLabel, todayKey } from '@/lib/vet/format'
 import {
   buildBackup,
   downloadBackup,
@@ -48,6 +48,7 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
   const [manualSafetyCopy, setManualSafetyCopy] = useState(false)
   const [safetyCopied, setSafetyCopied] = useState(false)
   const [restoring, setRestoring] = useState(false)
+  const [editingService, setEditingService] = useState<{ id: string; name: string; unit: string; unitPrice: number; active: boolean } | 'new' | null>(null)
 
   // Backup history comes from the desktop sidecar; in a browser the list
   // stays empty and the panel shows the download-based flow only.
@@ -290,6 +291,61 @@ const exportRegister = () => {
             )}
           </div>
         </Panel>
+        <Panel
+          title={t`Service catalog`}
+          description={t`Consultation and treatment fees — edits apply to new invoices only; priced in satang (THB).`}
+          action={
+            clinicManage.allowed ? (
+              <button className="small-button" onClick={() => setEditingService('new')}>
+                <Trans>Add service</Trans>
+              </button>
+            ) : undefined
+          }
+        >
+          <div className="activity-list">
+            {data.products.filter((p) => p.kind === 'service').map((service) => (
+              <div className="activity-row" key={service.id}>
+                <div>
+                  <strong>{service.name}</strong>
+                  <span>
+                    {service.unit} · {formatMoney(service.unitPrice)}
+                    {service.active === false ? ` · ${t`deactivated`}` : ''}
+                  </span>
+                </div>
+                {clinicManage.allowed && (
+                  <button
+                    className="small-button"
+                    onClick={() =>
+                      setEditingService({
+                        id: service.id,
+                        name: service.name,
+                        unit: service.unit,
+                        unitPrice: service.unitPrice,
+                        active: service.active !== false,
+                      })
+                    }
+                  >
+                    <Trans>Edit</Trans>
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </Panel>
+        {editingService && (
+          <ServiceEditor
+            initial={editingService === 'new' ? null : editingService}
+            onCancel={() => setEditingService(null)}
+            onSave={(service) => {
+              if (service.id) {
+                dispatch({ type: 'updateService', id: service.id, patch: { name: service.name, unit: service.unit, unitPrice: service.unitPrice, active: service.active } })
+              } else {
+                dispatch({ type: 'addService', service: { name: service.name, unit: service.unit, unitPrice: service.unitPrice } })
+              }
+              setEditingService(null)
+            }}
+          />
+        )}
         <Panel title={t`Portability & recovery`} description={t`Export and manual backup are included in the free Local plan.`}>
           {notice && (
             <p className="form-hint" role="status">
@@ -507,6 +563,79 @@ const exportRegister = () => {
         </Modal>
       )}
     </>
+  )
+}
+
+/**
+ * Service-catalog editor dialog (SET-04 / P1-9). Creates or edits a service
+ * (consultation/treatment fee); prices are typed in THB and stored in satang
+ * like every other money field. Deactivation keeps historical invoices intact
+ * — only the closure fee source skips inactive services.
+ */
+const ServiceEditor = ({
+  initial,
+  onCancel,
+  onSave,
+}: {
+  initial: { id: string; name: string; unit: string; unitPrice: number; active: boolean } | null
+  onCancel: () => void
+  onSave: (service: { id?: string; name: string; unit: string; unitPrice: number; active: boolean }) => void
+}) => {
+  const { t } = useLingui()
+  const [name, setName] = useState(initial?.name ?? '')
+  const [unit, setUnit] = useState(initial?.unit ?? 'visit')
+  const [price, setPrice] = useState(() => ((initial?.unitPrice ?? 0) / 100).toFixed(2))
+  const [active, setActive] = useState(initial?.active ?? true)
+
+  const parsedPrice = Math.round(Number(price) * 100)
+  const valid = name.trim().length > 0 && Number.isFinite(parsedPrice) && parsedPrice >= 0
+
+  const submit = () => {
+    if (!valid) return
+    onSave({
+      id: initial?.id,
+      name: name.trim(),
+      unit: unit.trim() || 'visit',
+      unitPrice: parsedPrice,
+      active,
+    })
+  }
+
+  return (
+    <Modal
+      label={initial ? t`Edit service ${initial.name}` : t`Add service`}
+      title={initial ? <Trans>Edit service</Trans> : <Trans>Add service</Trans>}
+      subtitle={<Trans>Applies to new invoices only — priced in THB.</Trans>}
+      onClose={onCancel}
+    >
+      <div className="form-grid">
+        <Field label={t`Service name`} htmlFor="svc-name">
+          <input id="svc-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t`e.g. Dental cleaning`} />
+        </Field>
+        <Field label={t`Unit`} htmlFor="svc-unit">
+          <input id="svc-unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="visit" />
+        </Field>
+        <Field label={t`Price (THB)`} htmlFor="svc-price">
+          <input id="svc-price" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} />
+        </Field>
+        {initial && (
+          <Field label={t`Availability`} htmlFor="svc-active">
+            <NativeSelect id="svc-active" value={active ? 'active' : 'inactive'} onChange={(e) => setActive(e.target.value === 'active')}>
+              <option value="active">{t`Active — selectable for new visits`}</option>
+              <option value="inactive">{t`Deactivated — kept for history`}</option>
+            </NativeSelect>
+          </Field>
+        )}
+      </div>
+      <div className="panel-footer">
+        <button className="button secondary" onClick={onCancel}>
+          <Trans>Cancel</Trans>
+        </button>
+        <button className="button primary" onClick={submit} disabled={!valid}>
+          {initial ? <Trans>Save changes</Trans> : <Trans>Add service</Trans>}
+        </button>
+      </div>
+    </Modal>
   )
 }
 

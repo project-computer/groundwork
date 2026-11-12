@@ -85,3 +85,24 @@ describe('closing an encounter', () => {
     )
   })
 })
+
+describe('consultation fee source (SET-04 / P1-9)', () => {
+  it('bills the updated service price on close, leaving historical invoices untouched', () => {
+    let store = withOpenEncounter([])
+    store = { ...store, data: reducer(store, { type: 'updateService', id: 'svc-1', patch: { unitPrice: 65000 } }).data }
+    const next = reducer(store, { type: 'closeEncounter', encounterId: 'e-9' })
+    const draft = next.data.invoices.find((i) => i.status === 'draft')!
+    const consult = draft.items.find((item) => item.productId === 'svc-1')
+    expect(consult?.unitPrice).toBe(65000)
+    // The seeded invoice that used the old price is unchanged.
+    expect(seedState.invoices).toContainEqual(expect.objectContaining({ id: 'inv-1' }))
+  })
+
+  it('falls back to the next active service when the default is deactivated', () => {
+    let store = withOpenEncounter([])
+    store = { ...store, data: reducer(store, { type: 'updateService', id: 'svc-1', patch: { active: false } }).data }
+    const next = reducer(store, { type: 'closeEncounter', encounterId: 'e-9' })
+    const draft = next.data.invoices.find((i) => i.status === 'draft')!
+    expect(draft.items.some((item) => item.productId === 'svc-2')).toBe(true)
+  })
+})
