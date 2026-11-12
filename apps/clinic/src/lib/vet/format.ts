@@ -45,6 +45,14 @@ export const todayKey = (now = new Date()) => {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
+/** Calendar date key n days from today — demo seeds keep their worklist
+ * windows (expiring lots, due-soon vaccinations) stable forever. */
+export const dateKeyFromToday = (days: number, now = new Date()) => {
+  const date = new Date(now)
+  date.setDate(date.getDate() + days)
+  return todayKey(date)
+}
+
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'THB', currencyDisplay: 'narrowSymbol' })
 const time = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: TZ })
 const date = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: TZ })

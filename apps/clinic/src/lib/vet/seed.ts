@@ -1,4 +1,4 @@
-import { todayKey } from './format'
+import { dateKeyFromToday, todayKey } from './format'
 import type { ClinicState } from './types'
 
 const TODAY = todayKey()
@@ -107,8 +107,8 @@ export const seedState: ClinicState = {
   ],
   inventoryLots: [
     { id: 'lot-1', itemId: 'it-1', lotNumber: 'MEL-2609A', quantity: 60, expiryDate: '2027-09-30', supplierId: 'sup-1', costPerUnit: 26000, receivedDate: '2026-09-20' },
-    { id: 'lot-2', itemId: 'it-2', lotNumber: 'AMX-2611C', quantity: 24, expiryDate: '2026-11-10', supplierId: 'sup-1', costPerUnit: 900, receivedDate: '2026-09-25' },
-    { id: 'lot-3', itemId: 'it-3', lotNumber: 'RAB-2610B', quantity: 10, expiryDate: '2026-11-05', supplierId: 'sup-2', costPerUnit: 21000, receivedDate: '2026-10-02' },
+    { id: 'lot-2', itemId: 'it-2', lotNumber: 'AMX-2611C', quantity: 24, expiryDate: dateKeyFromToday(21), supplierId: 'sup-1', costPerUnit: 900, receivedDate: '2026-09-25' },
+    { id: 'lot-3', itemId: 'it-3', lotNumber: 'RAB-2610B', quantity: 10, expiryDate: dateKeyFromToday(14), supplierId: 'sup-2', costPerUnit: 21000, receivedDate: '2026-10-02' },
     { id: 'lot-4', itemId: 'it-4', lotNumber: 'DHP-2608F', quantity: 2, expiryDate: '2027-08-15', supplierId: 'sup-2', costPerUnit: 33000, receivedDate: '2026-10-05' },
     { id: 'lot-5', itemId: 'it-5', lotNumber: 'BND-2609D', quantity: 6, expiryDate: '2028-01-01', supplierId: 'sup-1', costPerUnit: 5200, receivedDate: '2026-09-12' },
     { id: 'lot-6', itemId: 'it-6', lotNumber: 'PNG-2607E', quantity: 18, expiryDate: '2027-06-30', supplierId: 'sup-1', costPerUnit: 8000, receivedDate: '2026-10-10' },
@@ -132,7 +132,7 @@ export const seedState: ClinicState = {
   caseTransfers: [],
   vaccinations: [
     { id: 'v-1', patientId: 'p-1', vaccineName: 'Rabies vaccine', lotNumber: 'RAB-2601A', administeredAt: '2025-10-15T10:20:00+07:00', nextDueAt: '2026-10-15', vetId: 'u-pim', version: 1 },
-    { id: 'v-2', patientId: 'p-2', vaccineName: 'FVRCP', lotNumber: 'FVR-2603B', administeredAt: '2026-02-11T14:05:00+07:00', nextDueAt: '2027-02-11', vetId: 'u-arun', version: 1 },
+    { id: 'v-2', patientId: 'p-2', vaccineName: 'FVRCP', lotNumber: 'FVR-2603B', administeredAt: '2026-02-11T14:05:00+07:00', nextDueAt: dateKeyFromToday(60), vetId: 'u-arun', version: 1 },
     { id: 'v-3', patientId: 'p-3', vaccineName: 'Rabies vaccine', lotNumber: 'RAB-2510C', administeredAt: '2025-09-02T09:30:00+07:00', nextDueAt: '2026-09-02', vetId: 'u-pim', version: 1 },
   ],
   audit: [
