@@ -226,6 +226,28 @@ export interface RestStaff {
  * never carries PIN material. */
 export const listStaff = (): Promise<{ users: RestStaff[] }> => request('GET', '/api/v1/users')
 
+// --- staff management (issue 0019) --------------------------------------------
+
+export const getStaff = (id: string): Promise<RestUser> => request('GET', `/api/v1/users/${id}`)
+
+export const createStaffMember = (payload: {
+  name: string
+  username: string
+  role: string
+  active?: boolean
+  pin?: string
+}): Promise<RestUser> => request('POST', '/api/v1/users', payload)
+
+export const updateStaff = (
+  id: string,
+  patch: { name?: string; role?: string; active?: boolean },
+): Promise<RestUser> => request('PATCH', `/api/v1/users/${id}`, patch)
+
+/** Admin-or-self PIN reset. The backend kills the member's sessions, so the
+ * new PIN is the next credential. */
+export const setStaffPin = (id: string, pin: string): Promise<{ reset: boolean }> =>
+  request('PUT', `/api/v1/users/${id}/pin`, { pin })
+
 /** Whether the backend still honours the stored session (shell restart, tab
  * restore). Returns false and clears the session when it does not. */
 export const restoreSession = async (): Promise<RestSession | null> => {

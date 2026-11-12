@@ -21,6 +21,10 @@ import {
   resetRest,
   restoreSession,
   sessionToken,
+  setStaffPin,
+  createStaffMember,
+  getStaff,
+  updateStaff,
   updateAppointment,
 } from '../rest'
 import { seedState } from '../seed'
@@ -271,6 +275,31 @@ describe('resource paths', () => {
 
     await getSettings()
     expect(lastCall().url).toBe('http://127.0.0.1:51731/api/v1/settings')
+  })
+})
+
+describe('staff management (issue 0019)', () => {
+  it('creates, patches and resets PINs through the admin routes', async () => {
+    stubFetch(() => jsonResponse(200, { ok: true }))
+
+    await createStaffMember({ name: 'Ploy', username: 'ploy', role: 'receptionist', pin: '5678' })
+    expect(lastCall().init.method).toBe('POST')
+    expect(lastCall().url).toBe('http://127.0.0.1:51731/api/v1/users')
+    expect(JSON.parse(String(lastCall().init.body))).toEqual({
+      name: 'Ploy', username: 'ploy', role: 'receptionist', pin: '5678',
+    })
+
+    await getStaff('u-1')
+    expect(lastCall().url).toBe('http://127.0.0.1:51731/api/v1/users/u-1')
+
+    await updateStaff('u-1', { role: 'veterinarian', active: false })
+    expect(lastCall().init.method).toBe('PATCH')
+    expect(JSON.parse(String(lastCall().init.body))).toEqual({ role: 'veterinarian', active: false })
+
+    await setStaffPin('u-1', '4321')
+    expect(lastCall().init.method).toBe('PUT')
+    expect(lastCall().url).toBe('http://127.0.0.1:51731/api/v1/users/u-1/pin')
+    expect(JSON.parse(String(lastCall().init.body))).toEqual({ pin: '4321' })
   })
 })
 

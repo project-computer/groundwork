@@ -31,11 +31,30 @@ Frontend (after the backend lands):
 
 ## Acceptance criteria
 
-- [ ] An imported member gets a REST PIN and can then sign in through the
-      lock screen (bridge path, not document fallback).
-- [ ] Deactivating a member blocks their next login attempt (401).
-- [ ] Every staff mutation appears in `GET /api/v1/audit`.
-- [ ] Non-admin callers get 403 on all staff mutations.
+- [x] An imported member gets a REST PIN and can then sign in through the
+      lock screen (bridge path, not document fallback). — `PUT /users/{id}/pin`
+      then login verified in `TestStaffManagement`; the frontend mirror is
+      `persistence.restSetStaffPin`, wired through the store's `setMemberPin`
+      (document commit first, best-effort REST mirror — ADR 0024).
+- [x] Deactivating a member blocks their next login attempt (401). —
+      `SetUserActive` + `DeleteSessionsByUser` (sessions die immediately),
+      covered in `TestStaffManagement`.
+- [x] Every staff mutation appears in `GET /api/v1/audit`. — `staff.created`,
+      `staff.updated` (rename/role/activation), `staff.pin_reset`.
+- [x] Non-admin callers get 403 on all staff mutations. — covered; the PIN
+      route additionally allows self-service (the UI's `manage || isSelf`
+      gate).
+
+## Status — shipped 2026-11-12 (backend + PIN mirror)
+
+- Routes: `GET/POST /api/v1/users`, `GET/PATCH /api/v1/users/{id}`,
+  `PUT /api/v1/users/{id}/pin` (self-or-admin).
+- Frontend: `rest.ts` staff client methods; the PIN dialog writes through the
+  store's `setMemberPin` (document PBKDF2 first, best-effort REST mirror for
+  REST-known members; failures logged, never blocking the offline guarantee).
+- Still open: Staff & Permissions UI for REST-side member creation and
+  activate/deactivate (document actions remain in place until the owners/
+  pets-style per-feature cutover reaches staff).
 
 ## Blocked by
 

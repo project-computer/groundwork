@@ -1,11 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
 import { i18n } from '@lingui/core'
 import { msg } from '@lingui/core/macro'
-import { loadPlanPref, loadState, parseClinicState, restVerifyMember, savePlanPref, saveState } from './persistence'
+import { loadPlanPref, loadState, parseClinicState, restSetStaffPin, restVerifyMember, savePlanPref, saveState } from './persistence'
 import { runAutoBackup } from './backup'
 import { useSyncWorker } from './sync'
 import { can, formatMoney, formatMrn, invoiceTotals, roleLabel } from './format'
-import { verifyPin } from './auth'
+import { createPinCredential, verifyPin } from './auth'
 import { seedState } from './seed'
 import type {
   Appointment,
@@ -1034,6 +1034,7 @@ const StoreContext = createContext<{
   dispatch: (a: Action) => void
   hydrated: boolean
   signInWithPin: (member: StaffUser, pin: string) => Promise<'ok' | 'denied' | 'fallback'>
+  setMemberPin: (member: StaffUser, pin: string) => void
 } | null>(null)
 
 export const ClinicProvider = ({ children }: { children: ReactNode }) => {
@@ -1136,6 +1137,24 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
     [dispatch],
   )
 
+  // PIN writes commit to the document first (the offline guarantee), then
+  // best-effort mirror to REST when the member exists there (issue 0019).
+  // REST members without a mirrored PIN would break ADR-0024 verification,
+  // so a failure is logged loudly — but never blocks the local write.
+  const setMemberPin = useCallback(
+    (member: StaffUser, pin: string): void => {
+      void createPinCredential(pin).then((credential) => {
+        dispatch({ type: 'setStaffPin', id: member.id, credential })
+        void restSetStaffPin(member.id, pin).then((sync) => {
+          if (sync === 'failed') {
+            console.error(`setMemberPin: REST mirror failed for ${member.name}`)
+          }
+        })
+      })
+    },
+    [dispatch],
+  )
+
   // Sync orchestration lives behind the lib/vet/sync seam (phase 5): debounced
   // push, periodic pull, connectivity resets and the in-flight mutation lock.
   const { guardedDispatch } = useSyncWorker({
@@ -1149,8 +1168,8 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
   })
 
   const value = useMemo(
-    () => ({ store, dispatch: guardedDispatch, hydrated, signInWithPin }),
-    [store, guardedDispatch, hydrated, signInWithPin],
+    () => ({ store, dispatch: guardedDispatch, hydrated, signInWithPin, setMemberPin }),
+    [store, guardedDispatch, hydrated, signInWithPin, setMemberPin],
   )
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }
@@ -1158,7 +1177,7 @@ export const ClinicProvider = ({ children }: { children: ReactNode }) => {
 export const useClinic = () => {
   const ctx = useContext(StoreContext)
   if (!ctx) throw new Error('useClinic must be used inside ClinicProvider')
-  const { store, dispatch, hydrated, signInWithPin } = ctx
+  const { store, dispatch, hydrated, signInWithPin, setMemberPin } = ctx
   // A stale or missing member (foreign document, emptied users collection)
   // must not crash the shell — the inert placeholder holds no permissions on
   // any write path because the reducer re-checks the actor on every action.
@@ -1166,7 +1185,7 @@ export const useClinic = () => {
     store.data.users.find((u) => u.id === store.session.currentUserId) ??
     store.data.users.find((u) => u.active) ??
     EMPTY_USER
-  return { data: store.data, session: store.session, user, dispatch, hydrated, signInWithPin }
+  return { data: store.data, session: store.session, user, dispatch, hydrated, signInWithPin, setMemberPin }
 }
 
 export const usePermission = (permission: Permission) => {

@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { isMobilePlatform, isTauri } from '@/lib/platform'
 import { fetchState, pushState } from './backend'
 import { formatMrn } from './format'
-import { RestError, listStaff, login as restLogin } from './rest'
+import { RestError, listStaff, login as restLogin, setStaffPin as restSetStaffPinCall } from './rest'
 import { CLINIC_STATE_COLLECTIONS, type ClinicState, type Patient } from './types'
 
 /**
@@ -145,6 +145,28 @@ export const restVerifyMember = async (memberId: string, pin: string): Promise<R
     // absent, network hiccup) degrades to the document path.
     if (error instanceof RestError && error.status === 401) return 'denied'
     return 'fallback'
+  }
+}
+
+export type RestPinSync = 'synced' | 'skipped' | 'failed'
+
+/**
+ * Mirrors a PIN change to the REST backend (issue 0019) so the bridge in
+ * ADR 0024 can verify it server-side. REST-known members are updated; members
+ * only the document knows are skipped (there is nothing to sync); failures
+ * never block the document write — offline-first means the local hash is the
+ * guarantee, the mirror is an upgrade. Best-effort by contract.
+ */
+export const restSetStaffPin = async (memberId: string, pin: string): Promise<RestPinSync> => {
+  try {
+    const directory = await listStaff()
+    if (!directory.users.some((user) => user.id === memberId && user.active)) return 'skipped'
+    await restSetStaffPinCall(memberId, pin)
+    return 'synced'
+  } catch (error) {
+    if (error instanceof RestError && error.status === 404) return 'skipped'
+    console.error('restSetStaffPin: mirror failed (document PIN remains authoritative)', error)
+    return 'failed'
   }
 }
 

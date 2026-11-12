@@ -113,6 +113,12 @@ func (s *Server) Handler() http.Handler {
 	// before login. Loopback secret only — no bearer, no PIN material.
 	mux.HandleFunc("GET /api/v1/users", s.handleListStaff)
 
+	// Staff management (issue 0019): admin-gated mutations, audited.
+	mux.HandleFunc("GET /api/v1/users/{id}", s.authed(ownedBy(auth.RoleAdmin), s.handleGetStaff))
+	mux.HandleFunc("POST /api/v1/users", s.authed(ownedBy(auth.RoleAdmin), s.handleCreateStaff))
+	mux.HandleFunc("PATCH /api/v1/users/{id}", s.authed(ownedBy(auth.RoleAdmin), s.handleUpdateStaff))
+	mux.HandleFunc("PUT /api/v1/users/{id}/pin", s.authed(nil, s.handleSetStaffPIN))
+
 	// Backups (ADR 0021): any signed-in member may save or list; the storage
 	// discipline matches the document-model sidecar.
 	mux.HandleFunc("POST /api/v1/backups", s.authed(nil, s.handleBackupSave))

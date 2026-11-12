@@ -24,6 +24,15 @@ func (q *Queries) AssignRole(ctx context.Context, arg AssignRoleParams) error {
 	return err
 }
 
+const clearUserRoles = `-- name: ClearUserRoles :exec
+DELETE FROM user_roles WHERE user_id = ?1
+`
+
+func (q *Queries) ClearUserRoles(ctx context.Context, userID string) error {
+	_, err := q.db.ExecContext(ctx, clearUserRoles, userID)
+	return err
+}
+
 const countClinics = `-- name: CountClinics :one
 SELECT COUNT(*) FROM clinics
 `
@@ -175,6 +184,15 @@ DELETE FROM sessions WHERE token_hash = ?1
 
 func (q *Queries) DeleteSession(ctx context.Context, tokenHash string) error {
 	_, err := q.db.ExecContext(ctx, deleteSession, tokenHash)
+	return err
+}
+
+const deleteSessionsByUser = `-- name: DeleteSessionsByUser :exec
+DELETE FROM sessions WHERE user_id = ?1
+`
+
+func (q *Queries) DeleteSessionsByUser(ctx context.Context, userID string) error {
+	_, err := q.db.ExecContext(ctx, deleteSessionsByUser, userID)
 	return err
 }
 
@@ -449,6 +467,62 @@ type SetUserActiveParams struct {
 func (q *Queries) SetUserActive(ctx context.Context, arg SetUserActiveParams) error {
 	_, err := q.db.ExecContext(ctx, setUserActive,
 		arg.Active,
+		arg.UpdatedAt,
+		arg.ClinicID,
+		arg.ID,
+	)
+	return err
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users SET name = ?1, updated_at = ?2
+WHERE clinic_id = ?3 AND id = ?4
+RETURNING id, clinic_id, name, username, pin_hash, active, created_at, updated_at
+`
+
+type UpdateUserParams struct {
+	Name      string `json:"name"`
+	UpdatedAt string `json:"updated_at"`
+	ClinicID  string `json:"clinic_id"`
+	ID        string `json:"id"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUser,
+		arg.Name,
+		arg.UpdatedAt,
+		arg.ClinicID,
+		arg.ID,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.ClinicID,
+		&i.Name,
+		&i.Username,
+		&i.PinHash,
+		&i.Active,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUserPIN = `-- name: UpdateUserPIN :exec
+UPDATE users SET pin_hash = ?1, updated_at = ?2
+WHERE clinic_id = ?3 AND id = ?4
+`
+
+type UpdateUserPINParams struct {
+	PinHash   string `json:"pin_hash"`
+	UpdatedAt string `json:"updated_at"`
+	ClinicID  string `json:"clinic_id"`
+	ID        string `json:"id"`
+}
+
+func (q *Queries) UpdateUserPIN(ctx context.Context, arg UpdateUserPINParams) error {
+	_, err := q.db.ExecContext(ctx, updateUserPIN,
+		arg.PinHash,
 		arg.UpdatedAt,
 		arg.ClinicID,
 		arg.ID,

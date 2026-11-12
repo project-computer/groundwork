@@ -81,3 +81,18 @@ DELETE FROM sessions WHERE expires_at <= sqlc.arg(now);
 -- serves exactly one clinic (ADR 0019); when multi-tenancy lands this gains
 -- a clinic parameter. Never select pin_hash here.
 SELECT id, username, name, active FROM users ORDER BY name;
+
+-- name: UpdateUser :one
+UPDATE users SET name = sqlc.arg(name), updated_at = sqlc.arg(updated_at)
+WHERE clinic_id = sqlc.arg(clinic_id) AND id = sqlc.arg(id)
+RETURNING *;
+
+-- name: UpdateUserPIN :exec
+UPDATE users SET pin_hash = sqlc.arg(pin_hash), updated_at = sqlc.arg(updated_at)
+WHERE clinic_id = sqlc.arg(clinic_id) AND id = sqlc.arg(id);
+
+-- name: ClearUserRoles :exec
+DELETE FROM user_roles WHERE user_id = sqlc.arg(user_id);
+
+-- name: DeleteSessionsByUser :exec
+DELETE FROM sessions WHERE user_id = sqlc.arg(user_id);

@@ -10,6 +10,7 @@ import (
 
 type Querier interface {
 	AssignRole(ctx context.Context, arg AssignRoleParams) error
+	ClearUserRoles(ctx context.Context, userID string) error
 	CountClinics(ctx context.Context) (int64, error)
 	CountInvoicesWithPrefix(ctx context.Context, arg CountInvoicesWithPrefixParams) (int64, error)
 	CountOwners(ctx context.Context, clinicID string) (int64, error)
@@ -36,6 +37,7 @@ type Querier interface {
 	DeleteDiagnosesByConsultation(ctx context.Context, arg DeleteDiagnosesByConsultationParams) error
 	DeleteExpiredSessions(ctx context.Context, now string) error
 	DeleteSession(ctx context.Context, tokenHash string) error
+	DeleteSessionsByUser(ctx context.Context, userID string) error
 	DeleteTreatmentsByConsultation(ctx context.Context, arg DeleteTreatmentsByConsultationParams) error
 	GetActiveUserByUsername(ctx context.Context, username string) (User, error)
 	GetAppointment(ctx context.Context, arg GetAppointmentParams) (GetAppointmentRow, error)
@@ -87,6 +89,8 @@ type Querier interface {
 	UpdateOwner(ctx context.Context, arg UpdateOwnerParams) (Owner, error)
 	UpdatePet(ctx context.Context, arg UpdatePetParams) (Pet, error)
 	UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error)
+	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	UpdateUserPIN(ctx context.Context, arg UpdateUserPINParams) error
 	UpsertSetting(ctx context.Context, arg UpsertSettingParams) error
 	VoidPayment(ctx context.Context, arg VoidPaymentParams) error
 }

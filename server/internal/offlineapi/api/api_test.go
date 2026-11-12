@@ -257,6 +257,120 @@ func TestStaffDirectoryIsPreAuth(t *testing.T) {
 	}
 }
 
+// TestStaffManagement covers issue 0019's acceptance criteria end to end:
+// admin-gated creation, rename/role change, PIN reset (imported members
+// arrive hashless), deactivation killing sessions, audit trail, and 403s for
+// non-admins.
+func TestStaffManagement(t *testing.T) {
+	s := newTestServer(t)
+	adminToken := setupClinic(t, s)
+
+	// Create a receptionist with an initial PIN.
+	created := call(t, s, http.MethodPost, "/api/v1/users", testSecret, adminToken, map[string]any{
+		"name": "Ploy", "username": "ploy", "role": "receptionist", "pin": "5678",
+	})
+	if created.status != http.StatusCreated {
+		t.Fatalf("create staff = %d: %s", created.status, created.raw)
+	}
+	staffID, _ := created.body["id"].(string)
+
+	duplicate := call(t, s, http.MethodPost, "/api/v1/users", testSecret, adminToken, map[string]any{
+		"name": "Again", "username": "ploy", "role": "receptionist",
+	})
+	if duplicate.status != http.StatusConflict {
+		t.Fatalf("duplicate username = %d, want 409", duplicate.status)
+	}
+
+	// The receptionist signs in and reads their own profile? No — GET by id
+	// is admin-only; the receptionist gets 403, and every mutation too.
+	front := call(t, s, http.MethodPost, "/api/v1/auth/login", testSecret, "", map[string]any{
+		"username": "ploy", "pin": "5678",
+	})
+	if front.status != http.StatusOK {
+		t.Fatalf("receptionist login = %d: %s", front.status, front.raw)
+	}
+	frontToken, _ := front.body["token"].(string)
+	forbidden := []struct {
+		method, path string
+	}{
+		{http.MethodGet, "/api/v1/users/" + staffID},
+		{http.MethodPost, "/api/v1/users"},
+		{http.MethodPatch, "/api/v1/users/" + staffID},
+	}
+	for _, probe := range forbidden {
+		res := call(t, s, probe.method, probe.path, testSecret, frontToken, map[string]any{"name": "X"})
+		if res.status != http.StatusForbidden {
+			t.Fatalf("%s %s as receptionist = %d, want 403", probe.method, probe.path, res.status)
+		}
+	}
+
+	// Rename + role change.
+	patched := call(t, s, http.MethodPatch, "/api/v1/users/"+staffID, testSecret, adminToken, map[string]any{
+		"name": "Ploy S.", "role": "veterinarian",
+	})
+	if patched.status != http.StatusOK || patched.body["name"] != "Ploy S." {
+		t.Fatalf("patch staff = %d: %s", patched.status, patched.raw)
+	}
+	if roles, _ := patched.body["roles"].([]any); len(roles) != 1 || roles[0] != "veterinarian" {
+		t.Fatalf("role change lost: %s", patched.raw)
+	}
+
+	// PIN reset (imported members arrive hashless — this is the unlock).
+	reset := call(t, s, http.MethodPut, "/api/v1/users/"+staffID+"/pin", testSecret, adminToken, map[string]any{"pin": "4321"})
+	if reset.status != http.StatusOK {
+		t.Fatalf("pin reset = %d: %s", reset.status, reset.raw)
+	}
+	// The reset killed the old session…
+	afterReset := call(t, s, http.MethodGet, "/api/v1/auth/me", testSecret, frontToken, nil)
+	if afterReset.status != http.StatusUnauthorized {
+		t.Fatalf("me after pin reset = %d, want 401", afterReset.status)
+	}
+	// …and the new PIN is the next credential (old one dead).
+	oldPIN := call(t, s, http.MethodPost, "/api/v1/auth/login", testSecret, "", map[string]any{"username": "ploy", "pin": "5678"})
+	if oldPIN.status != http.StatusUnauthorized {
+		t.Fatalf("old pin login = %d, want 401", oldPIN.status)
+	}
+	newPIN := call(t, s, http.MethodPost, "/api/v1/auth/login", testSecret, "", map[string]any{"username": "ploy", "pin": "4321"})
+	if newPIN.status != http.StatusOK {
+		t.Fatalf("new pin login = %d: %s", newPIN.status, newPIN.raw)
+	}
+	newToken, _ := newPIN.body["token"].(string)
+
+	// Self-service PIN change is allowed without admin.
+	selfReset := call(t, s, http.MethodPut, "/api/v1/users/"+staffID+"/pin", testSecret, newToken, map[string]any{"pin": "8888"})
+	if selfReset.status != http.StatusOK {
+		t.Fatalf("self pin reset = %d: %s", selfReset.status, selfReset.raw)
+	}
+
+	// Deactivation ends sessions immediately and blocks the next login.
+	deactivated := call(t, s, http.MethodPatch, "/api/v1/users/"+staffID, testSecret, adminToken, map[string]any{"active": false})
+	if deactivated.status != http.StatusOK || deactivated.body["active"] != false {
+		t.Fatalf("deactivate = %d: %s", deactivated.status, deactivated.raw)
+	}
+	blocked := call(t, s, http.MethodPost, "/api/v1/auth/login", testSecret, "", map[string]any{"username": "ploy", "pin": "8888"})
+	if blocked.status != http.StatusUnauthorized {
+		t.Fatalf("deactivated login = %d, want 401", blocked.status)
+	}
+
+	// The audit trail carries every mutation.
+	audit := call(t, s, http.MethodGet, "/api/v1/audit?entityType=user", testSecret, adminToken, nil)
+	if audit.status != http.StatusOK {
+		t.Fatalf("audit = %d: %s", audit.status, audit.raw)
+	}
+	events, _ := audit.body["events"].([]any)
+	actions := map[string]bool{}
+	for _, raw := range events {
+		event, _ := raw.(map[string]any)
+		action, _ := event["action"].(string)
+		actions[action] = true
+	}
+	for _, want := range []string{"staff.created", "staff.updated", "staff.pin_reset"} {
+		if !actions[want] {
+			t.Fatalf("audit missing %s, got %v: %s", want, actions, audit.raw)
+		}
+	}
+}
+
 func TestMissingBearerIsUnauthorized(t *testing.T) {
 	s := newTestServer(t)
 	setupClinic(t, s)

@@ -2,7 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 
 // The mobile path reads the bundled SQLite document through this command.
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
-import { loadState, restVerifyMember, saveState } from '../persistence'
+import { loadState, restSetStaffPin, restVerifyMember, saveState } from '../persistence'
 import { configureRest, resetRest } from '../rest'
 import { seedState } from '../seed'
 
@@ -156,5 +156,48 @@ describe('restVerifyMember', () => {
     vi.stubGlobal('fetch', fetchSpy)
     await expect(restVerifyMember('u-pim', '1234')).resolves.toBe('fallback')
     expect(fetchSpy).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('restSetStaffPin', () => {
+  beforeEach(() => {
+    configureRest({ baseUrl: 'http://127.0.0.1:51731', secret: 'launch-secret' })
+    window.sessionStorage.clear()
+  })
+  afterEach(() => {
+    resetRest()
+    vi.unstubAllGlobals()
+  })
+
+  it('synced: mirrors to a REST-known member', async () => {
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValueOnce(
+        restJson(200, { users: [{ id: 'u-pim', username: 'pim', name: 'Pim', active: true }] }),
+      )
+      .mockResolvedValueOnce(restJson(200, { reset: true }))
+    vi.stubGlobal('fetch', fetchSpy)
+    await expect(restSetStaffPin('u-pim', '4321')).resolves.toBe('synced')
+    expect(fetchSpy.mock.calls[1][0]).toBe('http://127.0.0.1:51731/api/v1/users/u-pim/pin')
+  })
+
+  it('skipped: a document-only member has nothing to sync', async () => {
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValueOnce(restJson(200, { users: [] }))
+    vi.stubGlobal('fetch', fetchSpy)
+    await expect(restSetStaffPin('u-local', '4321')).resolves.toBe('skipped')
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('failed: backend errors never block the document write', async () => {
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValueOnce(
+        restJson(200, { users: [{ id: 'u-pim', username: 'pim', name: 'Pim', active: true }] }),
+      )
+      .mockResolvedValueOnce(new Response('boom', { status: 500 }))
+    vi.stubGlobal('fetch', fetchSpy)
+    await expect(restSetStaffPin('u-pim', '4321')).resolves.toBe('failed')
   })
 })
