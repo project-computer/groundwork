@@ -140,7 +140,7 @@ export interface Encounter {
   version: number
 }
 
-interface Product {
+export interface Product {
   id: string
   sku: string
   name: string
@@ -148,6 +148,10 @@ interface Product {
   unitPrice: number
   reorderThreshold: number
   kind: 'medication' | 'service' | 'supply'
+  /** Service-catalog toggle: undefined counts as active; deactivated
+   * services stay referenced by historical invoices and are skipped when
+   * choosing the closure consultation fee. */
+  active?: boolean
 }
 
 export type StockReason = 'stock_in' | 'stock_out' | 'adjustment' | 'waste'

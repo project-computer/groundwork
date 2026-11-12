@@ -22,6 +22,7 @@ import type {
   Payment,
   Permission,
   Prescription,
+  Product,
   Role,
   StaffUser,
   StockMovement,
@@ -117,6 +118,8 @@ export type Action =
   | { type: 'voidInvoice'; invoiceId: string }
   | { type: 'addSupplier'; supplier: Omit<Supplier, 'id'> }
   | { type: 'addInventoryItem'; item: Omit<InventoryItem, 'id'> }
+  | { type: 'addService'; service: { name: string; unit: string; unitPrice: number } }
+  | { type: 'updateService'; id: string; patch: Partial<Pick<Product, 'name' | 'unit' | 'unitPrice' | 'active'>> }
   | { type: 'receiveLot'; lot: Omit<InventoryLot, 'id' | 'quantity'>; quantity: number }
   | { type: 'recordStockMovement'; lotId: string; delta: number; reason: StockReason; notes?: string }
   | { type: 'addStaff'; name: string; role: Role; email?: string; phone?: string }
@@ -336,6 +339,19 @@ export const reducer = (store: Store, action: Action): Store => {
   if (action.type === 'addSupplier' || action.type === 'addInventoryItem' || action.type === 'receiveLot' || action.type === 'recordStockMovement') {
     const actor = data.users.find((u) => u.id === session.currentUserId)
     if (!actor || !can(actor.role, 'inventory.write')) return reject(store, 'rbac.inventory', 'Only admins and pharmacists can change stock.')
+  }
+
+  // The service catalog (consultation/treatment fees) is tenant pricing —
+  // clinic admins only (SET-04). A blank name or a negative price is invalid.
+  if (action.type === 'addService' || action.type === 'updateService') {
+    const actor = data.users.find((u) => u.id === session.currentUserId)
+    if (!actor || !can(actor.role, 'clinic.manage')) return reject(store, 'rbac.services', 'Only clinic admins manage the service catalog.')
+    if (action.type === 'addService' && !action.service.name.trim()) return reject(store, 'service.empty_name', 'A service needs a name.')
+    if (action.type === 'updateService' && action.patch.name !== undefined && !action.patch.name.trim()) return reject(store, 'service.empty_name', 'A service needs a name.')
+    if ((action.type === 'addService' ? action.service.unitPrice : action.patch.unitPrice) !== undefined) {
+      const price = action.type === 'addService' ? action.service.unitPrice : action.patch.unitPrice
+      if (price !== undefined && (!Number.isFinite(price) || price < 0)) return reject(store, 'service.invalid_price', 'Price must be 0 or more.')
+    }
   }
 
   switch (action.type) {
@@ -660,7 +676,11 @@ export const reducer = (store: Store, action: Action): Store => {
       const patient = data.patients.find((p) => p.id === enc.patientId)
       if (!patient) return store
       const closedAt = now()
-      const consult = data.products.find((p) => p.id === 'svc-1')
+      // The configured consultation fee comes first; falls back to any active
+      // service, so deactivating the default still bills a visit (SET-04).
+      const consult =
+        data.products.find((p) => p.kind === 'service' && p.active !== false && p.id === 'svc-1') ??
+        data.products.find((p) => p.kind === 'service' && p.active !== false)
       // Resolve each prescription against the catalog: legacy products first,
       // then inventory items (the live pharmacy model). Inventory dispenses
       // deduct lots FEFO (first-expiry-first-out) so the ledger and the
@@ -882,6 +902,36 @@ export const reducer = (store: Store, action: Action): Store => {
         },
         { action: 'stock.lot_receive', entityType: 'inventory_lot', entityId: lot.id, summary: `Received lot ${lot.lotNumber} — ${action.quantity} × ${item.name}`, operation: 'append' },
       )
+    }
+    case 'addService': {
+      const name = action.service.name.trim()
+      const service: Product = {
+        id: uid(),
+        sku: `SVC-${data.products.length + 1}`,
+        name,
+        unit: action.service.unit.trim() || 'visit',
+        unitPrice: action.service.unitPrice,
+        reorderThreshold: 0,
+        kind: 'service',
+        active: true,
+      }
+      return commit(store, { ...data, products: [service, ...data.products] }, {
+        action: 'service.create',
+        entityType: 'product',
+        entityId: service.id,
+        summary: `Created service ${service.name} at ${service.unitPrice}`,
+      })
+    }
+    case 'updateService': {
+      const target = data.products.find((p) => p.id === action.id)
+      if (!target || target.kind !== 'service') return reject(store, 'service.not_found', 'That service no longer exists.')
+      const updated: Product = { ...target, ...action.patch, name: action.patch.name?.trim() ?? target.name }
+      return commit(store, { ...data, products: data.products.map((p) => (p.id === action.id ? updated : p)) }, {
+        action: 'service.update',
+        entityType: 'product',
+        entityId: updated.id,
+        summary: `Updated ${updated.name}${action.patch.active === false ? ' — deactivated' : ''}`,
+      })
     }
     case 'recordStockMovement': {
       // Append-only ledger: the movement row and the lot's cached quantity update

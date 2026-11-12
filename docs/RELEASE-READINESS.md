@@ -152,15 +152,23 @@ Evidence: [`types.ts`](../apps/clinic/src/lib/vet/types.ts),
 
 ### P1-9. Editable service catalog (BILL-01, SET-04)
 
+DONE — Services live in Settings as a first-class catalog: admins (clinic.manage
+only, RBAC-enforced in the reducer) can add, rename, re-price and deactivate
+services from a dialog; every write is audited (`service.create`/`service.update`)
+and price changes apply to new invoices only — historical invoices keep their
+priced line items. Closing an encounter reads the active configured
+consultation fee, with a fallback to the next active service if the default is
+deactivated, so a visit always bills.
+
 The consultation fee is a hard-coded seeded product (`svc-1`); there is no UI
 to add a service or change a price. Inventory items can be added, but services
 are not inventory.
 
-- [ ] Admin can create/edit/deactivate services (name, category, unit, price).
-- [ ] Closing an encounter reads the configured consultation fee.
-- [ ] Price changes are audited and do not rewrite historical invoices.
+- [x] Admin can create/edit/deactivate services (name, unit, price).
+- [x] Closing an encounter reads the configured consultation fee.
+- [x] Price changes are audited and do not rewrite historical invoices.
 
-Evidence: [`billing/index.tsx`](../apps/clinic/src/features/vet/billing/index.tsx),
+Evidence: [`settings/index.tsx`](../apps/clinic/src/features/vet/settings/index.tsx),
 [`store.tsx`](../apps/clinic/src/lib/vet/store.tsx).
 
 ### P1-10. Owner/pet and medical-record exports (BKP-06/07)
