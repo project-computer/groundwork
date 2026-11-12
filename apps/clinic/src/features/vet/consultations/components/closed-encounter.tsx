@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { Panel, PageHeader, Pill } from '@/components/patterns/fields'
 import { useClinic } from '@/lib/vet/store'
 import { formatDate, statusLabel } from '@/lib/vet/format'
 import type { Encounter, Patient } from '@/lib/vet/types'
 import { PatientSnapshot, SnapshotPanel } from './patient-snapshot'
+import { ConsultationSummaryDialog, PrescriptionDialog } from './clinical-prints'
 
 /**
  * Archived consultation view (2026-10-30 plan, phase C): the read-only
@@ -14,6 +16,7 @@ import { PatientSnapshot, SnapshotPanel } from './patient-snapshot'
 export const ClosedEncounter = ({ encounter: open, patient }: { encounter: Encounter; patient: Patient }) => {
   const { t } = useLingui()
   const { data, dispatch } = useClinic()
+  const [printSheet, setPrintSheet] = useState<'summary' | 'prescription' | null>(null)
   const invoice = data.invoices.find((i) => i.encounterId === open.id)
   const attending = data.users.find((u) => u.id === open.attendingId)
   const vitalsRows = [
@@ -123,6 +126,14 @@ export const ClosedEncounter = ({ encounter: open, patient }: { encounter: Encou
               {invoice ? t`Draft invoice ${invoice.number} was created and is ready to post in Billing.` : t`No invoice was created for this visit.`}
             </p>
             <div className="panel-footer">
+              <button className="button secondary" onClick={() => setPrintSheet('summary')}>
+                <Trans>Print summary</Trans>
+              </button>
+              {open.prescriptions.length > 0 && (
+                <button className="button secondary" onClick={() => setPrintSheet('prescription')}>
+                  <Trans>Print prescription</Trans>
+                </button>
+              )}
               <button
                 className="button primary"
                 onClick={() => dispatch({ type: 'session', patch: { view: 'billing', activeEncounterId: undefined } })}
@@ -133,6 +144,8 @@ export const ClosedEncounter = ({ encounter: open, patient }: { encounter: Encou
           </Panel>
         </div>
       </div>
+      {printSheet === 'summary' && <ConsultationSummaryDialog encounter={open} patient={patient} onClose={() => setPrintSheet(null)} />}
+      {printSheet === 'prescription' && <PrescriptionDialog encounter={open} patient={patient} onClose={() => setPrintSheet(null)} />}
     </>
   )
 }

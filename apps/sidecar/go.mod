@@ -2,6 +2,8 @@ module github.com/project-computer/groundwork/sidecar
 
 go 1.27.1
 
+toolchain go1.27.4
+
 require modernc.org/sqlite v1.61.0
 
 require (

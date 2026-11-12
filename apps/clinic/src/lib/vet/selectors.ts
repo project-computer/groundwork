@@ -82,3 +82,15 @@ export const latestDueByPatient = (vaccinations: Vaccination[]): Map<string, str
   }
   return latest
 }
+
+/** All recorded weight observations for a patient, oldest first (ADR 0022):
+ * the measurement history behind the latest-weight read-out. */
+export const weightHistory = (patientId: string, encounters: Encounter[]): WeightObservation[] => {
+  const history: WeightObservation[] = []
+  for (const encounter of encounters) {
+    if (encounter.patientId !== patientId || !encounter.vitals.weightKg) continue
+    const recordedAt = encounter.closedAt ?? encounter.openedAt
+    history.push({ valueKg: encounter.vitals.weightKg, recordedAt })
+  }
+  return history.toSorted((a, b) => compareTime(a.recordedAt, b.recordedAt))
+}

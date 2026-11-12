@@ -5,6 +5,7 @@ import { useClinic } from '@/lib/vet/store'
 import { dispensableCatalog } from '@/lib/vet/catalog'
 import { itemOnHand } from '@/lib/vet/format'
 import type { Encounter, Patient } from '@/lib/vet/types'
+import { PrescriptionDialog } from './clinical-prints'
 
 /**
  * Prescription panel for the live consultation (2026-10-30 plan, phase C):
@@ -21,6 +22,7 @@ export const PrescriptionPanel = ({ encounter, patient }: { encounter: Encounter
   const [rxFrequency, setRxFrequency] = useState('BID')
   const [rxDuration, setRxDuration] = useState(t`7 days`)
   const [rxQuantity, setRxQuantity] = useState('1')
+  const [printingRx, setPrintingRx] = useState(false)
 
   // Dispensable catalog: live inventory items (medicine/vaccine) plus legacy
   // medication products so historical prescriptions still resolve.
@@ -57,7 +59,17 @@ export const PrescriptionPanel = ({ encounter, patient }: { encounter: Encounter
   }
 
   return (
-    <Panel title={t`Prescriptions`} description={t`Dispensed from pharmacy stock when the visit closes`}>
+    <Panel
+      title={t`Prescriptions`}
+      description={t`Dispensed from pharmacy stock when the visit closes`}
+      action={
+        encounter.prescriptions.length > 0 ? (
+          <button className="small-button" onClick={() => setPrintingRx(true)}>
+            <Trans>Print prescription</Trans>
+          </button>
+        ) : undefined
+      }
+    >
       <div className="inline-form nested">
         <div className="form-grid">
           <Field label={t`Medication`} htmlFor="rx-item">
@@ -123,6 +135,7 @@ export const PrescriptionPanel = ({ encounter, patient }: { encounter: Encounter
           </div>
         ))}
       </div>
+      {printingRx && <PrescriptionDialog encounter={encounter} patient={patient} onClose={() => setPrintingRx(false)} />}
     </Panel>
   )
 }

@@ -234,13 +234,25 @@ describe("App", () => {
     expect(target?.textContent).toContain("09:30");
   });
 
-  it("shows staff roles and the audit trail", async () => {
+  it("shows staff roles and the audit trail for admins only", async () => {
     renderApp();
     await flush();
     click(findButton("Staff & Permissions"));
     await flush();
     expect(document.body.textContent).toContain("Veterinarian");
-    expect(document.body.textContent).toContain("Audit trail");
+    // P2-16: the default member (veterinarian) sees the panel is reserved…
+    expect(document.body.textContent).toContain("reserved for clinic admins");
+    expect(document.body.textContent).not.toContain("Closed consultation for Tiger");
+
+    // …while an admin reads the real trail.
+    const maiRow = [...document.querySelectorAll(".staff-table .table-row")].find((row) =>
+      (row.textContent ?? "").includes("Mai Rattana"),
+    );
+    const signIn = maiRow
+      ? [...maiRow.querySelectorAll("button")].find((b) => (b.textContent ?? "").includes("Sign in as"))
+      : undefined;
+    click(signIn as HTMLButtonElement);
+    await flush();
     expect(document.body.textContent).toContain("Closed consultation for Tiger");
   });
 

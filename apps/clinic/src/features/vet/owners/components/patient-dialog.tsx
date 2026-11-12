@@ -5,7 +5,7 @@ import { Field, NativeSelect, Pill } from '@/components/patterns/fields'
 import { Modal } from '@/components/patterns/modal'
 import { useClinic } from '@/lib/vet/store'
 import { compareTime, formatDate, sexLabel, speciesLabel } from '@/lib/vet/format'
-import { latestWeightKg } from '@/lib/vet/selectors'
+import { latestWeightKg, weightHistory } from '@/lib/vet/selectors'
 import { SPECIES, SEXES, type Patient } from '@/lib/vet/types'
 
 const splitList = (value: string) =>
@@ -47,6 +47,7 @@ export const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patien
   // ADR 0022: the clinical weight is the latest recorded Visit vital; the
   // editable field below is only the owner-reported baseline.
   const recordedWeight = latestWeightKg(patient.id, data.encounters)
+  const weightTrend = weightHistory(patient.id, data.encounters)
   const timeline = [
     ...data.encounters
       .filter((e) => e.patientId === patient.id)
@@ -174,6 +175,12 @@ export const PatientClinicalDialog = ({ patientId, onClose, canWrite }: { patien
                 <Trans>Owner-reported starting weight; the clinical weight comes from each visit's vitals.</Trans>
               )}
             </p>
+            {weightTrend.length > 1 && (
+              <p className="form-hint">
+                <Trans>Weight history:</Trans>{' '}
+                {weightTrend.slice(-5).map((observation) => `${observation.valueKg} kg (${formatDate(observation.recordedAt)})`).join(' → ')}
+              </p>
+            )}
           </Field>
         </div>
       </fieldset>

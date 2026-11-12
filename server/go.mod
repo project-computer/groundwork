@@ -2,6 +2,8 @@ module github.com/project-computer/groundwork/server
 
 go 1.27.3
 
+toolchain go1.27.4
+
 require (
 	github.com/go-playground/validator/v10 v10.30.5
 	github.com/gofiber/fiber/v3 v3.6.1

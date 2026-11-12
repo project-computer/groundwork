@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { latestWeightKg, lowStockItems, openInvoices, outstandingBalance, overdueVaccinations } from '../selectors'
+import { latestWeightKg, lowStockItems, openInvoices, outstandingBalance, overdueVaccinations, weightHistory } from '../selectors'
 import type { InventoryItem, InventoryLot, Invoice, Payment, Vaccination } from '../types'
 
 const item = (id: string, reorderLevel: number): InventoryItem => ({
@@ -127,5 +127,39 @@ describe('latestWeightKg (ADR 0022)', () => {
       encounter('e-2', 'p-1', '28.9', '2026-10-01T09:42:00+07:00'),
     ]
     expect(latestWeightKg('p-1', encounters)?.valueKg).toBe('28.6')
+  })
+})
+
+describe('weightHistory (ADR 0022)', () => {
+  // eslint-disable-next-line unicorn/consistent-function-scoping -- fixture builder reads nothing from this scope
+  const encounter = (id: string, patientId: string, weightKg: string, openedAt: string, closedAt?: string) => ({
+    id,
+    patientId,
+    attendingId: 'u-pim',
+    status: closedAt ? ('closed' as const) : ('open' as const),
+    openedAt,
+    closedAt,
+    vitals: { weightKg, tempC: '', heartRate: '', respRate: '' },
+    notes: [],
+    diagnoses: [],
+    prescriptions: [],
+    version: 1,
+  })
+
+  it('returns every recorded weight oldest first', () => {
+    const encounters = [
+      encounter('e-1', 'p-1', '28.6', '2026-10-20T10:00:00Z'),
+      encounter('e-2', 'p-1', '27.9', '2026-10-01T09:00:00Z', '2026-10-01T09:40:00Z'),
+    ]
+    expect(weightHistory('p-1', encounters)).toEqual([
+      { valueKg: '27.9', recordedAt: '2026-10-01T09:40:00Z' },
+      { valueKg: '28.6', recordedAt: '2026-10-20T10:00:00Z' },
+    ])
+  })
+
+  it('is empty with no recorded weights and ignores other patients', () => {
+    expect(weightHistory('p-1', [])).toEqual([])
+    expect(weightHistory('p-1', [encounter('e-1', 'p-2', '5.0', '2026-10-01T09:00:00Z')])).toEqual([])
+    expect(weightHistory('p-1', [encounter('e-1', 'p-1', '', '2026-10-01T09:00:00Z')])).toEqual([])
   })
 })

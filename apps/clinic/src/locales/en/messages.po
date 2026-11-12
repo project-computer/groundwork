@@ -136,8 +136,11 @@ msgstr "{0, plural, one {# to reorder} other {# to reorder}}"
 msgid "{0} — {1, plural, one {# appointment} other {# appointments}}"
 msgstr "{0} — {1, plural, one {# appointment} other {# appointments}}"
 
+#. placeholder {0}: data.clinic.name
 #. placeholder {0}: patient?.name
 #. placeholder {1}: a.reason
+#. placeholder {1}: data.clinic.timezone
+#: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/schedule/index.tsx
 msgid "{0} · {1}"
 msgstr "{0} · {1}"
@@ -471,6 +474,10 @@ msgstr "Amend"
 #: src/features/vet/consultations/components/clinical-notes.tsx
 msgid "Amended note"
 msgstr "Amended note"
+
+#: src/features/vet/consultations/components/clinical-prints.tsx
+msgid "amendment"
+msgstr "amendment"
 
 #: src/features/vet/consultations/components/clinical-notes.tsx
 #: src/features/vet/consultations/components/closed-encounter.tsx
@@ -858,6 +865,7 @@ msgid "Clinical care — records visits, diagnoses and prescriptions."
 msgstr "Clinical care — records visits, diagnoses and prescriptions."
 
 #: src/features/vet/consultations/components/clinical-notes.tsx
+#: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/consultations/components/closed-encounter.tsx
 msgid "Clinical notes"
 msgstr "Clinical notes"
@@ -879,6 +887,7 @@ msgid "Clinical records"
 msgstr "Clinical records"
 
 #: src/features/vet/billing/components/receipt-dialog.tsx
+#: src/features/vet/consultations/components/clinical-prints.tsx
 msgid "Close"
 msgstr "Close"
 
@@ -996,6 +1005,15 @@ msgstr "Consultation closed"
 #: src/features/vet/records/index.tsx
 msgid "Consultation in progress"
 msgstr "Consultation in progress"
+
+#: src/features/vet/consultations/components/clinical-prints.tsx
+msgid "Consultation summary"
+msgstr "Consultation summary"
+
+#. placeholder {0}: patient.name
+#: src/features/vet/consultations/components/clinical-prints.tsx
+msgid "Consultation summary for {0}"
+msgstr "Consultation summary for {0}"
 
 #: src/features/vet/consultations/components/no-active-consultation.tsx
 #: src/features/vet/records/index.tsx
@@ -1125,6 +1143,7 @@ msgstr "Define the stock-keeping unit; lots are received against it."
 msgid "Diagnoses"
 msgstr "Diagnoses"
 
+#: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/consultations/index.tsx
 msgid "Diagnosis"
 msgstr "Diagnosis"
@@ -1448,6 +1467,7 @@ msgstr "Follow-up date"
 msgid "Follow-up: {0}"
 msgstr "Follow-up: {0}"
 
+#: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Frequency"
 msgstr "Frequency"
@@ -1495,6 +1515,7 @@ msgstr "Good evening"
 msgid "Good morning"
 msgstr "Good morning"
 
+#: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Heart rate (bpm)"
@@ -1814,6 +1835,10 @@ msgstr "Medical timeline"
 #: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Medication"
 msgstr "Medication"
+
+#: src/features/vet/consultations/components/clinical-prints.tsx
+msgid "Medication & instructions"
+msgstr "Medication & instructions"
 
 #: src/features/vet/inventory/index.tsx
 msgid "Medicine"
@@ -2206,6 +2231,7 @@ msgstr "Open my account ({0})"
 msgid "Open Staff & Permissions"
 msgstr "Open Staff & Permissions"
 
+#: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Open visit"
 msgstr "Open visit"
@@ -2250,6 +2276,7 @@ msgid "Overdue {0}"
 msgstr "Overdue {0}"
 
 #: src/features/vet/billing/index.tsx
+#: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
 msgid "Owner"
@@ -2293,6 +2320,7 @@ msgstr "paid"
 msgid "Paid"
 msgstr "Paid"
 
+#: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/dashboard/index.tsx
 #: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
@@ -2401,6 +2429,21 @@ msgstr "Post invoice"
 msgid "posted"
 msgstr "posted"
 
+#. placeholder {0}: vet.name
+#: src/features/vet/consultations/components/clinical-prints.tsx
+msgid "Prescriber: {0}"
+msgstr "Prescriber: {0}"
+
+#: src/features/vet/consultations/components/clinical-prints.tsx
+msgid "Prescription"
+msgstr "Prescription"
+
+#. placeholder {0}: patient.name
+#: src/features/vet/consultations/components/clinical-prints.tsx
+msgid "Prescription for {0}"
+msgstr "Prescription for {0}"
+
+#: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "Prescriptions"
@@ -2426,9 +2469,20 @@ msgstr "Previous month"
 msgid "Price"
 msgstr "Price"
 
+#: src/features/vet/consultations/components/clinical-prints.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+#: src/features/vet/consultations/components/prescription-panel.tsx
+msgid "Print prescription"
+msgstr "Print prescription"
+
 #: src/features/vet/billing/components/receipt-dialog.tsx
 msgid "Print receipt"
 msgstr "Print receipt"
+
+#: src/features/vet/consultations/components/clinical-prints.tsx
+#: src/features/vet/consultations/components/closed-encounter.tsx
+msgid "Print summary"
+msgstr "Print summary"
 
 #: src/features/vet/workspace/components/account-panel.tsx
 msgid "Profile saved"
@@ -2452,10 +2506,12 @@ msgid "Provisional working diagnoses and confirmed findings"
 msgstr "Provisional working diagnoses and confirmed findings"
 
 #: src/features/vet/billing/components/receipt-dialog.tsx
+#: src/features/vet/consultations/components/clinical-prints.tsx
 msgid "Qty"
 msgstr "Qty"
 
 #. placeholder {0}: rx.quantity
+#: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/consultations/components/prescription-panel.tsx
 msgid "qty {0}"
@@ -2687,6 +2743,7 @@ msgstr "Reschedule"
 msgid "Reschedule appointment"
 msgstr "Reschedule appointment"
 
+#: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Respiratory rate"
@@ -2914,6 +2971,10 @@ msgstr "Sign in (PIN)"
 msgid "Sign in as"
 msgstr "Sign in as"
 
+#: src/features/vet/consultations/components/clinical-prints.tsx
+msgid "Signature ____________________"
+msgstr "Signature ____________________"
+
 #: src/features/vet/workspace/components/account-panel.tsx
 msgid "Signed in"
 msgstr "Signed in"
@@ -3074,6 +3135,7 @@ msgstr "Team"
 msgid "Team member"
 msgstr "Team member"
 
+#: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Temperature (°C)"
@@ -3092,6 +3154,10 @@ msgstr "That backup file could not be read from disk."
 #: src/features/vet/records/components/import-case-dialog.tsx
 msgid "That is not valid JSON — paste the case bundle file contents or choose a .json file."
 msgstr "That is not valid JSON — paste the case bundle file contents or choose a .json file."
+
+#: src/features/vet/staff/index.tsx
+msgid "The audit trail is reserved for clinic admins."
+msgstr "The audit trail is reserved for clinic admins."
 
 #. placeholder {0}: patient.name
 #: src/features/vet/consultations/components/closed-encounter.tsx
@@ -3305,6 +3371,7 @@ msgstr "Vendors lots are purchased from"
 msgid "Versioned JSON snapshot of every clinic record, for reporting and hand-off."
 msgstr "Versioned JSON snapshot of every clinic record, for reporting and hand-off."
 
+#: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/records/index.tsx
 msgid "Vet"
 msgstr "Vet"
@@ -3331,6 +3398,7 @@ msgstr "Vettera clinic report"
 msgid "View"
 msgstr "View"
 
+#: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Visit"
 msgstr "Visit"
@@ -3419,6 +3487,7 @@ msgstr "Week of {0}"
 msgid "Week overview"
 msgstr "Week overview"
 
+#: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/consultations/components/vitals-panel.tsx
 msgid "Weight (kg)"
@@ -3428,6 +3497,10 @@ msgstr "Weight (kg)"
 #: src/features/vet/owners/components/patient-dialog.tsx
 msgid "weight {0} kg"
 msgstr "weight {0} kg"
+
+#: src/features/vet/owners/components/patient-dialog.tsx
+msgid "Weight history:"
+msgstr "Weight history:"
 
 #: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/consultations/components/vitals-panel.tsx
