@@ -450,6 +450,10 @@ msgstr "All patients"
 msgid "All time"
 msgstr "All time"
 
+#: src/lib/vet/exports.ts
+msgid "Allergies"
+msgstr "Allergies"
+
 #: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Allergies (comma-separated)"
 msgstr "Allergies (comma-separated)"
@@ -611,6 +615,7 @@ msgid "Bank transfer"
 msgstr "Bank transfer"
 
 #: src/features/vet/owners/components/patient-dialog.tsx
+#: src/lib/vet/exports.ts
 msgid "Baseline weight (kg)"
 msgstr "Baseline weight (kg)"
 
@@ -675,6 +680,7 @@ msgstr "Boosters due or overdue within 30 days"
 
 #: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
+#: src/lib/vet/exports.ts
 msgid "Breed"
 msgstr "Breed"
 
@@ -1110,6 +1116,7 @@ msgstr "Date administered"
 
 #: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
+#: src/lib/vet/exports.ts
 msgid "Date of birth"
 msgstr "Date of birth"
 
@@ -1417,6 +1424,7 @@ msgid "Export and manual backup are included in the free Local plan."
 msgstr "Export and manual backup are included in the free Local plan."
 
 #: src/features/vet/reports/index.tsx
+#: src/features/vet/settings/index.tsx
 msgid "Export CSV"
 msgstr "Export CSV"
 
@@ -1424,15 +1432,31 @@ msgstr "Export CSV"
 msgid "Export data"
 msgstr "Export data"
 
+#: src/features/vet/settings/index.tsx
+msgid "Export records"
+msgstr "Export records"
+
 #: src/features/vet/owners/index.tsx
 msgid "Export this patient's case bundle for another clinic"
 msgstr "Export this patient's case bundle for another clinic"
+
+#. placeholder {0}: data.patients.length
+#. placeholder {1}: data.encounters.length
+#: src/features/vet/settings/index.tsx
+msgid "Exported medical records — {0, plural, one {# patient} other {# patients}}, {1, plural, one {# visit} other {# visits}}"
+msgstr "Exported medical records — {0, plural, one {# patient} other {# patients}}, {1, plural, one {# visit} other {# visits}}"
 
 #. placeholder {0}: data.patients.length
 #. placeholder {1}: data.invoices.length
 #: src/features/vet/settings/index.tsx
 msgid "Exported the clinic archive — {0, plural, one {# patient} other {# patients}}, {1, plural, one {# invoice} other {# invoices}}"
 msgstr "Exported the clinic archive — {0, plural, one {# patient} other {# patients}}, {1, plural, one {# invoice} other {# invoices}}"
+
+#. placeholder {0}: data.owners.length
+#. placeholder {1}: data.patients.length
+#: src/features/vet/settings/index.tsx
+msgid "Exported the owner & patient register — {0, plural, one {# owner} other {# owners}}, {1, plural, one {# patient} other {# patients}}"
+msgstr "Exported the owner & patient register — {0, plural, one {# owner} other {# owners}}, {1, plural, one {# patient} other {# patients}}"
 
 #: src/features/vet/reports/components/labels.ts
 msgid "Feb"
@@ -1816,17 +1840,28 @@ msgstr "Mark no-show"
 msgid "May"
 msgstr "May"
 
+#: src/lib/vet/exports.ts
+msgid "Medical alerts"
+msgstr "Medical alerts"
+
 #: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Medical alerts (comma-separated)"
 msgstr "Medical alerts (comma-separated)"
 
 #: src/features/vet/records/index.tsx
+#: src/features/vet/settings/index.tsx
 msgid "Medical records"
 msgstr "Medical records"
 
 #: src/features/vet/shell/index.tsx
 msgid "Medical Records"
 msgstr "Medical Records"
+
+#. placeholder {0}: data.patients.length
+#. placeholder {1}: data.encounters.length
+#: src/features/vet/settings/index.tsx
+msgid "Medical records exported ({0, plural, one {# patient} other {# patients}}, {1, plural, one {# visit} other {# visits}})."
+msgstr "Medical records exported ({0, plural, one {# patient} other {# patients}}, {1, plural, one {# visit} other {# visits}})."
 
 #: src/features/vet/owners/components/patient-dialog.tsx
 msgid "Medical timeline"
@@ -1857,6 +1892,7 @@ msgid "Metric"
 msgstr "Metric"
 
 #: src/features/vet/owners/components/patient-dialog.tsx
+#: src/lib/vet/exports.ts
 msgid "Microchip"
 msgstr "Microchip"
 
@@ -1885,6 +1921,10 @@ msgstr "Monthly · last 12 months"
 #: src/features/vet/reports/components/labels.ts
 msgid "Monthly · this year"
 msgstr "Monthly · this year"
+
+#: src/lib/vet/exports.ts
+msgid "MRN"
+msgstr "MRN"
 
 #: src/features/vet/shell/index.tsx
 #: src/features/vet/workspace/index.tsx
@@ -2184,6 +2224,10 @@ msgstr "On"
 msgid "On hand"
 msgstr "On hand"
 
+#: src/features/vet/settings/index.tsx
+msgid "One CSV row per patient — the clinic's contactable roster for external systems."
+msgstr "One CSV row per patient — the clinic's contactable roster for external systems."
+
 #. placeholder {0}: Math.max(0, selectedStock)
 #. placeholder {1}: selectedRx.unit
 #: src/features/vet/consultations/components/prescription-panel.tsx
@@ -2279,12 +2323,25 @@ msgstr "Overdue {0}"
 #: src/features/vet/consultations/components/clinical-prints.tsx
 #: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
+#: src/lib/vet/exports.ts
 msgid "Owner"
 msgstr "Owner"
+
+#: src/features/vet/settings/index.tsx
+msgid "Owner & patient register"
+msgstr "Owner & patient register"
+
+#: src/lib/vet/exports.ts
+msgid "Owner address"
+msgstr "Owner address"
 
 #: src/features/vet/owners/index.tsx
 msgid "Owner and patient records are saved in one local transaction."
 msgstr "Owner and patient records are saved in one local transaction."
+
+#: src/lib/vet/exports.ts
+msgid "Owner email"
+msgstr "Owner email"
 
 #: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
@@ -2292,6 +2349,7 @@ msgid "Owner name"
 msgstr "Owner name"
 
 #: src/features/vet/owners/index.tsx
+#: src/lib/vet/exports.ts
 msgid "Owner phone"
 msgstr "Owner phone"
 
@@ -2326,6 +2384,7 @@ msgstr "Paid"
 #: src/features/vet/owners/index.tsx
 #: src/features/vet/records/index.tsx
 #: src/features/vet/schedule/components/booking-dialog.tsx
+#: src/lib/vet/exports.ts
 msgid "Patient"
 msgstr "Patient"
 
@@ -2685,6 +2744,12 @@ msgstr "refunded"
 msgid "Refunds are appended to the payment ledger; the original payment and the receipt stay unchanged."
 msgstr "Refunds are appended to the payment ledger; the original payment and the receipt stay unchanged."
 
+#. placeholder {0}: data.owners.length
+#. placeholder {1}: data.patients.length
+#: src/features/vet/settings/index.tsx
+msgid "Register exported ({0, plural, one {# owner} other {# owners}}, {1, plural, one {# patient} other {# patients}})."
+msgstr "Register exported ({0, plural, one {# owner} other {# owners}}, {1, plural, one {# patient} other {# patients}})."
+
 #: src/features/vet/dashboard/index.tsx
 #: src/features/vet/owners/index.tsx
 msgid "Register patient"
@@ -2938,6 +3003,7 @@ msgstr "Settings"
 
 #: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
+#: src/lib/vet/exports.ts
 msgid "Sex"
 msgstr "Sex"
 
@@ -2998,6 +3064,7 @@ msgstr "Something went wrong while drawing the workspace"
 
 #: src/features/vet/owners/components/patient-dialog.tsx
 #: src/features/vet/owners/index.tsx
+#: src/lib/vet/exports.ts
 msgid "Species"
 msgstr "Species"
 
@@ -3415,6 +3482,10 @@ msgstr "Visits"
 #: src/features/vet/reports/index.tsx
 msgid "Visits attended and revenue billed in this period."
 msgstr "Visits attended and revenue billed in this period."
+
+#: src/features/vet/settings/index.tsx
+msgid "Visits with vitals, diagnoses, prescriptions and notes, plus vaccinations — one readable JSON."
+msgstr "Visits with vitals, diagnoses, prescriptions and notes, plus vaccinations — one readable JSON."
 
 #: src/features/vet/consultations/components/closed-encounter.tsx
 #: src/features/vet/consultations/components/vitals-panel.tsx

@@ -19,6 +19,19 @@ import {
   type BackupSummary,
   type ClinicBackup,
 } from '@/lib/vet/backup'
+import { medicalRecordsExport, ownersPatientsCsv, recordsExportFileName, registerFileName } from '@/lib/vet/exports'
+
+/** Downloads a Blob through a transient anchor — the one download path. */
+const downloadBlob = (blob: Blob, name: string) => {
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = name
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
+}
 
 /** Settings View: local data, sync & plan, portability & recovery. */
 export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }) => {
@@ -67,6 +80,31 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
       summary: t`Exported the clinic archive — ${plural(data.patients.length, { one: '# patient', other: '# patients' })}, ${plural(data.invoices.length, { one: '# invoice', other: '# invoices' })}`,
     })
     setNotice(t`Clinic archive exported (${plural(data.patients.length, { one: '# patient', other: '# patients' })}, ${plural(data.invoices.length, { one: '# invoice', other: '# invoices' })}).`)
+  }
+
+const exportRegister = () => {
+    downloadBlob(new Blob([ownersPatientsCsv(data)], { type: 'text/csv;charset=utf-8' }), registerFileName(data.clinic.name))
+    dispatch({
+      type: 'recordAudit',
+      action: 'data.export',
+      entityType: 'clinic',
+      entityId: data.clinic.id,
+      summary: t`Exported the owner & patient register — ${plural(data.owners.length, { one: '# owner', other: '# owners' })}, ${plural(data.patients.length, { one: '# patient', other: '# patients' })}`,
+    })
+    setNotice(t`Register exported (${plural(data.owners.length, { one: '# owner', other: '# owners' })}, ${plural(data.patients.length, { one: '# patient', other: '# patients' })}).`)
+  }
+
+  const exportMedicalRecords = () => {
+    const records = medicalRecordsExport(data)
+    downloadBlob(new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' }), recordsExportFileName(data.clinic.name))
+    dispatch({
+      type: 'recordAudit',
+      action: 'data.export',
+      entityType: 'clinic',
+      entityId: data.clinic.id,
+      summary: t`Exported medical records — ${plural(data.patients.length, { one: '# patient', other: '# patients' })}, ${plural(data.encounters.length, { one: '# visit', other: '# visits' })}`,
+    })
+    setNotice(t`Medical records exported (${plural(data.patients.length, { one: '# patient', other: '# patients' })}, ${plural(data.encounters.length, { one: '# visit', other: '# visits' })}).`)
   }
 
   const createBackup = () => {
@@ -268,6 +306,30 @@ export const SettingsView = ({ onManageClinic }: { onManageClinic?: () => void }
             </div>
             <button className="button primary" onClick={exportData} disabled={!dataExport.allowed} title={dataExport.reason || undefined}>
               <Trans>Export data</Trans>
+            </button>
+          </div>
+          <div className="export-card">
+            <div className="export-icon">
+              <Database size={20} />
+            </div>
+            <div>
+              <strong><Trans>Owner & patient register</Trans></strong>
+              <span><Trans>One CSV row per patient — the clinic's contactable roster for external systems.</Trans></span>
+            </div>
+            <button className="button secondary" onClick={exportRegister} disabled={!dataExport.allowed} title={dataExport.reason || undefined}>
+              <Trans>Export CSV</Trans>
+            </button>
+          </div>
+          <div className="export-card">
+            <div className="export-icon">
+              <Database size={20} />
+            </div>
+            <div>
+              <strong><Trans>Medical records</Trans></strong>
+              <span><Trans>Visits with vitals, diagnoses, prescriptions and notes, plus vaccinations — one readable JSON.</Trans></span>
+            </div>
+            <button className="button secondary" onClick={exportMedicalRecords} disabled={!dataExport.allowed} title={dataExport.reason || undefined}>
+              <Trans>Export records</Trans>
             </button>
           </div>
           <div className="export-card">
