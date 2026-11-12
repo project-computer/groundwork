@@ -45,7 +45,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 12
 
       - name: Install Node
         uses: actions/setup-node@v4
@@ -54,10 +54,15 @@ jobs:
           cache: pnpm
           cache-dependency-path: apps/clinic/pnpm-lock.yaml
 
+      # The Makefile stages both the sidecar (apps/sidecar) and vetcare
+      # (server) binaries, so cache both modules.
       - name: Install Go
         uses: actions/setup-go@v5
         with:
           go-version-file: apps/sidecar/go.mod
+          cache-dependency-path: |
+            apps/sidecar/go.sum
+            server/go.sum
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable

@@ -194,4 +194,4 @@ deploy-landing: build-landing ## upload the download page
 
 # ---------- CI ----------
 
-ci: lint-ts lint-landing typecheck i18n-compile build test-ts test-landing lint-go vuln-go test-go lint-rust test-rust test-pages ## exactly what the CI workflow runs
+ci: lint-ts lint-landing typecheck i18n-compile build test-ts test-landing lint-go vuln-go test-go lint-rust test-rust test-pages ## every check the CI workflow runs, in sequence (CI splits it into parallel TS/Go/Rust jobs; same targets)

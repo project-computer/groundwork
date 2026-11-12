@@ -1,9 +1,19 @@
+# CI — pushes + manual runs, three independent jobs (TS / Go / Rust).
+#
+# `pull_request` is deliberately off: with this repo's public MIT posture, a
+# fork's PR would execute unreviewed code on our runners, and pushing to the
+# branch plus the manual run already covers mainline CI. Re-enable PR CI only
+# with an approval gate (e.g. label-gated workflow_run) once external
+# contributions become expected.
+#
+# Runs on GitHub-hosted runners (the self-hosted runner was retired — a
+# queue-for-hours CI is worse than a slower hosted one), same rationale as the
+# release workflow. Each job pins its toolchain and caches it; the three
+# languages are independent (the Rust job stages its own Go sidecar), so they
+# run in parallel and a failure in one never hides the others.
+
 name: CI
 
-# No `pull_request` trigger: this repo runs CI on a **self-hosted** runner,
-# and on a public repo a fork's PR would execute unreviewed code there.
-# Pushes and manual dispatch stay covered; re-enable pull_request only with
-# an approval gate (e.g. label-gated workflow_run) or GitHub-hosted runners.
 on:
   push:
   workflow_dispatch:
@@ -12,13 +22,15 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# CI never writes — read-only token, least privilege.
+permissions:
+  contents: read
+
 jobs:
-  checks:
-    name: lint + tests
-    # GitHub-hosted runners: the self-hosted runner is not always online, and
-    # a queued-for-hours CI is worse than a slower hosted one. Same rationale
-    # as the release workflow, which already builds on hosted runners.
+  ts:
+    name: TS — lint, typecheck, build, tests, pages
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -27,25 +39,29 @@ jobs:
         with:
           version: 12
 
-      # cargo clippy/fmt compile the Tauri shell, which needs the webkit
-      # system libraries on Linux (same list as the release workflow).
-      - name: Install Linux system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            build-essential \
-            libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
+      - name: Install Node + pnpm store cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: |
+            apps/clinic/pnpm-lock.yaml
+            apps/landing/pnpm-lock.yaml
 
       - name: Install JS deps
         run: |
           pnpm -C apps/clinic install --frozen-lockfile
           pnpm -C apps/landing install --frozen-lockfile
 
-      # Browser-mode vitest (component + screenshot) drives real Chromium.
+      # Chromium for browser-mode vitest (component + screenshot) and the
+      # Playwright page tests; --with-deps also installs its OS libraries.
+      # Restored from cache first so a hit makes `playwright install` a no-op.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('apps/clinic/pnpm-lock.yaml') }}
+
       - name: Install Playwright Chromium
         run: pnpm -C apps/clinic exec playwright install --with-deps chromium
 
@@ -66,6 +82,26 @@ jobs:
       - name: Tests (TS)
         run: make test-ts test-landing
 
+      - name: Page tests (Playwright)
+        run: make test-pages
+
+  go:
+    name: Go — lint, vuln, tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      # Pins Go from the sidecar's go.mod (`toolchain go1.27.x` picks it up)
+      # and caches the module + build caches for both Go modules.
+      - name: Install Go + module cache
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/sidecar/go.mod
+          cache-dependency-path: |
+            apps/sidecar/go.sum
+            server/go.sum
+
       - name: Lint (Go)
         run: make lint-go
 
@@ -75,11 +111,48 @@ jobs:
       - name: Go tests
         run: make test-go
 
+  rust:
+    name: Rust — fmt, clippy, tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/clinic/src-tauri
+
+      # lint-rust / test-rust stage the Go sidecar first (make sidecar /
+      # make vetcare), so this job needs the Go toolchain for both modules.
+      - name: Install Go + module cache
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/sidecar/go.mod
+          cache-dependency-path: |
+            apps/sidecar/go.sum
+            server/go.sum
+
+      # cargo clippy/fmt compile the Tauri shell, which needs the webkit
+      # system libraries on Linux (same list as the release workflow).
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
       - name: Lint (Rust)
         run: make lint-rust
 
       - name: Tests (Rust)
         run: make test-rust
-
-      - name: Page tests (Playwright)
-        run: make test-pages
