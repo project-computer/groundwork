@@ -199,6 +199,11 @@ Evidence: [`backups.go`](../server/internal/offlineapi/api/backups.go),
 
 ### P1-12. Full-visit UI E2E and the release-gate scenarios (QA-04, plan §8)
 
+DONE — `e2e/pages/full-visit.spec.ts` drives the full clinic day through the real
+browser: check-in → vitals → diagnosis → prescription → close → invoice →
+partial payment → settle → receipt → reload persistence; plus walk-in queue,
+register-and-restart, and RBAC denial. `make test-pages` now runs in CI.
+
 The API-level full visit is covered (`visit_e2e_test.go`); the browser suite
 covers shell mounting and responsive appointment layout only. Offline, RBAC
 denial, restore and restart are not automated through the UI.
