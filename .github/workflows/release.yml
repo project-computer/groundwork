@@ -1,16 +1,43 @@
 # Cross-platform desktop builds for the Tauri shell (apps/clinic).
 #
 # Builds the Go clinic-core sidecar, bundles it via `bundle.externalBin`,
-# and produces signed-off installers for the three desktop OSes:
+# and produces installers for every desktop platform/arch pair GitHub
+# hosts a runner for (one job per pair, all native — no cross-compiling,
+# so the Makefile's host-triple sidecar staging always matches `--target`):
 #
-#   macOS  (macos-latest, Apple Silicon)   .app/.dmg   — unsigned
-#   Windows (windows-latest)               .msi/.exe   — NSIS + WiX, unsigned
-#   Linux  (ubuntu-latest, currently 26.04) .deb/.rpm/.AppImage
+#   macOS   Apple Silicon (macos-latest)      .app/.dmg  — unsigned
+#   macOS   Intel         (macos-15-intel)    .app/.dmg  — unsigned
+#   Windows x64           (windows-latest)    .msi/.exe  — NSIS + WiX, unsigned
+#   Windows ARM64         (windows-11-arm)    .exe only  — NSIS; WiX/MSI has
+#                                             no ARM64 support, so this
+#                                             target passes --bundles nsis
+#   Linux   x64           (ubuntu-24.04)      .deb/.rpm/.AppImage
+#   Linux   ARM64         (ubuntu-24.04-arm)  .deb/.rpm/.AppImage
+#
+# plus one Android build (ARM64 — the pilot hardware; more ABIs would mean
+# more jobs, not a wider matrix):
+#
+#   Android ARM64          (ubuntu-latest)     .apk — signed only when the
+#                          ANDROID_KEYSTORE_B64 / _PASSWORD / _ALIAS secrets
+#                          exist; otherwise an unsigned APK is uploaded that
+#                          must be signed before it is published.
+#
+# Both Linux runners are pinned to the same 24.04 base so the x64 and
+# ARM64 bundles share one glibc floor. The desktop bundles are unsigned —
+# signing certificates are not configured yet (docs/RELEASE-READINESS.md).
 #
 # Triggered by pushed `v*` tags (draft GitHub release with bundle assets)
 # or manually (artifacts-only). The `make`/Go toolchain requirements come
 # from build.beforeBuildCommand in tauri.conf.json, which stages the
-# sidecar via the Makefile before every `tauri build`.
+# sidecar via the Makefile before every `tauri build`. The Android job
+# reuses the Makefile's `android-init` target (SDK/NDK/JDK/target checks +
+# `tauri android init --ci`, regenerating the gitignored `gen/` project).
+#
+# Release choreography: on a tag push a single `create-release` job makes
+# (or reuses) the draft release once and hands its ID to the build jobs,
+# so they upload assets instead of each racing to create the same
+# release. On a manual run that job is skipped and the builders fall back
+# to artifacts-only mode.
 
 name: Release
 
@@ -28,16 +55,77 @@ permissions:
   contents: write
 
 jobs:
+  create-release:
+    name: create draft release
+    # Tag pushes only; on workflow_dispatch the build jobs skip release
+    # creation entirely.
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      release_id: ${{ steps.release.outputs.id }}
+    steps:
+      - name: Create or reuse the draft release for this tag
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          # A retry of the same tag must keep filling the existing draft
+          # instead of spawning a second release for it.
+          if id="$(gh release view "$tag" --json id --jq .id 2>/dev/null)"; then
+            echo "Reusing existing release $id for $tag"
+          else
+            id="$(gh release create "$tag" \
+              --draft \
+              --target "$GITHUB_SHA" \
+              --title "Vet Clinic $tag" \
+              --json id --jq .id)"
+            echo "Created draft release $id for $tag"
+          fi
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
   build:
-    name: build (${{ matrix.platform }})
+    name: build (${{ matrix.label }})
+    # always() because create-release is skipped on manual runs — the
+    # builds must still run, artifacts-only.
+    if: always()
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
-        platform:
-          - macos-latest
-          - windows-latest
-          - ubuntu-latest # 26.04 LTS
+        include:
+          - platform: macos-latest
+            label: macOS Apple Silicon
+            target: aarch64-apple-darwin
+            args: --target aarch64-apple-darwin
+          - platform: macos-15-intel
+            label: macOS Intel
+            target: x86_64-apple-darwin
+            args: --target x86_64-apple-darwin
+          - platform: windows-latest
+            label: Windows x64
+            target: x86_64-pc-windows-msvc
+            args: --target x86_64-pc-windows-msvc
+          - platform: windows-11-arm
+            label: Windows ARM64
+            target: aarch64-pc-windows-msvc
+            # NSIS only — WiX cannot produce ARM64 MSIs.
+            args: --target aarch64-pc-windows-msvc --bundles nsis
+          - platform: ubuntu-24.04
+            label: Linux x64
+            target: x86_64-unknown-linux-gnu
+            args: --target x86_64-unknown-linux-gnu
+          - platform: ubuntu-24.04-arm
+            label: Linux ARM64
+            target: aarch64-unknown-linux-gnu
+            args: --target aarch64-unknown-linux-gnu
     runs-on: ${{ matrix.platform }}
+    # Release builds compile the whole Tauri shell from scratch; the ARM
+    # runners are the slowest, so give every job generous headroom.
+    timeout-minutes: 90
 
     steps:
       - uses: actions/checkout@v7
@@ -71,6 +159,9 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: apps/clinic/src-tauri
+          # One cache per target triple so the arch-specific build artifacts
+          # of the six matrix jobs never bleed into each other.
+          key: ${{ matrix.target }}
 
       - name: Install Linux system dependencies
         if: runner.os == 'Linux'
@@ -86,8 +177,9 @@ jobs:
             librsvg2-dev
 
       - name: Install make (Windows)
-        # The Makefile drives the sidecar build; windows-latest ships without make.
-        # Git Bash provides the `bash`/`cp` the Makefile's `SHELL := bash` assumes.
+        # The Makefile drives the sidecar build; the Windows runners (x64 and
+        # ARM) ship without make. Git Bash provides the `bash`/`cp` the
+        # Makefile's `SHELL := bash` assumes, on both images.
         if: runner.os == 'Windows'
         run: |
           choco install make --no-progress
@@ -102,16 +194,136 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: apps/clinic
-          # Empty on workflow_dispatch → skip release creation, artifacts only.
+          # Set only on tag pushes (empty on workflow_dispatch → skip release
+          # creation, artifacts only). When set, assets upload to the draft
+          # the create-release job made; if that job failed, the empty ID
+          # falls back to tagName/releaseName creation below.
+          releaseId: ${{ needs.create-release.outputs.release_id }}
           tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
           releaseName: "Vet Clinic v__VERSION__"
           releaseDraft: true
           prerelease: false
+          retryAttempts: 3
+          args: ${{ matrix.args }}
 
       - name: Upload build artifacts
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         uses: actions/upload-artifact@v4
         with:
-          name: vet-clinic-${{ matrix.platform }}
-          path: apps/clinic/src-tauri/target/release/bundle/**
+          name: vet-clinic-${{ matrix.target }}
+          # `--target <triple>` moves the bundle output under target/<triple>/.
+          path: apps/clinic/src-tauri/target/${{ matrix.target }}/release/bundle/**
+          if-no-files-found: error
+
+  build-android:
+    name: build (Android ARM64)
+    # always() mirrors the desktop builds: create-release is skipped on
+    # manual runs, and this job must still produce its artifact.
+    if: always()
+    needs: create-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/clinic/pnpm-lock.yaml
+
+      # All four targets because `make android-check` (via android-init)
+      # refuses to run unless rustup has the full set the Tauri template
+      # can build; only aarch64 is actually compiled below.
+      - name: Install Rust + Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/clinic/src-tauri
+          key: android-aarch64
+
+      - name: Install JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install Android SDK + NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-36 build-tools;36.0.0 ndk;27.2.12479018"
+
+      # The Tauri Android toolchain looks the NDK up through NDK_HOME; the
+      # runner image sets ANDROID_HOME but never NDK_HOME.
+      - name: Export NDK_HOME
+        run: echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+
+      - name: Install JS deps
+        run: pnpm -C apps/clinic install --frozen-lockfile
+
+      # gen/ is gitignored, so every CI run regenerates the Gradle project.
+      - name: Generate Android project
+        run: make android-init
+
+      # Mobile builds stage no sidecar (tauri.android.conf.json has an empty
+      # externalBin); beforeBuildCommand is just the Vite production build.
+      - name: Build release APK (ARM64)
+        run: pnpm -C apps/clinic exec tauri android build --target aarch64 --apk --ci
+
+      # AGP emits the release APK unsigned. With the keystore secrets set,
+      # sign it here (installable + upgradable); without them, ship the
+      # unsigned APK and let the maintainer sign before publishing.
+      - name: Sign APK
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          tools="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+          version="$(pnpm -C apps/clinic exec node -p "require('./src-tauri/tauri.conf.json').version")"
+          name="Vet Clinic_${version}_arm64.apk"
+          out="apps/clinic/src-tauri/gen/android/signed"
+          mkdir -p "$out"
+          apk="$(find apps/clinic/src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | sort)"
+          test -n "$apk" || { echo 'no APK produced by the Gradle build'; exit 1; }
+          apk="$(printf '%s\n' "$apk" | head -1)"
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > keystore.jks
+            "$tools/apksigner" sign \
+              --ks keystore.jks \
+              --ks-key-alias "${KEY_ALIAS:-vetclinic}" \
+              --ks-pass "pass:$KEYSTORE_PASSWORD" \
+              --out "$out/$name" "$apk"
+            "$tools/apksigner" verify "$out/$name"
+            rm -f keystore.jks
+          else
+            echo "ANDROID_KEYSTORE_B64 not set — uploading $name unsigned; sign before publishing."
+            cp "$apk" "$out/$name"
+          fi
+
+      - name: Upload APK to the draft release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload "$GITHUB_REF_NAME" apps/clinic/src-tauri/gen/android/signed/*.apk --clobber
+
+      - name: Upload build artifacts
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: vet-clinic-android-aarch64
+          path: apps/clinic/src-tauri/gen/android/signed/*.apk
           if-no-files-found: error

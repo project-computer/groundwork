@@ -33,6 +33,7 @@ SHELL := bash
 .DELETE_ON_ERROR:
 
 .PHONY: help install dev dev-landing build build-clinic build-landing tauri sidecar api vetcare
+.PHONY: android-check android-init android
 .PHONY: lint lint-ts lint-landing lint-go lint-rust
 .PHONY: fmt fmt-go fmt-rust
 .PHONY: test test-ts test-landing test-go test-rust test-pages test-screenshots vuln-go
@@ -64,6 +65,59 @@ build-landing: ## production build of the download page
 
 tauri: ## desktop shell (sidecar + SQLite), via the Tauri CLI
 	pnpm -C $(CLINIC) tauri dev
+
+# ---------- Android (Tauri mobile) ----------
+#
+# `src-tauri/gen/android` is generated and gitignored (see .gitignore); the
+# committed state is "no project, regenerate on demand". A debug APK needs an
+# Android SDK + NDK, JDK 17 and the four Rust Android targets. Variables accept
+# the usual environment names, so exporting ANDROID_HOME / NDK_HOME / JAVA_HOME
+# (or passing them to make) is enough.
+
+ANDROID_SDK     ?= $(or $(ANDROID_HOME),$(ANDROID_SDK_ROOT))
+ANDROID_NDK     ?= $(or $(NDK_HOME),$(ANDROID_NDK_HOME),$(lastword $(sort $(wildcard $(ANDROID_SDK)/ndk/*))))
+ANDROID_TARGET  ?= aarch64
+ANDROID_TARGETS := aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+
+export ANDROID_HOME      := $(ANDROID_SDK)
+export ANDROID_SDK_ROOT  := $(ANDROID_SDK)
+export NDK_HOME          := $(ANDROID_NDK)
+export ANDROID_NDK_HOME  := $(ANDROID_NDK)
+
+## Fails with an actionable message instead of letting Gradle/cargo fail deep
+## in the build. Checks SDK, NDK, JDK 17 and all four Rust targets.
+android-check:
+	@status=0; \
+	if [ -z "$(ANDROID_SDK)" ] || [ ! -d "$(ANDROID_SDK)" ]; then \
+		echo "error: Android SDK not found. Set ANDROID_HOME (or ANDROID_SDK_ROOT)."; status=1; \
+	fi; \
+	if [ -z "$(ANDROID_NDK)" ] || [ ! -d "$(ANDROID_NDK)" ]; then \
+		echo "error: Android NDK not found. Set NDK_HOME (for example $$ANDROID_HOME/ndk/27.2.12479018)."; status=1; \
+	fi; \
+	if [ -z "$(JAVA_HOME)" ] || [ ! -x "$(JAVA_HOME)/bin/java" ]; then \
+		echo "error: JDK 17 not found. Set JAVA_HOME to a JDK 17 installation."; status=1; \
+	else \
+		major=$$("$(JAVA_HOME)/bin/java" -version 2>&1 | awk -F'"' '/version/{print $$2}' | cut -d. -f1); \
+		if [ "$$major" != "17" ]; then \
+			echo "error: JDK 17 is required (found $$major). Set JAVA_HOME to a JDK 17 installation."; status=1; \
+		fi; \
+	fi; \
+	if ! command -v rustup >/dev/null 2>&1; then \
+		echo "error: rustup is not installed; cannot verify the Android Rust targets."; status=1; \
+	else \
+		for target in $(ANDROID_TARGETS); do \
+			rustup target list --installed | grep -qx "$$target" || { \
+				echo "error: Rust target $$target is not installed. Run: rustup target add $(ANDROID_TARGETS)"; status=1; \
+			}; \
+		done; \
+	fi; \
+	exit $$status
+
+android-init: android-check ## generate the (gitignored) Android project
+	pnpm -C $(CLINIC) exec tauri android init --ci
+
+android: android-init ## build a debug APK (ANDROID_TARGET=aarch64|x86_64|…)
+	pnpm -C $(CLINIC) exec tauri android build --debug --apk --ci --target $(ANDROID_TARGET)
 
 # ---------- Go sidecar ----------
 

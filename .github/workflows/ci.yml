@@ -1,4 +1,4 @@
-# CI — pushes + manual runs, three independent jobs (TS / Go / Rust).
+# CI — pushes + manual runs, four independent jobs (TS / Go / Rust / Android).
 #
 # `pull_request` is deliberately off: with this repo's public MIT posture, a
 # fork's PR would execute unreviewed code on our runners, and pushing to the
@@ -8,9 +8,9 @@
 #
 # Runs on GitHub-hosted runners (the self-hosted runner was retired — a
 # queue-for-hours CI is worse than a slower hosted one), same rationale as the
-# release workflow. Each job pins its toolchain and caches it; the three
-# languages are independent (the Rust job stages its own Go sidecar), so they
-# run in parallel and a failure in one never hides the others.
+# release workflow. Each job pins its toolchain and caches it; the languages
+# are independent (the Rust and Android jobs stage their own Go sidecar), so
+# they run in parallel and a failure in one never hides the others.
 
 name: CI
 
@@ -156,3 +156,60 @@ jobs:
 
       - name: Tests (Rust)
         run: make test-rust
+
+  android:
+    name: Android — debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - name: Install Node + pnpm store cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/clinic/pnpm-lock.yaml
+
+      - name: Install JS deps
+        run: pnpm -C apps/clinic install --frozen-lockfile
+
+      # The Tauri Android build needs all four Rust targets; make android-check
+      # verifies them (and the SDK/NDK/JDK) before invoking Gradle.
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/clinic/src-tauri
+
+      - name: Install JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install Android SDK + NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-36 build-tools;36.0.0 ndk;27.2.12479018"
+
+      # x86_64 keeps the CI build fast and produces an APK the Android
+      # emulator can install; release builds pick their ABI explicitly.
+      - name: Build debug APK
+        run: make android ANDROID_TARGET=x86_64
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: apps/clinic/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
