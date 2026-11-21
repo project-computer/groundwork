@@ -79,6 +79,16 @@ export const ConsultationSummaryDialog = ({ encounter, patient, onClose }: { enc
             </span>
           ))}
         </div>
+        {(['chiefComplaint', 'symptoms', 'examination', 'treatmentPlan'] as const).map((field) =>
+          encounter[field] ? (
+            <p key={field} className="text-[12.5px]">
+              <span className="text-[11.5px] font-semibold uppercase tracking-[0.04em] text-muted-foreground">
+                {field === 'chiefComplaint' ? <Trans>Chief complaint</Trans> : field === 'symptoms' ? <Trans>Symptoms</Trans> : field === 'examination' ? <Trans>Examination</Trans> : <Trans>Treatment plan</Trans>}
+              </span>{' '}
+              <strong>{encounter[field]}</strong>
+            </p>
+          ) : null,
+        )}
         {encounter.diagnoses.length > 0 && (
           <div className="flex flex-col gap-1 border-t border-border pt-2">
             <span className="text-[11.5px] font-semibold uppercase tracking-[0.04em] text-muted-foreground"><Trans>Diagnosis</Trans></span>

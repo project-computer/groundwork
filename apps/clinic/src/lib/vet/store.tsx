@@ -103,7 +103,9 @@ export type Action =
   | { type: 'addNote'; encounterId: string; body: string }
   | { type: 'amendNote'; encounterId: string; noteId: string; body: string; reason: string }
   | { type: 'addDiagnosis'; encounterId: string; diagnosis: Omit<Diagnosis, 'id'> }
+  | { type: 'correctDiagnosis'; encounterId: string; diagnosisId: string; description: string; reason: string }
   | { type: 'confirmDiagnosis'; encounterId: string; diagnosisId: string }
+  | { type: 'updateClinicalFields'; encounterId: string; fields: Pick<Encounter, 'chiefComplaint' | 'symptoms' | 'examination' | 'treatmentPlan'> }
   | { type: 'addPrescription'; encounterId: string; prescription: Omit<Prescription, 'id' | 'prescriberId'> }
   | { type: 'removePrescription'; encounterId: string; prescriptionId: string }
   | { type: 'recordVaccination'; patientId: string; vaccination: Omit<Vaccination, 'id' | 'patientId' | 'vetId' | 'version'> }
@@ -186,6 +188,12 @@ const updateEncounter = (data: ClinicState, id: string, fn: (e: Encounter) => En
 }
 
 const patientName = (data: ClinicState, id: string) => data.patients.find((p) => p.id === id)?.name ?? 'patient'
+
+/** Human-readable vitals for the audit trail (P1-8) — "28.4 kg, 38.9 °C, HR 88, RR 20". */
+const describeVitals = (v: Vitals) =>
+  [v.weightKg && `${v.weightKg} kg`, v.tempC && `${v.tempC} °C`, v.heartRate && `HR ${v.heartRate}`, v.respRate && `RR ${v.respRate}`]
+    .filter(Boolean)
+    .join(', ')
 
 /** Human-readable Medical Record Number, e.g. PT-2026-0042 (see CONTEXT.md). */
 /** Exposed for tests: drive business mutations and assert on the resulting document. */
@@ -497,13 +505,21 @@ export const reducer = (store: Store, action: Action): Store => {
       )
       return { ...next, session: { ...next.session, view: 'consult', activeEncounterId: enc.id } }
     }
-    case 'updateVitals':
+    case 'updateVitals': {
+      // Every overwrite is traced in the audit log with the full values — and
+      // when prior vitals existed, what they were replaced (P1-8).
+      const prior = data.encounters.find((e) => e.id === action.encounterId)?.vitals
+      const hadPrior = prior && [prior.weightKg, prior.tempC, prior.heartRate, prior.respRate].some(Boolean)
+      const summary = hadPrior && describeVitals(prior)
+        ? `Corrected vitals (was ${describeVitals(prior)}) — ${describeVitals(action.vitals) || 'no values'}`
+        : `Recorded vitals — ${describeVitals(action.vitals) || 'no values'}`
       return commit(store, updateEncounter(data, action.encounterId, (e) => ({ ...e, vitals: action.vitals })), {
-        action: 'observation.record',
+        action: hadPrior ? 'observation.correct' : 'observation.record',
         entityType: 'encounter',
         entityId: action.encounterId,
-        summary: 'Recorded vitals',
+        summary,
       })
+    }
     case 'addNote': {
       const note = { id: uid(), authorId: session.currentUserId, body: action.body, createdAt: now() }
       return commit(store, updateEncounter(data, action.encounterId, (e) => ({ ...e, notes: [...e.notes, note] })), {
@@ -545,6 +561,25 @@ export const reducer = (store: Store, action: Action): Store => {
         summary: `Diagnosis: ${dx.description}`,
       })
     }
+    case 'correctDiagnosis': {
+      // Corrections are audited edits, not deletes: the original description
+      // and the reason travel with the diagnosis (P1-8).
+      const enc = data.encounters.find((e) => e.id === action.encounterId)
+      const dx = enc?.diagnoses.find((d) => d.id === action.diagnosisId)
+      if (!enc || enc.status !== 'open' || !dx) return store
+      if (!action.description.trim() || !action.reason.trim())
+        return reject(store, 'diagnosis.correction_empty', 'A correction needs the new wording and a reason.')
+      return commit(
+        store,
+        updateEncounter(data, action.encounterId, (e) => ({
+          ...e,
+          diagnoses: e.diagnoses.map((d) =>
+            d.id === action.diagnosisId ? { ...d, description: action.description.trim(), correctedFrom: d.description, correctReason: action.reason.trim() } : d,
+          ),
+        })),
+        { action: 'diagnosis.correct', entityType: 'diagnosis', entityId: dx.id, summary: `Corrected diagnosis — ${action.reason.trim()}` },
+      )
+    }
     case 'confirmDiagnosis': {
       const enc = data.encounters.find((e) => e.id === action.encounterId)
       const dx = enc?.diagnoses.find((d) => d.id === action.diagnosisId)
@@ -557,6 +592,23 @@ export const reducer = (store: Store, action: Action): Store => {
         })),
         { action: 'diagnosis.confirm', entityType: 'diagnosis', entityId: dx.id, summary: `Confirmed diagnosis: ${dx.description}` },
       )
+    }
+    case 'updateClinicalFields': {
+      // Structured clinical fields (backend 0005 parity, P1-8): plain
+      // whitespace-only values clear the field; everything is audited.
+      const fields = {
+        chiefComplaint: action.fields.chiefComplaint?.trim() || undefined,
+        symptoms: action.fields.symptoms?.trim() || undefined,
+        examination: action.fields.examination?.trim() || undefined,
+        treatmentPlan: action.fields.treatmentPlan?.trim() || undefined,
+      }
+      if (!Object.values(fields).some(Boolean)) return reject(store, 'clinical.fields_empty', 'Enter at least one clinical field.')
+      return commit(store, updateEncounter(data, action.encounterId, (e) => ({ ...e, ...fields })), {
+        action: 'clinical_fields.update',
+        entityType: 'encounter',
+        entityId: action.encounterId,
+        summary: 'Updated structured clinical fields',
+      })
     }
     case 'addPrescription': {
       // Stock floor — enforced here, not only in the form (phase 2 of the

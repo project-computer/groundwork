@@ -108,6 +108,9 @@ export interface Diagnosis {
   id: string
   description: string
   status: 'provisional' | 'confirmed'
+  /** Auditable correction (P1-8): what this diagnosis replaced and why. */
+  correctedFrom?: string
+  correctReason?: string
 }
 
 export interface Prescription {
@@ -134,6 +137,11 @@ export interface Encounter {
   notes: ClinicalNote[]
   diagnoses: Diagnosis[]
   prescriptions: Prescription[]
+  /** Structured clinical fields (backend 0005): undefined = never captured. */
+  chiefComplaint?: string
+  symptoms?: string
+  examination?: string
+  treatmentPlan?: string
   /** Provenance (case transfer): origin of a copied encounter. */
   originClinicId?: string
   originEncounterId?: string

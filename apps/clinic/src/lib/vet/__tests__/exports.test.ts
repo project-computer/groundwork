@@ -72,3 +72,29 @@ describe('medicalRecordsExport (BKP-07)', () => {
     )
   })
 })
+
+describe('medicalRecordsExport — structured clinical fields (P1-8)', () => {
+  it('carries the four clinical fields and diagnosis provenance per visit', () => {
+    const withFields = {
+      ...seedState,
+      encounters: seedState.encounters.map((e) =>
+        e.id === seedState.encounters[0].id
+          ? { ...e, chiefComplaint: 'Limping', symptoms: 'Favoring left hind', examination: 'Mild swelling', treatmentPlan: 'Rest + NSAIDs', diagnoses: [{ ...e.diagnoses[0], correctedFrom: 'Sprain', correctReason: 'Imaging' }] }
+          : e,
+      ),
+    }
+    const exported = medicalRecordsExport(withFields, '2026-11-21T09:00:00Z')
+    const visit = exported.patients.flatMap((pt) => pt.visits)[0]
+    expect(visit.chiefComplaint).toBe('Limping')
+    expect(visit.symptoms).toBe('Favoring left hind')
+    expect(visit.examination).toBe('Mild swelling')
+    expect(visit.treatmentPlan).toBe('Rest + NSAIDs')
+    expect(visit.diagnoses[0]).toMatchObject({ correctedFrom: 'Sprain', correctReason: 'Imaging' })
+  })
+
+  it('omits the fields entirely when never captured', () => {
+    const exported = medicalRecordsExport(seedState, '2026-11-21T09:00:00Z')
+    const visit = exported.patients.flatMap((pt) => pt.visits).find((v) => v.diagnoses.length > 0)!
+    expect(visit.chiefComplaint).toBeUndefined()
+  })
+})
