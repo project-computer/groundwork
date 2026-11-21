@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Lock, PawPrint } from 'lucide-react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { useClinic } from '@/lib/vet/store'
@@ -12,7 +12,21 @@ import type { StaffUser } from '@/lib/vet/types'
  * dispatch replaces the session user. Members without a PIN (a clinic that has
  * not finished setup) can enter directly — admins are prompted in Staff &
  * Permissions to set one.
+ *
+ * Brute-force backoff (P2-20): five failures start a cooldown that doubles
+ * with every further failure (30s → 60s → …, capped at 5 minutes). The
+ * cooldown lives in this component's state — it guards the shared kiosk
+ * against shoulder-surf guessing, not a cryptographic attack.
  */
+
+/** Failures allowed before the first cooldown. */
+const FAILURES_FREE = 5
+const BASE_COOLDOWN_S = 30
+const MAX_COOLDOWN_S = 300
+
+const cooldownSeconds = (failures: number): number =>
+  failures < FAILURES_FREE ? 0 : Math.min(BASE_COOLDOWN_S * 2 ** (failures - FAILURES_FREE), MAX_COOLDOWN_S)
+
 export const LockScreen = () => {
   const { data, session, dispatch } = useClinic()
   const { t } = useLingui()
@@ -22,6 +36,19 @@ export const LockScreen = () => {
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [failures, setFailures] = useState(0)
+  const [lockedUntil, setLockedUntil] = useState(0)
+  const [nowMs, setNowMs] = useState(() => Date.now())
+
+  const remainingS = useMemo(() => Math.max(0, Math.ceil((lockedUntil - nowMs) / 1000)), [lockedUntil, nowMs])
+  const cooling = remainingS > 0
+
+  // Ticks once a second while a cooldown is running so the countdown renders.
+  useEffect(() => {
+    if (!cooling) return
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [cooling])
 
   const anyPinConfigured = members.some(hasPin)
 
@@ -34,6 +61,7 @@ export const LockScreen = () => {
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     if (!selected) return
+    if (remainingS > 0) return
     setError('')
     if (!hasPin(selected)) {
       dispatch({ type: 'signIn', userId: selected.id })
@@ -47,10 +75,20 @@ export const LockScreen = () => {
     const ok = await verifyPin(selected, pin)
     setBusy(false)
     if (!ok) {
-      setError(t`Incorrect PIN — try again`)
+      const count = failures + 1
+      setFailures(count)
+      const wait = cooldownSeconds(count)
+      if (wait > 0) {
+        // Event handler, not render — Date.now() is the correct clock here.
+        // oxlint-disable-next-line react/purity
+        setLockedUntil(Date.now() + wait * 1000)
+      }
+      setError(wait > 0 ? t`Too many attempts — wait ${wait}s and try again` : t`Incorrect PIN — try again`)
       setPin('')
       return
     }
+    setFailures(0)
+    setLockedUntil(0)
     dispatch({ type: 'signIn', userId: selected.id })
   }
 
@@ -109,9 +147,10 @@ export const LockScreen = () => {
                       onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
                       placeholder="••••"
                       autoFocus
+                      disabled={remainingS > 0}
                     />
-                    <button className="button primary" type="submit" disabled={busy || pin.length < 4}>
-                      {busy ? t`Checking…` : t`Unlock`}
+                    <button className="button primary" type="submit" disabled={busy || pin.length < 4 || remainingS > 0}>
+                      {busy ? t`Checking…` : remainingS > 0 ? t`Wait ${remainingS}s` : t`Unlock`}
                     </button>
                   </>
                 ) : (

@@ -309,9 +309,27 @@ year rollover (fake clock in 2027 → `INV-2027-0001`).
 
 ### P2-20. PIN policy hardening
 
-- [ ] Optional lockout/backoff after repeated failures.
-- [ ] Admin PIN reset that is audited.
-- [ ] Decide whether a PIN can be cleared after it has been set.
+DONE — policy decided and enforced in the reducer:
+
+- **Backoff**: the lock screen starts a cooldown at the 5th consecutive
+  failure, doubling per further failure (30s → 60s → …, capped at 5 minutes);
+  the keypad and submit button disable during the countdown. It guards the
+  shared kiosk against shoulder-surf guessing of a 4-digit PIN.
+- **Admin reset is audited**: already in place — `staff.pin_set` /
+  `staff.pin_clear` audit events, RBAC gate (admins manage anyone's, members
+  their own). Test-pinned.
+- **Decision: a set PIN cannot be cleared.** PIN-less members sign in without
+  a credential (setup phase), so removing the only gate would reopen the
+  account. `setStaffPin` with `null` on a set PIN rejects with
+  `pin.undeletable`; the dialog hides "Remove PIN" and explains. Changing the
+  PIN (audited) or deactivating the member are the levers.
+
+- [x] Optional lockout/backoff after repeated failures.
+- [x] Admin PIN reset that is audited.
+- [x] Decide whether a PIN can be cleared after it has been set. → No.
+
+Evidence: [`lock-screen.tsx`](../apps/clinic/src/features/vet/session/components/lock-screen.tsx),
+[`store.tsx`](../apps/clinic/src/lib/vet/store.tsx).
 
 ## Verified working — do not rebuild
 
