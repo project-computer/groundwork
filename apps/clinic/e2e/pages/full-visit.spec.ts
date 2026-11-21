@@ -107,3 +107,24 @@ test('a receptionist cannot perform admin-only exports', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Export CSV' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Export records' })).toBeDisabled()
 })
+
+test('invoice search narrows by number and owner, and clears', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Billing & Payments' }).click()
+  await expect(page.getByText('INV-2026-0142')).toBeVisible()
+
+  const search = page.getByRole('textbox', { name: 'Search invoices' })
+  await search.fill('0142')
+  await expect(page.getByText('INV-2026-0142')).toBeVisible()
+  await search.fill('Somchai')
+  await expect(page.getByText('INV-2026-0142')).toBeVisible()
+  await search.fill('nobody-here')
+  await expect(page.getByText('No invoices match the search.')).toBeVisible()
+
+  // A future "from" date excludes everything until the search is cleared.
+  await search.fill('')
+  await page.locator('#bill-from').fill('2027-01-01')
+  await expect(page.getByText('No invoices match the search.')).toBeVisible()
+  await page.getByRole('button', { name: 'Clear search' }).click()
+  await expect(page.getByText('INV-2026-0142')).toBeVisible()
+})
