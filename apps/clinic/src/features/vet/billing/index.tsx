@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Plural, Trans, useLingui } from '@lingui/react/macro'
-import { BarChart3, ClipboardList, CreditCard, Plus, X } from 'lucide-react'
+import { BarChart3, ClipboardList, CreditCard, Plus, Search, X } from 'lucide-react'
 import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/patterns/fields'
 import { DataTable, StatCard } from '@/components/patterns/data-table'
 import { useClinic, usePermission } from '@/lib/vet/store'
@@ -32,6 +32,9 @@ export const Billing = () => {
   const [receiptInvoiceId, setReceiptInvoiceId] = useState<string | null>(null)
   const [refundPaymentId, setRefundPaymentId] = useState<string | null>(null)
   const [voidInvoiceId, setVoidInvoiceId] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
 
   // Billable catalog: legacy products (services & medications) plus live inventory items.
   const catalog = useMemo(() => billableCatalog(data), [data])
@@ -55,6 +58,23 @@ export const Billing = () => {
   ] as const
 
   const sortedInvoices = data.invoices.toSorted((a, b) => compareTime(b.createdAt, a.createdAt))
+
+  // Invoice search (BILL-09 / P2-15): number or owner text, plus an optional
+  // created-at date range. The document model has no server pagination, so the
+  // table caps at the latest 200 matches — documented client cap (P2-15).
+  const VISIBLE_CAP = 200
+  const filteredInvoices = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return sortedInvoices.filter((inv) => {
+      const day = inv.createdAt.slice(0, 10)
+      if (fromDate && day < fromDate) return false
+      if (toDate && day > toDate) return false
+      if (!q) return true
+      const owner = data.owners.find((o) => o.id === inv.ownerId)
+      return inv.number.toLowerCase().includes(q) || (owner?.name ?? '').toLowerCase().includes(q)
+    })
+  }, [sortedInvoices, data.owners, query, fromDate, toDate])
+  const visibleInvoices = filteredInvoices.slice(0, VISIBLE_CAP)
 
   return (
     <>
@@ -137,7 +157,36 @@ export const Billing = () => {
         title={t`Invoices`}
         description={t`Drafts can be reviewed before posting; posted invoices are immutable.`}
       >
-        <DataTable
+        <div className="toolbar owners-toolbar">
+        <div className="search-field">
+          <Search size={17} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t`Search by invoice number or owner…`}
+            aria-label={t`Search invoices`}
+          />
+        </div>
+        <Field label={t`From`} htmlFor="bill-from">
+          <input id="bill-from" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} aria-label={t`Invoices from`} />
+        </Field>
+        <Field label={t`To`} htmlFor="bill-to">
+          <input id="bill-to" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label={t`Invoices to`} />
+        </Field>
+        {(query || fromDate || toDate) && (
+          <button
+            className="filter-button"
+            onClick={() => {
+              setQuery('')
+              setFromDate('')
+              setToDate('')
+            }}
+          >
+            <Trans>Clear search</Trans>
+          </button>
+        )}
+      </div>
+      <DataTable
           className="table-wide billing-table"
           columns={[
             <Trans key="invoice">Invoice</Trans>,
@@ -148,10 +197,10 @@ export const Billing = () => {
             <Trans key="balance">Balance</Trans>,
             null,
           ]}
-          isEmpty={sortedInvoices.length === 0}
-          empty={<Trans>No invoices yet.</Trans>}
+          isEmpty={visibleInvoices.length === 0}
+          empty={sortedInvoices.length === 0 ? <Trans>No invoices yet.</Trans> : <Trans>No invoices match the search.</Trans>}
         >
-          {sortedInvoices.map((invoice) => {
+          {visibleInvoices.map((invoice) => {
             const owner = data.owners.find((o) => o.id === invoice.ownerId)
             const totals = invoiceTotals(invoice, data.clinic.vatRate, data.payments)
             const addEntry = addItemCatalogId ? catalog.find((c) => c.id === addItemCatalogId) : undefined
@@ -253,6 +302,11 @@ export const Billing = () => {
             )
           })}
         </DataTable>
+        {filteredInvoices.length > VISIBLE_CAP && (
+          <p className="empty-state" role="status">
+            <Trans>Showing the latest {VISIBLE_CAP} of {filteredInvoices.length} invoices — refine the search to narrow the list.</Trans>
+          </p>
+        )}
       </Panel>
       <Panel title={t`Recent payments`} description={t`Every payment is appended to an immutable ledger.`}>
         <div className="activity-list">

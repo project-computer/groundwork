@@ -262,11 +262,20 @@ Evidence: [`cancel-dialog.tsx`](../apps/clinic/src/features/vet/schedule/compone
 
 ### P2-15. List pagination and invoice search (PET-08, BILL-09)
 
-Owners/pets and invoices render every row; there is no invoice search.
+DONE — Billing has a search toolbar: text match on invoice number or owner
+name, an optional created-at date range (from/to), and a one-click clear.
+The document model has no server pagination, so the table applies the
+documented client cap — the latest 200 matches, with a "showing N of M —
+refine the search" notice when truncated. Owners/pets already ship a
+multi-field search (owner, phone, patient, MRN, microchip); server-side
+pagination arrives with the REST cutover (P0-4) and the list endpoints that
+already accept it.
 
-- [ ] Server-side pagination (the REST list endpoints already accept it) or a
-      documented client cap.
-- [ ] Invoice search by number, owner and date range.
+- [x] Server-side pagination or a documented client cap. → documented cap (200)
+      client-side; server-side lands with the cutover.
+- [x] Invoice search by number, owner and date range.
+
+Evidence: [`billing/index.tsx`](../apps/clinic/src/features/vet/billing/index.tsx).
 
 ### P2-16. Audit viewer access (AUD-03)
 
