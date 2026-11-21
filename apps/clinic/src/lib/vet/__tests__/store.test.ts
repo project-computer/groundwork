@@ -444,3 +444,23 @@ describe('invoice numbering (P2-19)', () => {
     }
   })
 })
+
+describe('appointment cancellation reason (APT-04 / P2-14)', () => {
+  it('refuses a reason-less cancel and stores the reason when given', () => {
+    expect(
+      reducer(baseStore(), { type: 'setAppointmentStatus', id: 'a-3', status: 'cancelled' }).session.lastRejection?.code,
+    ).toBe('appointment.cancel_reason')
+
+    const next = reducer(baseStore(), { type: 'setAppointmentStatus', id: 'a-3', status: 'cancelled', reason: ' Owner travelling ' })
+    const appt = next.data.appointments.find((a) => a.id === 'a-3')!
+    expect(appt.status).toBe('cancelled')
+    expect(appt.cancellationReason).toBe('Owner travelling')
+    expect(next.data.audit[0].summary).toContain('Owner travelling')
+  })
+
+  it('clears the reason when the appointment is rebooked', () => {
+    let next = reducer(baseStore(), { type: 'setAppointmentStatus', id: 'a-3', status: 'cancelled', reason: 'Owner travelling' })
+    next = reducer(next, { type: 'setAppointmentStatus', id: 'a-3', status: 'booked' })
+    expect(next.data.appointments.find((a) => a.id === 'a-3')!.cancellationReason).toBeUndefined()
+  })
+})

@@ -1,10 +1,11 @@
-import type { DragEvent } from 'react'
+import { useState, type DragEvent } from 'react'
 import { Trans, useLingui } from '@lingui/react/macro'
 import { Stethoscope, UserX } from 'lucide-react'
 import { Pill } from '@/components/patterns/fields'
 import { useClinic } from '@/lib/vet/store'
 import { formatTime, statusLabel, statusTone } from '@/lib/vet/format'
 import type { Appointment, Patient, StaffUser } from '@/lib/vet/types'
+import { CancelAppointmentDialog } from './cancel-dialog'
 
 /**
  * Day-view appointment card (2026-10-30 plan, phase C): status chip plus the
@@ -34,6 +35,7 @@ export const AppointmentCard = ({
 }) => {
   const { t } = useLingui()
   const { dispatch } = useClinic()
+  const [cancelling, setCancelling] = useState(false)
   return (
     <div
       className={`cal-appt status-${a.status}${dragging ? ' dragging' : ''}`}
@@ -49,6 +51,9 @@ export const AppointmentCard = ({
         <span>
           {a.reason} · {vet?.name ?? <Trans>Unassigned</Trans>}
         </span>
+        {a.status === 'cancelled' && a.cancellationReason && (
+          <span className="cancel-reason">{t`Cancelled: ${a.cancellationReason}`}</span>
+        )}
       </div>
       <Pill tone={statusTone(a.status)} dot>
         {statusLabel(a.status)}
@@ -72,12 +77,15 @@ export const AppointmentCard = ({
             <button className="text-button" onClick={() => dispatch({ type: 'setAppointmentStatus', id: a.id, status: 'no_show' })} disabled={disabled} title={t`Mark no-show`}>
               <UserX size={13} /> <Trans>No-show</Trans>
             </button>
-            <button className="text-button" onClick={() => dispatch({ type: 'setAppointmentStatus', id: a.id, status: 'cancelled' })} disabled={disabled}>
+            <button className="text-button" onClick={() => setCancelling(true)} disabled={disabled}>
               <Trans>Cancel</Trans>
             </button>
           </>
         )}
       </div>
+      {cancelling && patient && (
+        <CancelAppointmentDialog appointmentId={a.id} patientName={patient.name} onClose={() => setCancelling(false)} />
+      )}
     </div>
   )
 }

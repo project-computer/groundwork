@@ -135,6 +135,12 @@
   border-left-color: var(--ink-muted);
   opacity: 0.75;
 }
+/* Cancellation reason (APT-04): readable in full, in the warning tone. */
+.cal-appt .cancel-reason,
+.appointment-row .cancel-reason {
+  color: var(--warning);
+  white-space: normal;
+}
 .cal-appt.compact {
   flex-direction: column;
   align-items: flex-start;
