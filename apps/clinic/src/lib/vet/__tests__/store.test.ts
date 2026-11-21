@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { initialSession, reducer, type Store } from '../store'
 import { seedState } from '../seed'
 import type { CaseBundle, ClinicState, Encounter } from '../types'
@@ -26,6 +26,24 @@ const paidStore = () => payInvoice(baseStore(), seedInvoiceTotal)
 
 const payInvoice = (store: Store, amount: number) =>
   reducer(store, { type: 'recordPayment', payment: { invoiceId: 'inv-1', amount, method: 'cash' } })
+
+/** Minimal draft creation used by the numbering tests (P2-19). */
+const createInvoiceFor = (store: Store) =>
+  reducer(store, { type: 'createInvoice', ownerId: 'o-1', items: [{ description: 'Consultation', quantity: 1, unitPrice: 50000 }] })
+
+/** A store whose invoice history holds exactly one (voided) invoice. */
+const storeWithInvoice = (number: string): Store => {
+  const store = baseStore()
+  return {
+    data: {
+      ...store.data,
+      invoices: [
+        { id: 'inv-x', number, ownerId: 'o-1', status: 'void' as const, items: [{ id: 'xi', description: 'Consultation', quantity: 1, unitPrice: 50000, productId: 'svc-1' }], createdAt: '2026-10-28T10:00:00+07:00', version: 1 },
+      ],
+    },
+    session: store.session,
+  }
+}
 
 describe('recordPayment', () => {
   it('flips posted→paid when the payment settles the full balance', () => {
@@ -395,5 +413,34 @@ describe('vitals audit trace (P1-8)', () => {
     expect(next.data.audit[0]).toMatchObject({ action: 'observation.correct' })
     expect(next.data.audit[0].summary).toContain('was 28.4 kg')
     expect(next.data.audit[0].summary).toContain('28.6 kg')
+  })
+})
+
+describe('invoice numbering (P2-19)', () => {
+  it('derives the next number from the max existing sequence, not the count', () => {
+    // A restore keeping one invoice numbered 0160 breaks count-based
+    // numbering (142 + 1 = 0143, a duplicate). Max-based mints 0161.
+    const next = createInvoiceFor(storeWithInvoice('INV-2026-0160'))
+    expect(next.data.invoices[0].number).toBe('INV-2026-0161')
+  })
+
+  it('mints unique numbers across sequential creations after a partial history', () => {
+    let store = storeWithInvoice('INV-2026-0144')
+    const numbers = [0, 0, 0].map(() => {
+      store = createInvoiceFor(store)
+      return store.data.invoices[0].number
+    })
+    expect(new Set(numbers).size).toBe(3)
+    expect(numbers).toEqual(['INV-2026-0145', 'INV-2026-0146', 'INV-2026-0147'])
+  })
+
+  it('restarts the sequence at 0001 in a new year', () => {
+    vi.useFakeTimers({ now: new Date('2027-03-01T10:00:00+07:00') })
+    try {
+      const next = createInvoiceFor(storeWithInvoice('INV-2026-0160'))
+      expect(next.data.invoices[0].number).toBe('INV-2027-0001')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

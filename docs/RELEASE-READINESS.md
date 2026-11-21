@@ -289,12 +289,17 @@ but no `/api/v1/users` routes.
 
 ### P2-19. Invoice numbering is sequence-backed
 
-The document model derives the next number from `142 + invoice count`, which
-can collide after a restore or a deleted/voided history. The REST backend
-already derives the next number from the stored prefix.
+DONE — `nextInvoiceNumber` derives the next number from the **maximum existing
+sequence for the invoice year** (parsed from `INV-YYYY-NNNN`), not the invoice
+count, in both `closeEncounter` and `createInvoice`. A restore or pruned
+history that leaves one invoice numbered 0160 now mints 0161 — the old
+count-based formula would have minted 0143, a duplicate. Each year restarts
+at 0001; numbers only grow within a year. Tests cover the restore-parity
+case, uniqueness across sequential creations after a partial history, and the
+year rollover (fake clock in 2027 → `INV-2027-0001`).
 
-- [ ] Persist a per-clinic sequence (or derive from max existing number).
-- [ ] Add a uniqueness test across restore and year rollover.
+- [x] Persist a per-clinic sequence (or derive from max existing number).
+- [x] Add a uniqueness test across restore and year rollover.
 
 ### P2-20. PIN policy hardening
 

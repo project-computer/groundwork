@@ -195,6 +195,22 @@ const describeVitals = (v: Vitals) =>
     .filter(Boolean)
     .join(', ')
 
+/**
+ * Sequence-backed invoice numbering (P2-19): the next number takes the maximum
+ * existing sequence for the invoice year, not the invoice count — a restore,
+ * import or pruned history can leave count and numbering out of sync, and a
+ * count-based formula then mints a duplicate (BILL-02 uniqueness). Each year
+ * restarts at 0001; numbers only ever grow within a year.
+ */
+const nextInvoiceNumber = (invoices: ClinicState['invoices'], at: Date): string => {
+  const year = at.getFullYear()
+  const maxSeq = invoices.reduce((max, inv) => {
+    const m = /^INV-(\d{4})-(\d+)$/.exec(inv.number)
+    return m && Number(m[1]) === year ? Math.max(max, Number(m[2])) : max
+  }, 0)
+  return `INV-${year}-${String(maxSeq + 1).padStart(4, '0')}`
+}
+
 /** Human-readable Medical Record Number, e.g. PT-2026-0042 (see CONTEXT.md). */
 /** Exposed for tests: drive business mutations and assert on the resulting document. */
 export const reducer = (store: Store, action: Action): Store => {
@@ -769,7 +785,7 @@ export const reducer = (store: Store, action: Action): Store => {
         items.push({ id: uid(), description: rx.medication, quantity: rx.quantity, unitPrice: 0 })
       }
       const invoiceId = uid()
-      const number = `INV-${new Date(closedAt).getFullYear()}-${String(142 + data.invoices.length).padStart(4, '0')}`
+      const number = nextInvoiceNumber(data.invoices, new Date(closedAt))
       return commit(
         store,
         {
@@ -792,7 +808,7 @@ export const reducer = (store: Store, action: Action): Store => {
       const owner = data.owners.find((o) => o.id === action.ownerId)
       if (!owner) return store
       const invoiceId = uid()
-      const number = `INV-${new Date().getFullYear()}-${String(142 + data.invoices.length).padStart(4, '0')}`
+      const number = nextInvoiceNumber(data.invoices, new Date())
       const invoice = {
         id: invoiceId,
         number,
