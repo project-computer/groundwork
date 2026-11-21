@@ -248,11 +248,17 @@ with the pilot clinic before the first real deployment.
 
 ### P2-14. Appointment cancellation reason (APT-04)
 
-The backend requires `cancellationReason` when cancelling; the UI has no field
-and only flips the status.
+DONE — Cancelling now asks why: the card's Cancel button opens a dialog whose
+reason is required by the reducer (`appointment.cancel_reason` rejection,
+mirroring the backend's required `cancellationReason`), stored on the
+appointment, shown on the cancelled card in the warning tone, included in the
+audit summary, and cleared when the appointment is rebooked or rescheduled.
 
-- [ ] Prompt for a reason; persist it; show it on the appointment card and in
+- [x] Prompt for a reason; persist it; show it on the appointment card and in
       the audit summary.
+
+Evidence: [`cancel-dialog.tsx`](../apps/clinic/src/features/vet/schedule/components/cancel-dialog.tsx),
+[`store.tsx`](../apps/clinic/src/lib/vet/store.tsx).
 
 ### P2-15. List pagination and invoice search (PET-08, BILL-09)
 

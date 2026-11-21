@@ -85,6 +85,8 @@ export interface Appointment {
   vetId: string
   assignedUserId?: string
   status: AppointmentStatus
+  /** Why the visit was cancelled (APT-04) — required by the reducer. */
+  cancellationReason?: string
   version: number
 }
 

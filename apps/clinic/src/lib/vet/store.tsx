@@ -97,7 +97,7 @@ export type Action =
   | { type: 'bookAppointment'; appointment: Omit<Appointment, 'id' | 'version' | 'status'> }
   | { type: 'walkIn'; patientId: string; reason: string; vetId: string }
   | { type: 'rescheduleAppointment'; id: string; startsAt: string; durationMin?: number }
-  | { type: 'setAppointmentStatus'; id: string; status: AppointmentStatus }
+  | { type: 'setAppointmentStatus'; id: string; status: AppointmentStatus; reason?: string }
   | { type: 'startEncounter'; appointmentId: string }
   | { type: 'updateVitals'; encounterId: string; vitals: Vitals }
   | { type: 'addNote'; encounterId: string; body: string }
@@ -476,7 +476,7 @@ export const reducer = (store: Store, action: Action): Store => {
           ...data,
           appointments: data.appointments.map((a) =>
             a.id === action.id
-              ? { ...a, startsAt: action.startsAt, durationMin: action.durationMin ?? a.durationMin, status: 'booked', version: a.version + 1 }
+              ? { ...a, startsAt: action.startsAt, durationMin: action.durationMin ?? a.durationMin, status: 'booked', cancellationReason: undefined, version: a.version + 1 }
               : a,
           ),
         },
@@ -486,10 +486,32 @@ export const reducer = (store: Store, action: Action): Store => {
     case 'setAppointmentStatus': {
       const appt = data.appointments.find((a) => a.id === action.id)
       if (!appt) return store
+      // Cancellations carry a reason (APT-04, backend parity): it lands on the
+      // appointment, the audit trail and the card. Re-booking clears it.
+      if (action.status === 'cancelled' && !action.reason?.trim())
+        return reject(store, 'appointment.cancel_reason', 'A cancellation needs a reason.')
+      const reason = action.reason?.trim()
       return commit(
         store,
-        { ...data, appointments: data.appointments.map((a) => (a.id === action.id ? { ...a, status: action.status, version: a.version + 1 } : a)) },
-        { action: `appointment.${action.status}`, entityType: 'appointment', entityId: appt.id, summary: `${patientName(data, appt.patientId)}: ${action.status.replace('_', ' ')}` },
+        {
+          ...data,
+          appointments: data.appointments.map((a) =>
+            a.id === action.id
+              ? {
+                  ...a,
+                  status: action.status,
+                  cancellationReason: action.status === 'cancelled' ? reason : undefined,
+                  version: a.version + 1,
+                }
+              : a,
+          ),
+        },
+        {
+          action: `appointment.${action.status}`,
+          entityType: 'appointment',
+          entityId: appt.id,
+          summary: `${patientName(data, appt.patientId)}: ${action.status.replace('_', ' ')}${reason ? ` — ${reason}` : ''}`,
+        },
       )
     }
     case 'startEncounter': {
