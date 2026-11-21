@@ -6,7 +6,7 @@ import { Field } from '@/components/patterns/fields'
 import { Modal } from '@/components/patterns/modal'
 import type { StaffUser } from '@/lib/vet/types'
 
-/** Admin/self dialog for setting, changing, or removing a member's PIN. */
+/** Admin/self dialog for setting or changing a member's PIN. */
 export const PinDialog = ({ member, onClose }: { member: StaffUser; onClose: () => void }) => {
   const { dispatch } = useClinic()
   const { t } = useLingui()
@@ -30,11 +30,6 @@ export const PinDialog = ({ member, onClose }: { member: StaffUser; onClose: () 
     setBusy(true)
     const credential = await createPinCredential(pin)
     dispatch({ type: 'setStaffPin', id: member.id, credential })
-    onClose()
-  }
-
-  const clear = () => {
-    dispatch({ type: 'setStaffPin', id: member.id, credential: null })
     onClose()
   }
 
@@ -77,11 +72,6 @@ export const PinDialog = ({ member, onClose }: { member: StaffUser; onClose: () 
           </p>
         )}
         <div className="panel-footer">
-          {existing && (
-            <button type="button" className="small-button" onClick={clear}>
-              <Trans>Remove PIN</Trans>
-            </button>
-          )}
           <button type="button" className="small-button" onClick={onClose}>
             <Trans>Cancel</Trans>
           </button>
@@ -89,6 +79,11 @@ export const PinDialog = ({ member, onClose }: { member: StaffUser; onClose: () 
             {busy ? t`Saving…` : existing ? t`Change PIN` : t`Set PIN`}
           </button>
         </div>
+        {existing && (
+          <p className="lock-hint">
+            <Trans>A set PIN cannot be removed — change it here, or ask an admin to deactivate the member.</Trans>
+          </p>
+        )}
       </form>
     </Modal>
   )

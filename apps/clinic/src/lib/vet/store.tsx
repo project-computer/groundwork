@@ -351,10 +351,16 @@ export const reducer = (store: Store, action: Action): Store => {
   }
 
   // PINs are a credential change: admins manage anyone's, members their own.
+  // Policy (P2-20): once set, a PIN cannot be cleared — the credential is the
+  // account's gate and PIN-less members sign in without one. Changing it
+  // (admin reset, audited) or deactivating the member are the levers.
   if (action.type === 'setStaffPin') {
     const actor = data.users.find((u) => u.id === session.currentUserId)
-    if (!actor || !data.users.some((u) => u.id === action.id)) return reject(store, 'staff.not_found', 'That staff member no longer exists.')
+    const member = data.users.find((u) => u.id === action.id)
+    if (!actor || !member) return reject(store, 'staff.not_found', 'That staff member no longer exists.')
     if (actor.role !== 'admin' && actor.id !== action.id) return reject(store, 'rbac.denied', 'You can only change your own PIN.')
+    if (!action.credential && (member.pinHash || member.pinSalt))
+      return reject(store, 'pin.undeletable', 'A set PIN cannot be removed — change it or deactivate the member.')
   }
 
   // Inventory writes follow the permission matrix — admin and pharmacist

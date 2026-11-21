@@ -464,3 +464,32 @@ describe('appointment cancellation reason (APT-04 / P2-14)', () => {
     expect(next.data.appointments.find((a) => a.id === 'a-3')!.cancellationReason).toBeUndefined()
   })
 })
+
+describe('PIN policy (P2-20)', () => {
+  it('refuses to clear a set PIN; a PIN-less member can still be provisioned', () => {
+    // Setup-phase members (no PIN in the seed) get one, then the credential
+    // is permanent — clearing it would reopen sign-in without a credential.
+    const withoutPin = structuredClone(baseStore().data.users)
+    const nok = withoutPin.find((u) => u.id === 'u-nok')!
+    nok.pinHash = undefined
+    nok.pinSalt = undefined
+    const seeded: Store = { data: { ...baseStore().data, users: withoutPin }, session: { ...adminSession } }
+    const ok = reducer(seeded, { type: 'setStaffPin', id: 'u-nok', credential: { pinHash: 'h', pinSalt: 's' } })
+    expect(ok.data.users.find((u) => u.id === 'u-nok')!.pinHash).toBe('h')
+    const cleared = reducer(ok, { type: 'setStaffPin', id: 'u-nok', credential: null })
+    expect(cleared.session.lastRejection?.code).toBe('pin.undeletable')
+    expect(cleared.data.users.find((u) => u.id === 'u-nok')!.pinHash).toBe('h')
+  })
+
+  it('audits an admin PIN reset of another member', () => {
+    const next = reducer(baseStore(), { type: 'setStaffPin', id: 'u-nok', credential: { pinHash: 'h2', pinSalt: 's2' } })
+    expect(next.data.users.find((u) => u.id === 'u-nok')!.pinHash).toBe('h2')
+    expect(next.data.audit[0]).toMatchObject({ action: 'staff.pin_set', actorId: 'u-mai', entityId: 'u-nok' })
+  })
+
+  it('rejects a PIN change on someone else by a non-admin', () => {
+    const vet = { ...baseStore(), session: { ...initialSession, currentUserId: 'u-pim' } }
+    const next = reducer(vet, { type: 'setStaffPin', id: 'u-nok', credential: { pinHash: 'x', pinSalt: 'y' } })
+    expect(next.session.lastRejection?.code).toBe('rbac.denied')
+  })
+})
