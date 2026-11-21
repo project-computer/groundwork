@@ -4,6 +4,7 @@ import { Field, NativeSelect, Panel, PageHeader, Pill } from '@/components/patte
 import { useClinic } from '@/lib/vet/store'
 import { speciesLabel, statusLabel } from '@/lib/vet/format'
 import { ClosedEncounter } from './components/closed-encounter'
+import { ClinicalFieldsPanel } from './components/clinical-fields'
 import { ClinicalNotes } from './components/clinical-notes'
 import { FollowUpPanel } from './components/follow-up-panel'
 import { NoActiveConsultation } from './components/no-active-consultation'
@@ -29,6 +30,7 @@ export const Consultations = ({ onOpen }: { onOpen: (encounterId: string) => voi
   const appt = open && data.appointments.find((a) => a.id === open.appointmentId)
   const [dxText, setDxText] = useState('')
   const [dxStatus, setDxStatus] = useState<'provisional' | 'confirmed'>('provisional')
+  const [correction, setCorrection] = useState<{ id: string; text: string; reason: string } | null>(null)
 
   if (!open || !patient) return <NoActiveConsultation onOpen={onOpen} />
   if (open.status === 'closed') return <ClosedEncounter encounter={open} patient={patient} />
@@ -65,6 +67,7 @@ export const Consultations = ({ onOpen }: { onOpen: (encounterId: string) => voi
             )}
           </SnapshotPanel>
           <VitalsPanel encounter={open} />
+          <ClinicalFieldsPanel encounter={open} />
           <VaccinationPanel encounter={open} patient={patient} />
         </div>
         <div className="side-stack">
@@ -99,7 +102,45 @@ export const Consultations = ({ onOpen }: { onOpen: (encounterId: string) => voi
                   <div>
                     <strong>{d.description}</strong>
                     <span>{statusLabel(d.status)}</span>
+                    {d.correctedFrom && (
+                      <span>
+                        {t`corrected from “${d.correctedFrom}” — ${d.correctReason}`}
+                      </span>
+                    )}
                   </div>
+                  {correction?.id === d.id ? (
+                    <div className="inline-form nested" style={{ flex: 1 }}>
+                      <input
+                        aria-label={t`Corrected diagnosis`}
+                        value={correction.text}
+                        onChange={(e) => setCorrection({ ...correction, text: e.target.value })}
+                        placeholder={t`New wording`}
+                      />
+                      <input
+                        aria-label={t`Correction reason`}
+                        value={correction.reason}
+                        onChange={(e) => setCorrection({ ...correction, reason: e.target.value })}
+                        placeholder={t`Why it changes`}
+                      />
+                      <button
+                        className="small-button"
+                        disabled={!correction.text.trim() || !correction.reason.trim()}
+                        onClick={() => {
+                          dispatch({ type: 'correctDiagnosis', encounterId: open.id, diagnosisId: d.id, description: correction.text, reason: correction.reason })
+                          setCorrection(null)
+                        }}
+                      >
+                        <Trans>Save correction</Trans>
+                      </button>
+                      <button className="small-button" onClick={() => setCorrection(null)}>
+                        <Trans>Cancel</Trans>
+                      </button>
+                    </div>
+                  ) : (
+                    <button className="small-button" onClick={() => setCorrection({ id: d.id, text: d.description, reason: '' })} aria-label={t`Correct diagnosis ${d.description}`}>
+                      <Trans>Correct</Trans>
+                    </button>
+                  )}
                   {d.status === 'provisional' ? (
                     <button
                       className="small-button"

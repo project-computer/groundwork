@@ -135,19 +135,26 @@ panel once a prescription exists, and from the archived record.
 
 ### P1-8. Structured clinical fields and auditable corrections
 
-The UI encounter holds vitals, free-text notes, diagnoses and prescriptions.
-The plan's chief complaint, symptoms, examination and treatment plan exist in
-the normalized backend but not in the running UI. Only notes can be amended;
-diagnoses can be added/confirmed but not corrected, and vitals overwrite
-silently.
+DONE — The Visit editor carries the four structured fields from the normalized
+backend (`0005_consultations.sql`): chief complaint, symptoms, examination and
+treatment plan, saved as one audited write (`clinical_fields.update`) and
+included in the consultation-summary print and the medical-records JSON export.
+Diagnoses can be corrected in place with wording + reason (provenance rides on
+the diagnosis: `correctedFrom`/`correctReason`, audited `diagnosis.correct`).
+Every vitals overwrite is traced in the audit log — the first write is
+`observation.record` with the values, later writes are `observation.correct`
+recording what they replaced. Notes already amend with a reason (append-only).
+Closing a visit drafts the invoice and never blocks on billing — payment is
+reception's separate flow (verified: `closeEncounter` has no billing gate).
 
-- [ ] Add the four clinical fields to the encounter editor and print/export.
-- [ ] Diagnosis edit/correct with a reason and an audit event.
-- [ ] Vitals correction keeps a trace (or explicitly justifies overwrite).
-- [ ] Do not block closing a visit on billing.
+- [x] Add the four clinical fields to the encounter editor and print/export.
+- [x] Diagnosis edit/correct with a reason and an audit event.
+- [x] Vitals correction keeps a trace (or explicitly justifies overwrite).
+- [x] Do not block closing a visit on billing.
 
 Evidence: [`types.ts`](../apps/clinic/src/lib/vet/types.ts),
 [`consultations/index.tsx`](../apps/clinic/src/features/vet/consultations/index.tsx),
+[`clinical-fields.tsx`](../apps/clinic/src/features/vet/consultations/components/clinical-fields.tsx),
 [`0005_consultations.sql`](../server/internal/offlineapi/migrations/0005_consultations.sql).
 
 ### P1-9. Editable service catalog (BILL-01, SET-04)

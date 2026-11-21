@@ -58,7 +58,8 @@ export const ownersPatientsCsv = (data: ClinicState): string => {
  *   { format: 'vetcare-medical-records', version: 1, exportedAt, clinic,
  *     patients: [{ id, mrn, name, species, breed, sex, birthDate, microchip,
  *       allergies, medicalAlerts, owner | null,
- *       visits: [{ id, openedAt, closedAt, veterinarian, vitals, diagnoses,
+ *       visits: [{ id, openedAt, closedAt, veterinarian, vitals, chiefComplaint,
+ *                 symptoms, examination, treatmentPlan, diagnoses,
  *                 prescriptions, notes }],
  *       vaccinations: [{ vaccineName, lotNumber, administeredAt, nextDueAt,
  *                        veterinarian }] }] }
@@ -95,7 +96,11 @@ export const medicalRecordsExport = (
           closedAt: encounter.closedAt,
           veterinarian: data.users.find((u) => u.id === encounter.attendingId)?.name ?? encounter.attendingId,
           vitals: { ...encounter.vitals },
-          diagnoses: encounter.diagnoses.map((d) => ({ description: d.description, status: d.status })),
+          chiefComplaint: encounter.chiefComplaint,
+          symptoms: encounter.symptoms,
+          examination: encounter.examination,
+          treatmentPlan: encounter.treatmentPlan,
+          diagnoses: encounter.diagnoses.map((d) => ({ description: d.description, status: d.status, correctedFrom: d.correctedFrom, correctReason: d.correctReason })),
           prescriptions: encounter.prescriptions.map((rx) => ({
             medication: rx.medication,
             dose: rx.dose,

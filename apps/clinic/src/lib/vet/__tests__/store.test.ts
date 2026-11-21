@@ -336,3 +336,64 @@ describe('service catalog (SET-04 / P1-9)', () => {
     expect(next.session.lastRejection?.code).toBe('rbac.services')
   })
 })
+
+describe('structured clinical fields (P1-8)', () => {
+  it('saves the four fields and audits the write', () => {
+    const next = reducer(openEncounterStore(), {
+      type: 'updateClinicalFields',
+      encounterId: 'e-9',
+      fields: { chiefComplaint: ' Head shaking ', symptoms: 'Scratching left ear', examination: 'Otitis externa', treatmentPlan: 'Clean + drops' },
+    })
+    const enc = next.data.encounters.find((e) => e.id === 'e-9')!
+    expect(enc.chiefComplaint).toBe('Head shaking')
+    expect(enc.symptoms).toBe('Scratching left ear')
+    expect(next.data.audit[0]).toMatchObject({ action: 'clinical_fields.update', entityType: 'encounter', entityId: 'e-9' })
+  })
+
+  it('rejects a write where every field is blank', () => {
+    const next = reducer(openEncounterStore(), {
+      type: 'updateClinicalFields',
+      encounterId: 'e-9',
+      fields: { chiefComplaint: '  ', symptoms: '', examination: '', treatmentPlan: '' },
+    })
+    expect(next.session.lastRejection?.code).toBe('clinical.fields_empty')
+  })
+})
+
+describe('diagnosis corrections (P1-8)', () => {
+  it('edits the wording with provenance and an audit event', () => {
+    let store = openEncounterStore()
+    store = reducer(store, { type: 'addDiagnosis', encounterId: 'e-9', diagnosis: { description: 'Otitis externa', status: 'provisional' } })
+    const dxId = store.data.encounters.find((e) => e.id === 'e-9')!.diagnoses[0].id
+
+    const next = reducer(store, { type: 'correctDiagnosis', encounterId: 'e-9', diagnosisId: dxId, description: 'Otitis externa, left ear', reason: ' Ear exam localised it ' })
+    const dx = next.data.encounters.find((e) => e.id === 'e-9')!.diagnoses[0]
+    expect(dx.description).toBe('Otitis externa, left ear')
+    expect(dx.correctedFrom).toBe('Otitis externa')
+    expect(dx.correctReason).toBe('Ear exam localised it')
+    expect(next.data.audit[0]).toMatchObject({ action: 'diagnosis.correct' })
+    expect(next.data.audit[0].summary).toContain('Ear exam localised it')
+  })
+
+  it('refuses a correction without wording or reason', () => {
+    let store = openEncounterStore()
+    store = reducer(store, { type: 'addDiagnosis', encounterId: 'e-9', diagnosis: { description: 'Otitis externa', status: 'provisional' } })
+    const dxId = store.data.encounters.find((e) => e.id === 'e-9')!.diagnoses[0].id
+
+    expect(reducer(store, { type: 'correctDiagnosis', encounterId: 'e-9', diagnosisId: dxId, description: '  ', reason: 'x' }).session.lastRejection?.code).toBe('diagnosis.correction_empty')
+    expect(reducer(store, { type: 'correctDiagnosis', encounterId: 'e-9', diagnosisId: dxId, description: 'x', reason: '' }).session.lastRejection?.code).toBe('diagnosis.correction_empty')
+  })
+})
+
+describe('vitals audit trace (P1-8)', () => {
+  it('records vitals with the values, then traces a correction with the prior values', () => {
+    let next = reducer(openEncounterStore(), { type: 'updateVitals', encounterId: 'e-9', vitals: { weightKg: '28.4', tempC: '38.9', heartRate: '88', respRate: '20' } })
+    expect(next.data.audit[0]).toMatchObject({ action: 'observation.record' })
+    expect(next.data.audit[0].summary).toContain('28.4 kg')
+
+    next = reducer(next, { type: 'updateVitals', encounterId: 'e-9', vitals: { weightKg: '28.6', tempC: '38.9', heartRate: '88', respRate: '20' } })
+    expect(next.data.audit[0]).toMatchObject({ action: 'observation.correct' })
+    expect(next.data.audit[0].summary).toContain('was 28.4 kg')
+    expect(next.data.audit[0].summary).toContain('28.6 kg')
+  })
+})
